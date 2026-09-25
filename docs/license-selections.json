@@ -1,0 +1,70 @@
+[
+  {
+    "name": "css-mediaquery",
+    "version": "0.1.2",
+    "file": "LICENSE",
+    "sha256": "d3dfa68a3c80e64eb10e46cef10e4208502da5ffb1387b11db00e42a507ab8f7",
+    "selectedLicense": "BSD-3-Clause",
+    "reason": "Package metadata says BSD; exact shipped Yahoo license is the standard three-clause BSD text."
+  },
+  {
+    "name": "type-fest",
+    "version": "5.10.0",
+    "file": "license-mit",
+    "sha256": "5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3",
+    "selectedLicense": "MIT",
+    "reason": "Package offers MIT OR CC0-1.0; select its shipped MIT license."
+  },
+  {
+    "name": "lightningcss",
+    "version": "1.33.0",
+    "file": "LICENSE",
+    "sha256": "5eba353fe5076ac3432177f8ab1cf75e3afcd0584251e37c3bfead5f447d040e",
+    "selectedLicense": "MPL-2.0",
+    "scope": "unmodified-build-tool-only",
+    "reviewApproved": true,
+    "approval": "Aidan Telegram41727, 2026-09-25: Approved MPL",
+    "source": "https://registry.npmjs.org/lightningcss/1.33.0",
+    "reason": "Excluded from browser assets and serving image; no modifications. Exact version only.",
+    "reviewedRegistryTarballSha256": "d492f4278bb7234ceaa3c2638ef944e108ea17a23db7c6a2367c14fa725598cf"
+  },
+  {
+    "name": "lightningcss-linux-x64-gnu",
+    "version": "1.33.0",
+    "file": "LICENSE",
+    "sha256": "5eba353fe5076ac3432177f8ab1cf75e3afcd0584251e37c3bfead5f447d040e",
+    "selectedLicense": "MPL-2.0",
+    "scope": "unmodified-build-tool-only",
+    "reviewApproved": true,
+    "approval": "Aidan Telegram41727, 2026-09-25: Approved MPL",
+    "source": "https://registry.npmjs.org/lightningcss-linux-x64-gnu/1.33.0",
+    "reason": "Excluded from browser assets and serving image; no modifications. Exact version only.",
+    "reviewedRegistryTarballSha256": "fd485dfd57082c4ef864dd867fa87fd8e1a9b5d58ee85c2b76e28e42c8f3e1d3"
+  },
+  {
+    "name": "caniuse-lite",
+    "version": "1.0.30001812",
+    "file": "LICENSE",
+    "sha256": "fd3a263fe19ed8faa9068b43abaebafc02c77897b0c6fc09abc04bb592e5f16e",
+    "selectedLicense": "CC-BY-4.0",
+    "scope": "unmodified-build-tool-only",
+    "reviewApproved": true,
+    "approval": "Exact shipped non-copyleft license reviewed 2026-09-25; retain complete notices",
+    "source": "https://registry.npmjs.org/caniuse-lite/1.0.30001812",
+    "reason": "Excluded from browser assets and serving image; no modifications. Exact version only.",
+    "reviewedRegistryTarballSha256": "61a964ee6800f1a2d5193f88e10ff0093c2d72553bc131cd680abc9f967e6083"
+  },
+  {
+    "name": "argparse",
+    "version": "2.0.1",
+    "file": "LICENSE",
+    "sha256": "de4d1f2d2ad5ad0cfd1657a106476b31cb5db5ef9d1ff842b237c0c81f0c8a23",
+    "selectedLicense": "Python-2.0",
+    "scope": "unmodified-build-tool-only",
+    "reviewApproved": true,
+    "approval": "Exact shipped non-copyleft license reviewed 2026-09-25; retain complete notices",
+    "source": "https://registry.npmjs.org/argparse/2.0.1",
+    "reason": "Excluded from browser assets and serving image; no modifications. Exact version only.",
+    "reviewedRegistryTarballSha256": "27903847fc8215e6fc5a33e81490f7baba66403f8aade33771b988cca097728c"
+  }
+]

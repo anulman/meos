@@ -1,0 +1,21 @@
+services:
+  preview:
+    build: .
+    image: meos-preview:local
+    container_name: meos-preview
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3180:80'
+    environment:
+      MEOS_TIMEZONE: ${MEOS_TIMEZONE:-UTC}
+      MEOS_API_BASE: ${MEOS_API_BASE:-/api}
+      MEOS_DEMO: 'true'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/health']
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    logging:
+      options:
+        max-size: '5m'
+        max-file: '2'

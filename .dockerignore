@@ -1,0 +1,7 @@
+*
+!dist/
+!dist/client/
+!dist/client/**
+!deploy/
+!deploy/**
+!Dockerfile
