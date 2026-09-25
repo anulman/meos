@@ -15,7 +15,7 @@ Settings exposes Projects/New project, No project including unscheduled tasks, a
 - `git diff --check`: pass.
 - `pnpm preview:deploy`: deployed loopback port 3180; container healthy.
 
-Image: `sha256:a9481d5a2f36a9026c4b3078f6f822a588843d85e8d6f1fd79192fb05b12cc25`.
+Image: `sha256:560f6db0bc4b347664f08f034d31552d3adb35e019f17777d22a993def41c5c8`.
 
 Inspected deployed screenshots: `artifacts/phase3-task-mobile.png`, `artifacts/phase3-project-mobile.png`, `artifacts/phase3-project-desktop.png`. Dialogs have bounded vertical scrolling, no horizontal overflow, and preserve paper/ink/olive styles. Form actions may require scrolling on phones.
 
@@ -24,6 +24,8 @@ Inspected deployed screenshots: `artifacts/phase3-task-mobile.png`, `artifacts/p
 - TanStack Query collection retained absent optional keys after API project archival. Explicit optional-property normalization in task query results ensures project removal and cleared scheduling propagate.
 - Root-level data subscriptions attempted browser MSW initialization during prerender. Hydration-gated active provider fixes that.
 - Preserved PATCH on direct task-completion updates to retain the established API contract and A assertion.
+
+- Corrected ProseMirror whitespace styling (`pre-wrap`) after a console warning surfaced at dev-server shutdown; final deployed Browser B rerun passes.
 
 ## Remaining scope
 
