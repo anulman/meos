@@ -2,15 +2,32 @@ import { createCollection } from '@tanstack/react-db'
 import { queryCollectionOptions } from '@tanstack/query-db-collection'
 import { QueryClient } from '@tanstack/react-query'
 import { getConfig } from './config'
-import type { Task } from './contracts'
+import type { Task, Project } from './contracts'
 export const queryClient=new QueryClient({defaultOptions:{queries:{retry:false,refetchOnWindowFocus:false}}})
 async function request(path:string, init?:RequestInit) {
+ const {ready}=await import('./mock'); await ready
  const response=await fetch(getConfig().apiBase+path,init)
- if(!response.ok) throw new Error(`Demo request failed (${response.status})`)
+ if(!response.ok) { const data=await response.json().catch(()=>({})); throw new Error(data.error || `Demo request failed (${response.status})`) }
  return response.json()
 }
+const json=(method:string,body:unknown):RequestInit=>({method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
 export const tasksCollection=createCollection(queryCollectionOptions<Task>({
  id:'tasks',queryKey:['tasks'],queryClient,getKey:task=>task.id,
- queryFn:async()=>{ const {ready}=await import('./mock'); await ready; return request('/tasks') as Promise<Task[]> },
- onUpdate:async({transaction})=>{for(const mutation of transaction.mutations) await request(`/tasks/${mutation.original.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({completed:mutation.modified.completed})})},
+ queryFn:async()=>((await request('/tasks')) as Task[]).map(task=>({...task,projectId:task.projectId,schedule:task.schedule,durationMinutes:task.durationMinutes})),
+ onUpdate:async({transaction})=>{for(const mutation of transaction.mutations) await request(`/tasks/${mutation.original.id}`,json('PATCH',mutation.modified))},
 }))
+export const projectsCollection=createCollection(queryCollectionOptions<Project>({
+ id:'projects',queryKey:['projects'],queryClient,getKey:project=>project.id,
+ queryFn:()=>request('/projects') as Promise<Project[]>,
+ onUpdate:async({transaction})=>{for(const mutation of transaction.mutations) await request(`/projects/${mutation.original.id}`,json('PUT',mutation.modified))},
+}))
+/** Both UI and future agent clients share these resource operations. */
+export async function saveTask(task:Task,isNew=false) {
+ const saved=await request(isNew?'/tasks':`/tasks/${task.id}`,json(isNew?'POST':'PUT',task)) as Task
+ await queryClient.invalidateQueries({queryKey:['tasks']}); return saved
+}
+export async function saveProject(project:Project,isNew=false) {
+ const saved=await request(isNew?'/projects':`/projects/${project.id}`,json(isNew?'POST':'PUT',project)) as Project
+ await queryClient.invalidateQueries({queryKey:['projects']})
+ await queryClient.invalidateQueries({queryKey:['tasks']}); return saved
+}
