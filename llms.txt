@@ -4,7 +4,7 @@
 
 ## Operating skills
 
-- [Install and bootstrap](public/skills/meos-bootstrap/SKILL.md): Install a verified persistent MeOS release, then configure agent schedules, authority and event long-polling; current repository Compose is demo-only, not a full installation package.
+- [Install and bootstrap](public/skills/meos-bootstrap/SKILL.md): Install a post-cutover production release with Docker Compose or Helm, verify persistent application access, then configure agent schedules, authority and event long-polling.
 
 - [Shared operating contract](public/skills/contract.md): Required authority, tool discovery, progress, scheduling and delivery rules.
 - [Weekly review + 14-day look-ahead](public/skills/meos-weekly-review/SKILL.md): Review priorities and capacity across the next 14 days when the user requests weekly planning or a configured weekly review fires; composes board decisions and schedules only within existing authority.

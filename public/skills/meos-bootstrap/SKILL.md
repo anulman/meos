@@ -7,18 +7,18 @@ description: Install MeOS for a new user from a verified supported release, prov
 
 Use when a user's agent should install MeOS from scratch or finish configuring an existing installation, including its operating skills. Reading this document alone authorizes no installation or side effects. Use supported host tools within existing authority; do not add a MeOS callback framework or invent deployment or MCP operations.
 
-## Current packaging boundary — read first
+## Installation target
 
-**This repository's current `compose.yml` installs a demo preview, not a persistent MeOS application.** It builds an nginx image serving prebuilt `dist/client`, binds `127.0.0.1:3180:80`, and forces `MEOS_DEMO: 'true'`. Demo data lives in page memory and resets on reload. It provides no persistent backend, accounts, or real integrations. A healthy nginx response or successful `docker compose up` is not a completed MeOS installation.
+This guide targets the **post-production-cutover MeOS release**: install the persistent application first, then configure its agent. Prefer Docker Compose for a single host; use Helm when the user already operates a compatible Kubernetes cluster or explicitly chooses one. Do not introduce a cluster merely to run MeOS. Use an existing verified deployment when available.
 
-The documented preview build uses Node 24, pnpm 10.30.3, `pnpm install --frozen-lockfile`, `pnpm run licenses`, `pnpm build`, and `pnpm typecheck`; `pnpm preview:deploy` deploys that preview after license qualification. `MEOS_TIMEZONE` and `MEOS_API_BASE` are public configuration, not secret storage. Changing the API path does not install a backend; production API mode is rejected in this preview phase.
+All `REPLACE_WITH_...` values below are explicit placeholders for artifacts and settings obtained from the selected release's maintained installation manifest. They are not shipped artifact names, chart coordinates, configuration keys, or endpoints. Resolve them before executing commands; equivalent supported host tools are fine.
 
-**A verified full persistent installation package is not supplied by this Compose file.** Find a maintained full-release installation manifest and its supported artifacts before attempting a real install. Do not promote an unreleased integration branch or assemble speculative backend services into a pretend supported release. If no such release is available, report the missing persistent deployment package as the blocker. Offer the clearly labeled disposable preview only if useful to the user; do not substitute it silently or claim soup-to-nuts installation succeeded.
+> Maintainer note: this guide assumes production cutover is complete; it is not evidence of current deployment. At authoring, this branch's Compose file remains a demo-only nginx preview, and production Compose/Helm coordinates have not been supplied here. Release maintainers must publish verified persistent deployment artifacts and their configuration/compatibility contract. Do not select the preview as the production artifact.
 
 ## Stage 1 — Discover the host and select a release
 
 1. Determine whether this is a fresh install or an existing MeOS instance. Inspect existing services, versions, data ownership, and configuration before changing anything; never initialize over existing data. Discover available host-management tools and the host OS, architecture, resources, storage, network constraints, and Docker/Compose availability. A local shell is optional if supported remote/host tools provide the required operations.
-2. Select a pinned, verified, supported release and read its maintained installation manifest, prerequisite matrix, deployment instructions, migration and recovery instructions. Verify provenance/checksums using the release's documented mechanism. Confirm that the artifacts include a persistent backend, its data services, authentication, and the web application—not just preview assets. Record exactly what is available and any missing component.
+2. Select a pinned, verified, supported release and read its maintained installation manifest, prerequisite matrix, deployment instructions, migration and recovery instructions. Verify provenance/checksums using the release's documented mechanism. Resolve the production Compose artifact or Helm chart, image digests, application/configuration versions, supported Docker/Compose or Kubernetes/Helm versions, required data services, and resource/storage requirements. Confirm the bundle includes the persistent backend, authentication, and web application. Record exactly what is available and any missing component.
 3. Reuse known preferences and ask only for materially missing choices: instance/data owner, local timezone, desired domain, private versus public access, storage location, and necessary installation authority. Do not assume a friend's host should become publicly accessible. Check disk capacity and ownership and resolve conflicting ports or an existing deployment before proceeding.
 
 ## Stage 2 — Configure and install the application
@@ -30,6 +30,62 @@ Prepare a concrete plan using the selected release's actual schema: pinned artif
 - Configure persistent storage and permissions before starting services. Identify which data survives container/service replacement. Never use reset, volume deletion, or database reinitialization as an installation shortcut. Establish the release's supported recovery procedure before migrating an existing instance.
 - Bind services narrowly by default. Configure private networking or a reverse proxy and TLS only as required by the selected exposure and release instructions. Keep internal backend/data ports private. Validate the actual authentication/bootstrap-owner procedure; do not expose an unauthenticated setup flow publicly.
 - Build or fetch verified artifacts, run only documented initialization/migrations, and start the actual supported stack. Capture service/resource IDs and failures without leaking secrets. Stop and report missing packaging or unsupported prerequisites rather than ad-lib production infrastructure.
+
+### Docker Compose — single host
+
+Verify Docker Engine and the Compose plugin are supported by the release (`docker version`, `docker compose version`) and the daemon is reachable. Check host architecture, free disk/memory, persistent mount ownership, and the intended port/proxy setup. Download and verify the pinned production release bundle through its documented distribution channel; keep a versioned copy for recovery. If the release requires building, follow its maintained build procedure rather than the preview build.
+
+Populate the release's configuration template using its actual keys, secret-file references, storage paths/volume definitions, image pins, auth owner setup, and external URL. Store any environment file privately (mode `0600` on POSIX, equivalent restrictive ACL elsewhere); prefer release-supported secret references for credentials. Public client configuration must contain no secrets. Use a stable Compose project name, and record which named volumes or bind mounts contain persistent data.
+
+Command templates after substituting verified paths and chosen project name:
+
+```sh
+MEOS_COMPOSE_FILE='REPLACE_WITH_VERIFIED_PRODUCTION_COMPOSE_PATH'
+MEOS_PRIVATE_ENV='REPLACE_WITH_PRIVATE_RELEASE_ENV_PATH'
+MEOS_COMPOSE_PROJECT='REPLACE_WITH_STABLE_PROJECT_NAME'
+
+docker compose --project-name "$MEOS_COMPOSE_PROJECT" --env-file "$MEOS_PRIVATE_ENV" -f "$MEOS_COMPOSE_FILE" config --quiet
+docker compose --project-name "$MEOS_COMPOSE_PROJECT" --env-file "$MEOS_PRIVATE_ENV" -f "$MEOS_COMPOSE_FILE" pull
+docker compose --project-name "$MEOS_COMPOSE_PROJECT" --env-file "$MEOS_PRIVATE_ENV" -f "$MEOS_COMPOSE_FILE" up -d
+docker compose --project-name "$MEOS_COMPOSE_PROJECT" --env-file "$MEOS_PRIVATE_ENV" -f "$MEOS_COMPOSE_FILE" ps
+```
+
+Use `pull` when the release supplies images; use the documented build step instead when it supplies a supported source-build artifact. Apply any required release-specific initialization/migration at the documented point, not an invented command. Validate without printing a fully interpolated configuration. Configure the actual proxy/TLS or private access path; keep data-service ports internal. Inspect release-defined health/readiness and perform Stage 3 even if all containers are running.
+
+For diagnosis, request bounded logs from the actual failing service and redact them before sharing:
+
+```sh
+MEOS_COMPOSE_SERVICE='REPLACE_WITH_ACTUAL_SERVICE_NAME'
+docker compose --project-name "$MEOS_COMPOSE_PROJECT" --env-file "$MEOS_PRIVATE_ENV" -f "$MEOS_COMPOSE_FILE" logs --tail 100 "$MEOS_COMPOSE_SERVICE"
+```
+
+For an authorized controlled restart, use the same project/file/env selection with `restart` and the verified service name; do not restart every data service casually. For upgrades, verify the new release, preserve the prior bundle and private configuration securely, take the release-required recovery checkpoint, review migration compatibility, then repeat validation and the documented upgrade procedure. A prior image is not necessarily compatible with a migrated database: rollback only through the supported recovery path. Pause with the same selection and `stop` when requested. Uninstall only after identifying owned resources and retention requirements; never include `down --volumes`, volume pruning, or data deletion by default.
+
+### Helm — existing Kubernetes cluster
+
+Verify the selected cluster and namespace, Kubernetes/Helm compatibility, identity/RBAC, available resources, storage class and volume retention, ingress/private-network route, and TLS/certificate mechanism. Confirm the current context before any mutation; a familiar namespace name is not proof of cluster identity. Do not install cluster-wide controllers or broaden RBAC without authority.
+
+Discover the release's real chart coordinates and pinned chart version. Verify provenance/digests using its supported mechanism. Read that version's values schema/defaults and migration instructions before preparing overrides. Use actual chart keys for persistent storage, image pins, resource requests/limits, secret references, auth, and routing; do not invent `values.yaml` fields. Prefer references to pre-created secrets or a supported secret manager. Treat private values files and Helm release metadata as potentially sensitive; do not pass passwords via `--set` or dump values into chat.
+
+```sh
+MEOS_KUBE_CONTEXT='REPLACE_WITH_VERIFIED_CLUSTER_CONTEXT'
+MEOS_HELM_RELEASE='REPLACE_WITH_STABLE_RELEASE_NAME'
+MEOS_NAMESPACE='REPLACE_WITH_TARGET_NAMESPACE'
+MEOS_CHART='REPLACE_WITH_RELEASE_SUPPLIED_CHART_COORDINATE'
+MEOS_CHART_VERSION='REPLACE_WITH_PINNED_CHART_VERSION'
+MEOS_PRIVATE_VALUES='REPLACE_WITH_PRIVATE_VALIDATED_VALUES_PATH'
+MEOS_ROLLOUT_TIMEOUT='REPLACE_WITH_RELEASE_APPROPRIATE_DURATION'
+
+kubectl config current-context
+kubectl --context "$MEOS_KUBE_CONTEXT" cluster-info
+helm show values "$MEOS_CHART" --version "$MEOS_CHART_VERSION"
+helm upgrade --install "$MEOS_HELM_RELEASE" "$MEOS_CHART" --version "$MEOS_CHART_VERSION" --kube-context "$MEOS_KUBE_CONTEXT" --namespace "$MEOS_NAMESPACE" --create-namespace --values "$MEOS_PRIVATE_VALUES" --wait --timeout "$MEOS_ROLLOUT_TIMEOUT"
+helm status "$MEOS_HELM_RELEASE" --kube-context "$MEOS_KUBE_CONTEXT" --namespace "$MEOS_NAMESPACE"
+```
+
+Chart repository registration or OCI authentication, if needed, must follow the actual release instructions with credentials entered through supported private tooling. Validate the private values against the chart schema and its documented checks before installation. Avoid sharing rendered manifests or dry-run output containing Secrets. Do not use automatic rollback flags blindly when migrations may be irreversible. `--wait` confirms Helm's supported readiness checks, not persistence, successful login, or every application dependency; run Stage 3 and any release-defined migration-job checks separately.
+
+Inspect only actual release-owned resources using the manifest's resource names/labels; avoid broad secret/configuration dumps. An authorized restart can use `kubectl rollout restart` and `kubectl rollout status` for the actual supported workload type/name, never an invented deployment name or indiscriminate data-service restart. Record release revision and previous artifact/version. Before upgrading, verify storage recovery and migration compatibility; review the new chart/schema and apply the validated values with the pinned new chart. `helm rollback` does not undo database migrations or restore external data: use it only when the release's compatibility rules permit it. Before uninstalling, inspect PVC retention, chart deletion hooks and external resource ownership; preserve data by default and do not delete the namespace as a shortcut.
 
 ## Stage 3 — Prove persistent MeOS works
 
