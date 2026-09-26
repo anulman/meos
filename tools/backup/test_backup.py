@@ -11,6 +11,8 @@ AGE=os.environ.get('MEOS_TEST_AGE','/tmp/meos-age-qualify/age/age')
 
 class BackupTests(unittest.TestCase):
     def setUp(self):
+        self.space=patch.object(b.shutil, 'disk_usage', return_value=shutil._ntuple_diskusage(100 * 1024**3, 0, 100 * 1024**3))
+        self.space.start(); self.addCleanup(self.space.stop)
         self.temp=tempfile.TemporaryDirectory(prefix='meos-backup-test-')
         self.root=Path(self.temp.name);self.addCleanup(self.temp.cleanup)
         self.c={'schema':1,'bucket':'synthetic-bucket','enabled':True,'endpoint':'https://invalid.example','prefix':'tests/meos','region':'us-east-1',
@@ -38,6 +40,40 @@ class BackupTests(unittest.TestCase):
         require=Path(AGE).is_file();self.assertTrue(require,'MEOS_TEST_AGE must point to admitted binary')
         subprocess.run([str(Path(AGE).with_name('age-keygen')),'-o',str(self.root/'identity')],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
         self.c['recipient']=subprocess.check_output([str(Path(AGE).with_name('age-keygen')),'-y',str(self.root/'identity')],text=True).strip()
+    def test_capacity_denial_before_quiesce_or_copy(self):
+        self.space.stop()
+        with patch.object(b.shutil,'disk_usage',return_value=shutil._ntuple_diskusage(1024,0,1024)), patch.object(b,'ancestors'), patch.object(b,'quiesce') as stop, patch.object(b,'stage') as copy:
+            with self.assertRaisesRegex(RuntimeError,'reserve'): b.backup(self.c,self.root,'test')
+            stop.assert_not_called(); copy.assert_not_called()
+    def test_oversize_denial_before_quiesce_or_copy(self):
+        self.c['maxArchiveBytes']=1
+        with patch.object(b,'ancestors'), patch.object(b,'quiesce') as stop, patch.object(b,'stage') as copy:
+            with self.assertRaisesRegex(RuntimeError,'configured limit'): b.backup(self.c,self.root,'test')
+            stop.assert_not_called(); copy.assert_not_called()
+    def test_growth_copy_is_bounded(self):
+        self.c['maxArchiveBytes']=65536
+        source=self.root/'growing';source.write_bytes(b'x'*65537)
+        budget=b.Budget(self.c)
+        with self.assertRaisesRegex(RuntimeError,'configured limit'):budget.copy(source,self.root/'bounded')
+        self.assertEqual((self.root/'bounded').stat().st_size,65536)
+    def test_native_file_ceiling_restored_after_failure(self):
+        old=b.resource.getrlimit(b.resource.RLIMIT_FSIZE)
+        with self.assertRaises(OSError):
+            with b.file_ceiling(16): (self.root/'bounded-native').write_bytes(b'x'*100)
+        self.assertLessEqual((self.root/'bounded-native').stat().st_size,16)
+        self.assertEqual(b.resource.getrlimit(b.resource.RLIMIT_FSIZE),old)
+    def test_capacity_aggregates_same_filesystem(self):
+        reserve=5*1024**3
+        with patch.object(b.shutil,'disk_usage',return_value=shutil._ntuple_diskusage(reserve+100,0,reserve+100)):
+            b.capacity(self.c,[(self.root,50),(self.root/'new',50)])
+            with self.assertRaisesRegex(RuntimeError,'reserve'):b.capacity(self.c,[(self.root,51),(self.root/'new',50)])
+    def test_restore_capacity_denied_before_network_or_target(self):
+        with patch.object(b,'ancestors'), patch.object(b.shutil,'disk_usage',return_value=shutil._ntuple_diskusage(1,0,1)),patch.object(b,'S3') as remote:
+            with self.assertRaisesRegex(RuntimeError,'reserve'):b.restore(self.c,'tests/meos/no',self.root/'restore-denied')
+            remote.assert_not_called();self.assertFalse((self.root/'restore-denied').exists())
+    def test_reserve_cannot_be_lowered(self):
+        self.c['reserveBytes']=5*1024**3-1;self.write_config()
+        with self.assertRaisesRegex(RuntimeError,'at least 5 GiB'):b.config(self.config)
     def test_absent_bucket_no_side_effects(self):
         for value in [{},{'credentialsFile':'/never/read','bucket':''},{'bucket':'yes','enabled':False}]:
             self.config.write_text(json.dumps(value))

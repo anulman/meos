@@ -5,7 +5,9 @@
 set -eu
 AGE_DIR=$(realpath "$1")
 SOURCE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-STAGE_DIR=$(mktemp -d /tmp/meos-backup-proof.XXXXXX)
+STAGE_PARENT=${MEOS_TEST_STAGE_PARENT:-"$SOURCE_DIR/../.."}
+/usr/local/bin/build-space-check --path "$STAGE_PARENT" --required-mib 40
+STAGE_DIR=$(mktemp -d "$STAGE_PARENT/.meos-backup-proof.XXXXXX")
 trap 'rm -rf "$STAGE_DIR"' EXIT HUP INT TERM
 cp -R "$SOURCE_DIR" "$STAGE_DIR/code"
 cp -R "$AGE_DIR" "$STAGE_DIR/age"

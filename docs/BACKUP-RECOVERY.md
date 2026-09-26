@@ -90,6 +90,18 @@ redacted error; review private configuration/recovery state, not secret log dump
 
 ## Consistency, scheduling and interruptions
 
+Before stopping writers, the runner scans every source and rejects a conservative
+source/metadata footprint above `maxArchiveBytes`. It admits six archive-limit
+allocations for staging, tar, encryption, download, decryption and restored data.
+`reserveBytes` defaults to 5 GiB and cannot be lowered. Space checks aggregate
+allocations on each destination filesystem, including a separate restore target,
+and recheck before allocation. Ordinary copies and extraction have running byte
+budgets; native SQLite, tar and age output have kernel file-size ceilings. Growth
+therefore fails boundedly and still follows writer-resume cleanup. No old backups,
+evidence or interrupted runs are deleted for capacity relief. Checks are admission
+guards, not filesystem quotas against unrelated concurrent writers; installation
+must account for those writers and available memory.
+
 The runner locks one work directory, records previously active units durably, then
 stops web sockets/services, Calendar sockets/services and the native backend. It
 checks Docker has no container using the verified native volume. SQLite uses its
@@ -187,7 +199,11 @@ production login/restart drill; those remain installation qualification gates.
 Run the isolated suite: `tools/backup/test-isolated.sh /path/to/admitted/age-directory`.
 The launcher stages only code and public binaries, clears the environment, hides
 home/production paths and Docker, and creates a network namespace. It does not
-mount production data or credentials. Tests assert those denial conditions.
+mount production data or credentials. Tests assert those denial conditions. The
+launcher requires the host `build-space-check` and stages under the source checkout
+(or `MEOS_TEST_STAGE_PARENT`), after a 40 MiB allocation plus 5 GiB reserve check.
+Synthetic tests mock free space for ordinary cases; dedicated regressions inject
+low space, source growth and shared-filesystem allocations to prove denial.
 
 Archive integrity is not a guarantee against an attacker who can replace both
 objects and receipts. Keep immutable receipt hashes outside the bucket, consider

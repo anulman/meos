@@ -3,7 +3,7 @@
 """Optional MeOS host recovery tooling. Missing bucket means no side effects."""
 import argparse, contextlib, datetime as dt, fcntl, hashlib, hmac, json, os
 from pathlib import Path
-import re, shutil, signal, sqlite3, stat, subprocess, sys, tarfile, tempfile
+import re, resource, shutil, signal, sqlite3, stat, subprocess, sys, tarfile, tempfile
 import urllib.parse, urllib.request, uuid
 
 AGE_SHA256 = 'eb7dd1b518f0a307c99cd97782623c5321da049154b04acd2d98d21aa7bc9b2c'
@@ -70,8 +70,64 @@ def config(path):
         require(isinstance(c.get(key, default), bool), 'invalid policy boolean')
     require(type(c.get('cadenceSeconds', 86400)) is int and c.get('cadenceSeconds', 86400) > 0, 'invalid cadence')
     require(type(c.get('maxArchiveBytes', 268435456)) is int and 0 < c.get('maxArchiveBytes', 268435456) <= 5368709120, 'invalid archive limit')
+    require(type(c.get('reserveBytes', 5 * 1024**3)) is int and c.get('reserveBytes', 5 * 1024**3) >= 5 * 1024**3, 'reserve must be at least 5 GiB')
     require(type(c.get('keepLast', 0)) is int and c.get('keepLast', 0) >= 0, 'invalid retention')
     return c, None
+
+def limit(c): return c.get('maxArchiveBytes', 268435456)
+
+def capacity(c, allocations):
+    """Aggregate concurrent allocations by device, including separate restore targets.
+
+    This is an admission/recheck, not a quota against unrelated concurrent writers.
+    Never reclaim old runs, receipts or backups to make admission pass.
+    """
+    devices = {}
+    for path, size in allocations:
+        path = Path(path)
+        while not path.exists(): path = path.parent
+        info = path.stat(); free = shutil.disk_usage(path).free
+        previous = devices.get(info.st_dev, (free, 0))
+        devices[info.st_dev] = (min(free, previous[0]), previous[1] + size)
+    for free, size in devices.values():
+        require(free >= size + c.get('reserveBytes', 5 * 1024**3), 'insufficient filesystem reserve')
+
+@contextlib.contextmanager
+def file_ceiling(size):
+    # Also bounds native SQLite/age writes, which cannot use our Python writer.
+    previous = resource.getrlimit(resource.RLIMIT_FSIZE)
+    ceiling = size if previous[0] == resource.RLIM_INFINITY else min(size, previous[0])
+    resource.setrlimit(resource.RLIMIT_FSIZE, (ceiling, previous[1]))
+    try: yield
+    finally: resource.setrlimit(resource.RLIMIT_FSIZE, previous)
+
+class Budget:
+    def __init__(self,c): self.c=c; self.used=0
+    def charge(self, size):
+        require(size >= 0 and self.used + size <= limit(self.c), 'source/archive exceeds configured limit')
+        self.used += size
+    def copy(self, source, target):
+        with source.open('rb') as src, target.open('xb') as dst:
+            while chunk := src.read(65536):
+                self.charge(len(chunk)); capacity(self.c, [(target, len(chunk))]); dst.write(chunk)
+
+def source_preflight(c):
+    budget = Budget(c)
+    for label, root in c['sources'].items():
+        root = Path(root); ancestors(root)
+        require(root.is_dir() and not root.is_symlink(), 'source missing or symlinked')
+        paths = [root/u for u in UNITS] if label == 'units' else root.rglob('*')
+        for path in paths:
+            info = path.lstat()
+            require(not stat.S_ISLNK(info.st_mode), 'symlink in source')
+            if stat.S_ISSOCK(info.st_mode) and label == 'native' and path.name in ['server.sock','admin.sock']: continue
+            require(stat.S_ISDIR(info.st_mode) or (stat.S_ISREG(info.st_mode) and info.st_nlink == 1), 'special or hardlinked source')
+            # Budget directory blocks, tar/PAX headers, manifest and SQLite schema
+            # metadata conservatively, including WAL/SHM bytes even if not archived.
+            budget.charge(65536 + len(str(path).encode()) * 4)
+            if stat.S_ISREG(info.st_mode): budget.charge(info.st_size * 2)
+    capacity(c, [(Path(c['workDirectory']), 6 * limit(c))] + [(p,0) for p in c['sources'].values()])
+    return budget.used
 
 def run(command):
     p = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env={'PATH':'/usr/bin:/bin'}, timeout=600)
@@ -133,6 +189,7 @@ def snapshot(source, target):
     return {'schema':schema,'userVersion':version}
 
 def stage(c, target):
+    budget = Budget(c)
     m = {'schema':1,'createdAt':now(),'instanceId':c['instanceId'],'files':{},'databases':{},'recoveryScope':sorted(REQUIRED),'applicationRecoveryVerified':False}
     for secret in [c['identityFile'], c['credentialsFile']]:
         require(not any(Path(secret).is_relative_to(Path(source)) for source in c['sources'].values()), 'backup key/credentials overlap archived roots')
@@ -145,6 +202,8 @@ def stage(c, target):
         paths = [source/u for u in UNITS] if label == 'units' else sorted(source.rglob('*'))
         for p in paths:
             rel = Path(label)/p.relative_to(source); dest = target/rel; info = p.lstat()
+            budget.charge(65536 + len(str(rel).encode()) * 4)
+            capacity(c, [(target, 65536)])
             require(not stat.S_ISLNK(info.st_mode), 'symlink in source')
             if stat.S_ISDIR(info.st_mode):
                 dest.mkdir(parents=True, exist_ok=True, mode=0o700); continue
@@ -156,8 +215,12 @@ def stage(c, target):
                 continue
             dest.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
             with p.open('rb') as f: sqlite = f.read(16) == b'SQLite format 3\x00'
-            if sqlite: m['databases'][str(rel)] = snapshot(p,dest)
-            else: shutil.copyfile(p,dest); os.chmod(dest,0o600)
+            if sqlite:
+                remaining = limit(c) - budget.used
+                capacity(c, [(target, remaining * 2)])
+                with file_ceiling(remaining): m['databases'][str(rel)] = snapshot(p,dest)
+                budget.charge(dest.stat().st_size)
+            else: budget.copy(p,dest); os.chmod(dest,0o600)
             m['files'][str(rel)] = {'sha256':digest(dest),'bytes':dest.stat().st_size,'mode':stat.S_IMODE(info.st_mode),'uid':info.st_uid,'gid':info.st_gid}
     require('native/data/main.db' in m['databases'], 'native database missing')
     require('calendar/private/calendar.sqlite' in m['databases'], 'Calendar database missing')
@@ -169,6 +232,9 @@ def stage(c, target):
     require(all('units/'+u in m['files'] for u in UNITS), 'service units missing')
     with contextlib.closing(sqlite3.connect((target/'native/data/main.db').as_uri()+'?mode=ro',uri=True)) as db:
         require(db.execute('SELECT instance_id FROM _meos_instance').fetchall() == [(c['instanceId'],)], 'wrong instance')
+    encoded = json.dumps(m, sort_keys=True, indent=2).encode()
+    budget.charge(len(encoded) + 1)
+    capacity(c, [(target, len(encoded) + 4096)])
     atomic(target/'manifest.json',m)
     return json.loads((target/'manifest.json').read_text())
 
@@ -178,7 +244,8 @@ def age(c, source, target, decrypt=False):
     if decrypt:
         private(c['identityFile']); args += ['--decrypt','--identity',c['identityFile']]
     else: args += ['--encrypt','--recipient',c['recipient']]
-    run(args+['--output',str(target),str(source)])
+    capacity(c, [(target, limit(c))])
+    with file_ceiling(limit(c)): run(args+['--output',str(target),str(source)])
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs): raise RuntimeError('S3 redirects forbidden')
@@ -226,16 +293,23 @@ def verify_tree(root):
     return m
 
 def unpack(c, archive, target, temp):
-    clear = temp/'restore.tar'; age(c,archive,clear,decrypt=True); target.mkdir(mode=0o700)
+    capacity(c, [(temp, limit(c)), (target, limit(c))])
+    clear = temp/'restore.tar'; age(c,archive,clear,decrypt=True)
+    require(clear.stat().st_size <= limit(c), 'decrypted archive exceeds limit')
+    capacity(c, [(target, limit(c))]); target.mkdir(mode=0o700)
+    budget = Budget(c)
     with tarfile.open(clear) as tar:
         members = tar.getmembers(); names = [m.name for m in members]
+        require(sum(m.size + 4096 for m in members) <= limit(c), 'restore allocation exceeds limit')
         require(len(names) == len(set(names)), 'duplicate archive paths')
         for m in members:
             require(not Path(m.name).is_absolute() and '..' not in Path(m.name).parts and (m.isfile() or m.isdir()),'unsafe archive member')
+            budget.charge(4096); capacity(c, [(target, m.size + 4096)])
             if m.isdir(): (target/m.name).mkdir(parents=True,exist_ok=True,mode=0o700)
             else:
                 dest = target/m.name; dest.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
-                with tar.extractfile(m) as src, dest.open('xb') as dst: shutil.copyfileobj(src,dst)
+                with tar.extractfile(m) as src, dest.open('xb') as dst:
+                    while chunk := src.read(65536): budget.charge(len(chunk)); capacity(c, [(target,len(chunk))]); dst.write(chunk)
                 os.chmod(dest,0o600)
     return verify_tree(target)
 
@@ -243,12 +317,15 @@ def backup(c,root,reason):
     require(not c.get('paused',False),'backup policy paused')
     run_id = dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid.uuid4().hex
     key = c['prefix'].rstrip('/')+'/'+run_id+'.tar.age'
+    source_preflight(c) # Admission before secrets, copying or stopping writers.
     require(digest(c['age']) == AGE_SHA256,'unadmitted age executable'); private(c['identityFile']); remote = S3(c)
     with tempfile.TemporaryDirectory(prefix='run-',dir=root) as directory:
         temp = Path(directory); tree = temp/'tree'; tree.mkdir(mode=0o700)
+        source_preflight(c) # Recheck immediately before quiescence/allocation.
         with quiesce(root,c): manifest = stage(c,tree)
         clear, encrypted = temp/'bundle.tar', temp/'bundle.tar.age'
-        with tarfile.open(clear,'w') as tar:
+        capacity(c, [(temp, 5 * limit(c))])
+        with file_ceiling(limit(c)), tarfile.open(clear,'w') as tar:
             for p in sorted(tree.rglob('*')):
                 if p.is_file(): tar.add(p,arcname=str(p.relative_to(tree)),recursive=False)
         require(clear.stat().st_size <= c.get('maxArchiveBytes', 268435456), 'archive exceeds configured limit')
@@ -256,7 +333,7 @@ def backup(c,root,reason):
         require(encrypted.stat().st_size <= c.get('maxArchiveBytes', 268435456), 'encrypted archive exceeds configured limit')
         checksum = digest(encrypted)
         remote.request('PUT',key,encrypted.read_bytes())
-        fetched = temp/'download.tar.age'; fetched.write_bytes(remote.request('GET',key))
+        fetched = temp/'download.tar.age'; capacity(c, [(temp, 3 * limit(c))]); fetched.write_bytes(remote.request('GET',key))
         require(digest(fetched) == checksum,'remote checksum mismatch')
         receipt = {'schema':1,'snapshot':key,'instanceId':c['instanceId'],'sha256':checksum,'backupSucceededAt':now(),
                    'snapshotAt':manifest['createdAt'],'reason':reason,'dataRestoreSucceededAt':None,'applicationRecoveryVerified':False}
@@ -280,11 +357,12 @@ def restore(c,key,output):
     target = Path(output).absolute(); ancestors(target); require(not target.exists() and not target.is_symlink(),'restore target exists')
     for p in [*c['sources'].values(),c['workDirectory']]:
         require(not target.is_relative_to(Path(p)) and not Path(p).is_relative_to(target),'restore target overlaps live data')
+    capacity(c, [(tempfile.gettempdir(), 2 * limit(c)), (target, limit(c))])
     remote = S3(c)
     with tempfile.TemporaryDirectory(prefix='meos-restore-') as directory:
         temp = Path(directory); receipt = json.loads(remote.request('GET',key+'.receipt.json'))
         require(receipt['snapshot'] == key and receipt['instanceId'] == c['instanceId'],'wrong snapshot identity')
-        archive = temp/'download.tar.age'; archive.write_bytes(remote.request('GET',key))
+        archive = temp/'download.tar.age'; capacity(c, [(temp, 2 * limit(c)), (target, limit(c))]); archive.write_bytes(remote.request('GET',key))
         require(digest(archive) == receipt['sha256'],'remote checksum mismatch')
         manifest = unpack(c,archive,target,temp); require(manifest['instanceId'] == c['instanceId'],'wrong restored identity')
         return {'status':'isolated-data-restore-verified','target':str(target),'at':now(),'applicationRecoveryVerified':False}

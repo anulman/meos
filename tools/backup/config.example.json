@@ -31,5 +31,6 @@
     "calendarOAuth": "calendar/oauth.json",
     "calendarPlanner": "calendar/planner.json"
   },
-  "maxArchiveBytes": 268435456
+  "maxArchiveBytes": 268435456,
+  "reserveBytes": 5368709120
 }
