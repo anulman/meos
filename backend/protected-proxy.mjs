@@ -56,6 +56,7 @@ export function createProtectedApiProxy({origin,upstream}) {
     const headers=new Headers({'Cache-Control':'no-store'});copyCookies(headers,clearCookies())
     return new Response(null,{status:204,headers})
    }
+   if(path==='/api/meos/v1/mcp')return denied()
    if(path==='/api/meos/v1/bridge'||path.startsWith('/api/meos/v1/bridge/'))return denied()
    if(path.startsWith('/api/meos/v1/')&&['GET','POST','PUT','DELETE'].includes(request.method)) {
     const body=['POST','PUT'].includes(request.method)?await boundedText(request,150000):undefined

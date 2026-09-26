@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: Apache-2.0
+// Authoritative JSON Schema vocabulary, used by runtime, OpenAPI and MCP.
+import {DomainError} from './domain.mjs'
+const str=(maxLength=300)=>({type:'string',minLength:1,maxLength})
+const integer=(minimum=1,maximum=Number.MAX_SAFE_INTEGER)=>({type:'integer',minimum,maximum})
+const bool={type:'boolean'},ref=name=>({$ref:'#/components/schemas/'+name})
+const obj=(properties,required=Object.keys(properties),additionalProperties=false)=>({type:'object',properties,required,additionalProperties})
+const array=(items,maxItems=100)=>({type:'array',items,maxItems})
+const id={type:'string',pattern:'^[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'}
+const day={type:'string',format:'date',pattern:'^\\d{4}-\\d{2}-\\d{2}$'}
+const key={type:'string',minLength:8,maxLength:128,pattern:'^[A-Za-z0-9_-]+$'}
+export const schemas={
+ UUID:id,Date:day,Notes:{type:'object',properties:{type:{const:'doc'}},required:['type'],additionalProperties:true},
+ Schedule:obj({date:day,time:{type:'string',pattern:'^([01]\\d|2[0-3]):[0-5]\\d$'},timezone:str(100),offsetMinutes:integer(-840,840)},['date','time','timezone']),
+ PreferredTime:obj({text:str(500),status:{enum:['validated','context_required','ambiguous']},interpretation:obj({kind:{enum:['daypart','relative','clock','unresolved']},value:str(100)},['kind'])},['text']),
+ RecurrenceIntent:obj({text:str(500),status:{enum:['validated','ambiguous']},kind:{enum:['fixed','flexible','unresolved']},weekdays:array(integer(0,6),7),intervalWeeks:integer(1,2),anchorDate:day,frequency:integer(1,7),period:{const:'week'},preferredWeekdays:array(integer(0,6),7)},['text','anchorDate']),
+ Reference:obj({id,label:str(),url:str(2048)}),
+ Error:obj({error:obj({code:{enum:['validation','unauthenticated','expired','forbidden','conflict','not_found','unavailable','invalid_response']},message:str(2000),details:{type:'object',additionalProperties:true}},['code','message'])}),
+}
+const base={id,title:str(),notes:ref('Notes')},schedule=ref('Schedule'),pref=ref('PreferredTime')
+schemas.Task=obj({...base,completed:bool,priority:{enum:['none','low','medium','high']},projectId:id,schedule,durationMinutes:integer(1,1440),archived:bool,references:array(ref('Reference'),50),preferredTime:pref},['id','title','notes','completed','priority'])
+schemas.Routine=obj({...base,weekdays:{...array(integer(0,6),7),minItems:1,uniqueItems:true},time:{type:'string',pattern:'^([01]\\d|2[0-3]):[0-5]\\d$'},timezone:str(100),durationMinutes:integer(1,1440),archived:bool,preferredTime:pref,recurrenceIntent:ref('RecurrenceIntent')},['id','title','notes','weekdays','timezone'])
+schemas.Occurrence=obj({...base,routineId:id,date:day,completed:bool,schedule,durationMinutes:integer(1,1440),preferredTime:pref,skipped:bool,edited:bool,templateRevision:integer()},['id','routineId','date','completed'])
+schemas.Project=obj({...base,completed:bool,archived:bool,targetDate:day,references:array(ref('Reference'),50)},['id','title','notes'])
+schemas.Period=obj({start:day,end:day})
+schemas.Outcome=obj({id,taskId:id,period:ref('Period'),position:integer(0,10000)})
+schemas.PeriodNote=obj({id,kind:{enum:['day','week']},period:ref('Period'),notes:ref('Notes')})
+schemas.Preferences=obj({timezone:str(100),weekStartsOn:integer(0,1),weather:obj({enabled:bool,source:{enum:['latest','manual']},units:{enum:['celsius','fahrenheit']},manual:obj({latitude:{type:'number',minimum:-90,maximum:90},longitude:{type:'number',minimum:-180,maximum:180},label:str(200)},['latitude','longitude'])},['enabled','source','units'])})
+export const resourceSchemas={tasks:'Task',routines:'Routine',occurrences:'Occurrence',projects:'Project',outcomes:'Outcome',periodNotes:'PeriodNote'}
+const envelope=name=>obj({value:ref(name),revision:integer(),createdAt:{type:'string',format:'date-time'},updatedAt:{type:'string',format:'date-time'}})
+for(const name of [...Object.values(resourceSchemas),'Preferences'])schemas[name+'Envelope']=envelope(name)
+const changes=array(obj({kind:{enum:['tasks','occurrences']},id,expectedRevision:integer(),schedule:{anyOf:[schedule,{type:'null'}]}}),100)
+const genericEnvelope={anyOf:['Task','Occurrence'].map(x=>ref(x+'Envelope'))}
+const scheduleResult=obj({items:array(genericEnvelope),applied:bool})
+const op=(description,input,output,scope,write=false)=>({description,input,output,scope,write})
+export const operations={
+ list_agenda:op('List scheduled tasks and independent routine instances for a local date; excludes unscheduled, skipped and archived items.',obj({date:day,timezone:str(100)}),obj({items:array(obj({kind:{enum:['tasks','occurrences']},value:{anyOf:[ref('Task'),ref('Occurrence')]},revision:integer(),createdAt:str(),updatedAt:str(),scheduledAt:{type:'string',format:'date-time'}}),100000)}),'agenda:read'),
+ create_task:op('Create a task; schedule is optional. Repeated idempotency key returns its original result.',obj({value:ref('Task'),idempotencyKey:key}),ref('TaskEnvelope'),'tasks:write',true),
+ update_routine:op('Replace routine template with revision check; existing occurrences are unchanged.',obj({value:ref('Routine'),expectedRevision:integer(),idempotencyKey:key}),ref('RoutineEnvelope'),'routines:write',true),
+ move_occurrence:op('Edit or move one occurrence without changing its original slot, template or siblings.',obj({id,expectedRevision:integer(),idempotencyKey:key,schedule:{anyOf:[schedule,{type:'null'}]},title:str(),notes:ref('Notes'),durationMinutes:integer(1,1440),skipped:bool},['id','expectedRevision','idempotencyKey','schedule']),ref('OccurrenceEnvelope'),'occurrences:write',true),
+ complete_occurrence:op('Set one occurrence completion with revision and retry protection.',obj({id,expectedRevision:integer(),idempotencyKey:key,completed:bool}),ref('OccurrenceEnvelope'),'occurrences:write',true),
+ preview_schedule:op('Validate a proposed schedule atomically without writing. Preferences do not automatically assign times.',obj({changes}),scheduleResult,'schedule:read'),
+ apply_schedule:op('Atomically apply explicit scheduling decisions with per-record revisions and retry protection.',obj({changes,idempotencyKey:key}),scheduleResult,'schedule:write',true),
+ materialize_routine:op('Expand fixed recurrence from actual current local day through at most 14 days ahead. Existing slots preserved; flexible intents require scheduler decisions.',obj({routineId:id,through:day,ids:{type:'object',additionalProperties:id,maxProperties:15},idempotencyKey:key}),obj({items:array(ref('OccurrenceEnvelope'),15)}),'occurrences:write',true),
+ delete_task:op('Delete a task and retain a tombstone plus transactional sync deletion.',obj({id,expectedRevision:integer(),idempotencyKey:key}),obj({deleted:{const:true},id}),'tasks:write',true),
+ bind_external_event:op('Bind a stable remote calendar event identity without reassigning existing mappings.',obj({kind:{enum:['tasks','occurrences']},entityId:id,expectedRevision:integer(),provider:str(100),calendarId:str(500),eventId:str(500),remoteRevision:str(500),expectedRemoteRevision:str(500),idempotencyKey:key},['kind','entityId','expectedRevision','provider','calendarId','eventId','remoteRevision','idempotencyKey']),obj({bound:{const:true}}),'sync:write',true),
+}
+const reading={type:'object',properties:{at:{type:'string'},temperature:{type:'number'},rainProbability:{type:'number',minimum:0,maximum:100},windSpeed:{type:'number',minimum:0}},required:['at','temperature','rainProbability','windSpeed'],additionalProperties:false}
+schemas.Weather={type:'object',properties:{status:{enum:['fresh','stale','unavailable']},units:{enum:['celsius','fahrenheit']},timezone:{type:'string'},attribution:{type:'object',properties:{url:{const:'https://open-meteo.com/'},label:{type:'string'}},required:['url','label'],additionalProperties:false},hourly:{type:'array',items:reading,maxItems:200},daily:{type:'array',maxItems:7,items:{type:'object',properties:{date:ref('Date'),minimum:{type:'number'},maximum:{type:'number'},rainProbability:{type:'number'}},required:['date','minimum','maximum','rainProbability'],additionalProperties:false}},current:reading,location:{type:'object',properties:{latitude:{type:'number'},longitude:{type:'number'},label:{type:'string'},source:{enum:['bridge','manual']},observedAt:{type:'string',format:'date-time'}},required:['latitude','longitude','source','observedAt'],additionalProperties:false},fetchedAt:{type:'string',format:'date-time'},expiresAt:{type:'string',format:'date-time'}},required:['status','units','timezone','attribution','hourly','daily'],additionalProperties:false}
+/** Small fail-closed interpreter for the vocabulary emitted above, not a general JSON Schema engine. */
+export function validateSchema(schema,value,path='$'){
+ const fail=()=>{throw new DomainError('validation','Schema validation failed',{fields:{[path]:'Value does not match application schema'}})}
+ if(schema.$ref)return validateSchema(schemas[schema.$ref.split('/').at(-1)],value,path)
+ if(schema.anyOf){for(const sub of schema.anyOf)try{validateSchema(sub,value,path);return}catch(e){if(!(e instanceof DomainError))throw e}return fail()}
+ if('const' in schema&&value!==schema.const)fail()
+ if(schema.enum&&!schema.enum.includes(value))fail()
+ if(schema.type){const t=schema.type,valid=t==='null'?value===null:t==='array'?Array.isArray(value):t==='object'?value!==null&&typeof value==='object'&&!Array.isArray(value):t==='integer'?Number.isSafeInteger(value):t==='number'?typeof value==='number'&&Number.isFinite(value):typeof value===t;if(!valid)fail()}
+ if(typeof value==='string'){if(value.length<(schema.minLength??0)||value.length>(schema.maxLength??Infinity)||schema.pattern&&!new RegExp(schema.pattern).test(value))fail();if(schema.format==='date'){const d=new Date(value+'T00:00:00Z');if(!Number.isFinite(+d)||d.toISOString().slice(0,10)!==value)fail()}}
+ if(typeof value==='number'&&(value<(schema.minimum??-Infinity)||value>(schema.maximum??Infinity)))fail()
+ if(Array.isArray(value)){if(value.length<(schema.minItems??0)||value.length>(schema.maxItems??Infinity)||schema.uniqueItems&&new Set(value.map(x=>JSON.stringify(x))).size!==value.length)fail();value.forEach((v,i)=>validateSchema(schema.items,v,path+'['+i+']'))}
+ else if(value&&typeof value==='object'){for(const key of schema.required??[])if(!(key in value))fail();if(Object.keys(value).length>(schema.maxProperties??Infinity))fail();for(const [key,v]of Object.entries(value)){const child=schema.properties&&Object.hasOwn(schema.properties,key)?schema.properties[key]:undefined;if(child)validateSchema(child,v,path+'.'+key);else if(schema.additionalProperties===false)fail();else if(schema.additionalProperties&&typeof schema.additionalProperties==='object')validateSchema(schema.additionalProperties,v,path+'.'+key)}}
+}
+export function inlineSchema(schema){if(schema.$ref)return inlineSchema(schemas[schema.$ref.split('/').at(-1)]);if(Array.isArray(schema))return schema.map(inlineSchema);if(schema&&typeof schema==='object')return Object.fromEntries(Object.entries(schema).map(([k,v])=>[k,inlineSchema(v)]));return schema}

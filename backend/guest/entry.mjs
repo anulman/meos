@@ -7,6 +7,7 @@ import http from 'wasi:http/types@0.2.12'
 import outgoing from 'wasi:http/outgoing-handler@0.2.12'
 import {GuestHeaders,GuestResponse,Utf8Decoder,Utf8Encoder} from './platform.mjs'
 import {createDatabasePort,decodeHostContext,sessionResponse,quickJsTransactionClass} from '../trailbase-port.mjs'
+import {createMcpHandler} from '../mcp.mjs'
 import {createCommands} from '../commands.mjs'
 import {createSynchronousHttpHandler} from '../http-handler.mjs'
 import {DomainError} from '../domain.mjs'
@@ -48,6 +49,7 @@ const weather=createSynchronousWeather({storage:createWeatherStorage(database),f
  try{return readText(response,maxBytes)}finally{dispose(response.incoming)}
 }})
 const bridge=createBridge({database,weather})
+const mcp=createMcpHandler({commands,origin,readText})
 const handle=createSynchronousHttpHandler({commands,weather,bridge,origin},{readText})
 export const initEndpoint={getManifest(){
  return JSON.stringify({metadata:{display_name:'MeOS',guest_runtime:'ecma_script',version:'0.1.0'},http_handlers:['get','post','put','delete'].map(method=>({method,path:'/api/meos/v1/{*path}'})),job_handlers:[{name:'meos-weather-prune',spec:'0 * * * * *',timeout:5000}],sqlite_functions:[]})
@@ -84,7 +86,7 @@ export const incomingHandler={handle(incoming,out){
   const user=decodeHostContext(values.get('__context'))
   result=method==='GET'&&path==='/api/meos/v1/instance'
    ?new GuestResponse(JSON.stringify(instance),{headers:{'Content-Type':'application/json','Cache-Control':'no-store'}})
-   :method==='GET'&&path==='/api/meos/v1/session'?sessionResponse(user):handle(request,user)
+   :path==='/api/meos/v1/mcp'?mcp(request,user):method==='GET'&&path==='/api/meos/v1/session'?sessionResponse(user):handle(request,user)
  }catch(error){
   const unauthorized=error instanceof DomainError&&error.code==='unauthenticated'
   result=new GuestResponse(JSON.stringify({error:{code:unauthorized?'unauthenticated':'unavailable',message:unauthorized?'Sign in required':'Service unavailable'}}),{status:unauthorized?401:503,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}})

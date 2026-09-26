@@ -19,6 +19,7 @@ test('real commands run through independently encoded ABI-shaped resource agains
   db.exec('PRAGMA foreign_keys=ON; CREATE TABLE _user(id BLOB PRIMARY KEY NOT NULL) STRICT;')
   const owner=randomUUID();db.prepare('INSERT INTO _user VALUES (?)').run(Buffer.from(owner.replaceAll('-',''),'hex'))
   db.exec(readFileSync(new URL('../backend/migrations/U1790380800__planner.sql',import.meta.url),'utf8'))
+ db.exec(readFileSync(new URL('../backend/migrations/U1790380805__scheduling_contract.sql',import.meta.url),'utf8'))
   class SyntheticResource {
    constructor(){db.exec('BEGIN IMMEDIATE')}
    query(sql,values){return db.prepare(sql).all(...values.map(fromSqlValue)).map(row=>Object.values(row).map(toSqlValue))}

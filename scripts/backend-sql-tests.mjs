@@ -17,6 +17,7 @@ function fixture() {
  const owner=randomUUID(), other=randomUUID()
  for(const id of [owner,other])db.prepare('INSERT INTO _user VALUES (?)').run(toBlob(id))
  db.exec(migration)
+ db.exec(readFileSync(new URL('../backend/migrations/U1790380805__scheduling_contract.sql',import.meta.url),'utf8'))
  const begin=()=>{
   db.exec('BEGIN IMMEDIATE')
   return {

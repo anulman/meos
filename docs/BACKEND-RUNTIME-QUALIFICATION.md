@@ -1,3 +1,21 @@
+# Current checkpoint — contract pass qualified (2026-09-26)
+
+The pre-integration application contract pass is implemented and locally qualified.
+See [backend/contract-evidence.json](../backend/contract-evidence.json) for exact
+source/migration hashes and final-image identity. **58 focused tests**, strict
+generated-client typecheck, **29 planner + 7 protected-proxy + 19 actual MCPorter**
+checks pass on the final isolated image. A separate real-native pre005 upgrade
+fixture passes six migration/history checks for the identical migration005 hash.
+The final acceptance instance is running network-none; superseded instances are
+stopped with data retained. No production change or frontend same-screen proof.
+
+See [contract](BACKEND-CONTRACT.md) and [frontend handoff](BACKEND-ACCEPTANCE-HANDOFF.md).
+Parent review was requested; this child records manual self-review, not a received
+independent reviewer sign-off. Frontend integration remains the next phase;
+production routing, credential provisioning and cutover retain their gates.
+
+## Historical qualification record (superseded by current checkpoint above)
+
 # Runtime qualification — resumed checkpoint
 
 No artifact is admitted. Cargo/rustc version probes and dependency resolution ran after Telegram41818; no dependency build scripts, componentizer or TrailBase runtime ran. Production and the deployed frontend remain untouched. Earlier findings below are historical; the Telegram41818 continuation section records the current gate.

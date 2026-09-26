@@ -38,3 +38,10 @@ A host reverse proxy can use `reverse_proxy 127.0.0.1:3180`; hostname and access
 Dependency license gate is fail-closed. See `docs/LICENSE-REVIEW.md` for exact approved build-tool exceptions and retained notices. Apache-2.0 project license is preserved. GitHub checks perform license qualification, build and typecheck only; no automatic deployment.
 
 Phase 1 does not yet implement task creation/editing/deletion, notes editor, detailed week planning, routines, priority controls, project management, editable settings, search, or final accessibility review. The visible phase label deliberately distinguishes this skeleton from a finished planner.
+
+## Application contract and agent integration
+
+See [Backend contract](docs/BACKEND-CONTRACT.md) for independent routine occurrences,
+optional schedules, bounded materialization, OpenAPI/generated types, scoped MCP
+tools, transactional scheduling and deferred Calendar sync foundations.
+Run `pnpm contract:check` to check generated-contract drift.

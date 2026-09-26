@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "image": "sha256:9a42759ad1d1239023c7d0f4d56c9908b6700b75ffe8a021c2ba58bc20ceab35",
+  "image": "sha256:592e54a55bf2ce63de2669736aaa7153bd1dd712057989f3fdb0a230e19b3aff",
   "coverage": "complete-runtime-and-linked-components",
   "method": "Conservative selected native normal/build and admin package source closures, exact guest runtime SBOM plus URL dependencies. Node-only lightningcss/argparse/caniuse excluded from runtime; their source/notices retained. Static ELF lacks interpreter/DT_NEEDED. Explicit rust-embed/debug-embed compiled native assets and migrations. Scratch file allowlist excludes build tools/caches.",
   "components": [
@@ -12858,7 +12858,7 @@
     },
     {
       "path": "data/wasm/meos.wasm",
-      "digest": "sha256:1588f5e215882f98c42633d09945633cdd4460c54873ce97a6d2f7a3072f4842"
+      "digest": "sha256:ed7ea966cc47c25e7c05873200f33cff0ee9b7df8ae2f7406d6c104cfa49f198"
     },
     {
       "path": "data/migrations/main/U1790380800__planner.sql",
@@ -12871,6 +12871,10 @@
     {
       "path": "data/migrations/main/U1790380804__bridge_seal.sql",
       "digest": "sha256:bad62129aab8b320c3eb057f86871fae15380562d61825f78c0ad3fbf0a013d0"
+    },
+    {
+      "path": "data/migrations/main/U1790380805__scheduling_contract.sql",
+      "digest": "sha256:64b5630910f532b4f2256791adeaf579c5be48b08b366be5bccb2333f6306fed"
     },
     {
       "path": "data/migrations/main/U1790380803__bridge.sql",

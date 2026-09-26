@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
+import {schemas,resourceSchemas,validateSchema} from './contract.mjs'
 import { isTimezone } from './timezones.mjs'
+import {scheduledInstant,interpretPreferredTime,interpretRecurrence} from './scheduling.mjs'
 export class DomainError extends Error {
  constructor(code, message, details) { super(message); this.name='DomainError'; this.code=code; this.details=details }
 }
@@ -84,15 +86,16 @@ function cloneData(value) {
 const base=['id','title','notes']
 const fields={
  projects:[...base,'completed','archived','targetDate','references'],
- tasks:[...base,'completed','priority','projectId','schedule','durationMinutes','archived','references'],
- routines:[...base,'weekdays','time','timezone','durationMinutes','archived'],
- occurrences:['id','routineId','date','completed'],outcomes:['id','taskId','period','position'],periodNotes:['id','kind','period','notes']
+ tasks:[...base,'completed','priority','projectId','schedule','durationMinutes','archived','references','preferredTime'],
+ routines:[...base,'weekdays','time','timezone','durationMinutes','archived','preferredTime','recurrenceIntent'],
+ occurrences:['id','routineId','date','completed','title','notes','durationMinutes','schedule','preferredTime','skipped','edited','templateRevision'],outcomes:['id','taskId','period','position'],periodNotes:['id','kind','period','notes']
 }
 export function validateResource(kind,input) {
  if(!fields[kind])fail('resource','Unsupported resource')
+ validateSchema(schemas[resourceSchemas[kind]],input)
  keys(input,fields[kind],'resource');uuid(input.id)
  const value=cloneData(input)
- if(base.every(key=>fields[kind].includes(key))){value.title=text(value.title,'title');notes(value.notes)}
+ if(kind!=='occurrences'&&base.every(key=>fields[kind].includes(key))){value.title=text(value.title,'title');notes(value.notes)}
  for(const flag of ['completed','archived'])if(value[flag]!==undefined)boolean(value[flag],flag)
  if(value.durationMinutes!==undefined)integer(value.durationMinutes,'durationMinutes',1,1440)
  if(value.references!==undefined) {
@@ -101,21 +104,28 @@ export function validateResource(kind,input) {
   for(const ref of value.references){keys(ref,['id','label','url'],'references');uuid(ref.id,'references');if(ids.has(ref.id))fail('references','Duplicate reference');ids.add(ref.id);ref.label=text(ref.label,'references');safeUrl(ref.url,'references')}
  }
  if(kind==='projects'&&value.targetDate!==undefined)date(value.targetDate,'targetDate')
+ if(['tasks','routines','occurrences'].includes(kind)&&value.preferredTime!==undefined){
+  keys(value.preferredTime,['text','status','interpretation'],'preferredTime');value.preferredTime=interpretPreferredTime(value.preferredTime.text)
+ }
+ if(['tasks','occurrences'].includes(kind)&&value.schedule!==undefined){keys(value.schedule,['date','time','timezone','offsetMinutes'],'schedule');scheduledInstant(value.schedule)}
  if(kind==='tasks') {
   boolean(value.completed,'completed');if(!['none','low','medium','high'].includes(value.priority))fail('priority','Invalid priority')
   if(value.projectId!==undefined)uuid(value.projectId,'projectId')
-  if(value.schedule!==undefined){keys(value.schedule,['date','time','timezone'],'schedule');date(value.schedule.date);timezone(value.schedule.timezone);time(value.schedule.time,'schedule.time')}
+  if(value.schedule!==undefined){keys(value.schedule,['date','time','timezone','offsetMinutes'],'schedule');date(value.schedule.date);timezone(value.schedule.timezone);time(value.schedule.time,'schedule.time')}
  }
  if(kind==='routines') {
+  if(value.recurrenceIntent!==undefined){keys(value.recurrenceIntent,['text','status','kind','weekdays','intervalWeeks','anchorDate','frequency','period','preferredWeekdays'],'recurrenceIntent');value.recurrenceIntent=interpretRecurrence(value.recurrenceIntent.text,value.recurrenceIntent.anchorDate??'2020-01-01')}
+
   if(!Array.isArray(value.weekdays)||!value.weekdays.length||value.weekdays.length>7||new Set(value.weekdays).size!==value.weekdays.length)fail('weekdays','Use distinct weekdays')
   value.weekdays.forEach(day=>integer(day,'weekdays',0,6));value.weekdays.sort();timezone(value.timezone);if(value.time!==undefined)time(value.time)
  }
- if(kind==='occurrences'){uuid(value.routineId,'routineId');date(value.date);boolean(value.completed,'completed')}
+ if(kind==='occurrences'){uuid(value.routineId,'routineId');date(value.date);boolean(value.completed,'completed');if(value.title!==undefined)value.title=text(value.title,'title');if(value.notes!==undefined)notes(value.notes);for(const key of ['skipped','edited'])if(value[key]!==undefined)boolean(value[key],key);if(value.templateRevision!==undefined)integer(value.templateRevision,'templateRevision',1,Number.MAX_SAFE_INTEGER)}
  if(kind==='outcomes'){uuid(value.taskId,'taskId');period(value.period,'week');integer(value.position,'position',0,10000)}
  if(kind==='periodNotes'){if(!['day','week'].includes(value.kind))fail('kind','Invalid note kind');period(value.period,value.kind);notes(value.notes)}
  return value
 }
 export function validatePreferences(input) {
+ validateSchema(schemas.Preferences,input)
  keys(input,['timezone','weekStartsOn','weather'],'preferences');timezone(input.timezone);integer(input.weekStartsOn,'weekStartsOn',0,1)
  keys(input.weather,['enabled','source','units','manual'],'weather');boolean(input.weather.enabled,'weather.enabled')
  if(!['latest','manual'].includes(input.weather.source)||!['celsius','fahrenheit'].includes(input.weather.units))fail('weather','Invalid weather preferences')

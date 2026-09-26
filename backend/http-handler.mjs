@@ -35,13 +35,15 @@ function createHttpFlow({commands,weather,bridge,origin,basePath='/api/meos/v1'}
     if(length>150000)throw new DomainError('validation','Request too large')
     const text=yield {kind:'body',request,maxBytes:150000}
     try{body=JSON.parse(text)}catch{throw new DomainError('validation','Invalid JSON')}
-    if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(key=>!['value','expectedRevision'].includes(key)))throw new DomainError('validation','Invalid command envelope')
+    if(!body||typeof body!=='object'||Array.isArray(body)||(parts[0]!=='operations'&&Object.keys(body).some(key=>!['value','expectedRevision'].includes(key))))throw new DomainError('validation','Invalid command envelope')
    }
    if(parts.length===2&&parts[0]==='bridge'&&parts[1]==='location'&&method==='POST'&&bridge) {
     if(body.expectedRevision!==undefined)throw new DomainError('validation','Revision is not a location field')
     return response(yield {kind:'bridge',userId:user.id,observation:body.value})
    }
    if(bridge?.ownerFor(user.id))throw new DomainError('forbidden','Bridge identity cannot access planner resources')
+   if(commands.agentGrant(user.id))throw new DomainError('forbidden','Agent identity cannot access browser APIs')
+   if(parts.length===2&&parts[0]==='operations'&&method==='POST')return response(commands.invoke(user.id,parts[1],body))
    if(parts[0]==='resources'&&resources.has(parts[1])) {
     const kind=parts[1],id=parts[2]
     if(parts.length>3)throw new DomainError('not_found','Route not found')

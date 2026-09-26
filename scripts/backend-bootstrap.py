@@ -39,12 +39,14 @@ if cp.exists():
  state=json.loads(cp.read_text());assert state['runId']==run, 'never reuse credentials from another instance'
  assert state.get('schema')==1, 'unrecognized bootstrap receipt; reconcile without reset'
 else:
- state={'schema':1,'runId':run,'users':[{'id':str(uuid.uuid4()),'email':role+'-'+run+'@example.invalid','password':secrets.token_urlsafe(32),'provisioned':False} for role in ['owner','other','bridge']]}
+ state={'schema':1,'runId':run,'users':[{'id':str(uuid.uuid4()),'email':role+'-'+run+'@example.invalid','password':secrets.token_urlsafe(32),'provisioned':False} for role in ['owner','other','bridge','agent']]}
  persist(state) # Persist intent before creating identities, so interrupted attempts resume.
 if not any(user['email'].startswith('bridge-') for user in state['users']):
  state['users'].append({'id':str(uuid.uuid4()),'email':'bridge-'+run+'@example.invalid','password':secrets.token_urlsafe(32),'provisioned':False});persist(state)
+if not any(user['email'].startswith('agent-') for user in state['users']):
+ state['users'].append({'id':str(uuid.uuid4()),'email':'agent-'+run+'@example.invalid','password':secrets.token_urlsafe(32),'provisioned':False});persist(state)
 for user in state['users']:
- assert re.fullmatch(r'(owner|other|bridge)-'+run+r'@example\.invalid',user['email'])
+ assert re.fullmatch(r'(owner|other|bridge|agent)-'+run+r'@example\.invalid',user['email'])
  conn=sqlite3.connect(root/'data/main.db');conn.execute('PRAGMA foreign_keys=ON')
  conn.create_function('is_uuid',1,lambda value:int(isinstance(value,bytes) and len(value)==16))
  conn.create_function('is_email',1,lambda value:int(value is None or value==user['email']))
@@ -68,6 +70,10 @@ bridge=next(user for user in state['users'] if user['email'].startswith('bridge-
 conn=sqlite3.connect(root/'data/main.db');conn.execute('BEGIN IMMEDIATE')
 conn.execute('INSERT INTO _meos_bridge_binding VALUES(?,?) ON CONFLICT DO NOTHING',(uuid.UUID(bridge['id']).bytes,uuid.UUID(owner['id']).bytes))
 assert conn.execute('SELECT owner_id FROM _meos_bridge_binding WHERE bridge_id=?',(uuid.UUID(bridge['id']).bytes,)).fetchone()==(uuid.UUID(owner['id']).bytes,)
+agent=next(user for user in state['users'] if user['email'].startswith('agent-'))
+existing=conn.execute('SELECT owner_id FROM _meos_agent_grants WHERE agent_id=?',(uuid.UUID(agent['id']).bytes,)).fetchone()
+if existing is None:conn.execute('INSERT INTO _meos_agent_grants VALUES(?,?,?,?,0)',(uuid.UUID(agent['id']).bytes,uuid.UUID(owner['id']).bytes,json.dumps(['agenda:read','tasks:write','routines:write','occurrences:write','schedule:read','schedule:write']),int(time.time()*1000)+86400000))
+else:assert existing==(uuid.UUID(owner['id']).bytes,)
 conn.commit();conn.close()
 (q/'acceptance-endpoint.json').write_text(json.dumps({'runId':run,'container':name,'socket':str(root/'server.sock'),'origin':'https://meos-acceptance.invalid','environment':'acceptance','ownerUid':10001},indent=2)+'\n')
 print('Acceptance identity sealed; ordinary synthetic owner, second user and scoped bridge provisioned; credentials retained privately')

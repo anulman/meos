@@ -17,6 +17,7 @@ function fixture(){
  db.exec('PRAGMA foreign_keys=ON; CREATE TABLE _user(id BLOB PRIMARY KEY NOT NULL) STRICT;')
  db.prepare('INSERT INTO _user VALUES(?)').run(Buffer.from(owner.replaceAll('-',''),'hex'))
  db.exec(readFileSync(new URL('../backend/migrations/U1790380800__planner.sql',import.meta.url),'utf8'))
+ db.exec(readFileSync(new URL('../backend/migrations/U1790380805__scheduling_contract.sql',import.meta.url),'utf8'))
  const commands=createCommands({begin:()=>{db.exec('BEGIN IMMEDIATE');return {
   query:(sql,params)=>db.prepare(sql).all(...params).map(Object.values),execute:(sql,params)=>Number(db.prepare(sql).run(...params).changes),commit:()=>db.exec('COMMIT'),rollback:()=>db.exec('ROLLBACK')
  }}})
@@ -78,5 +79,16 @@ test('synchronous WASI routing core shares CRUD and CSRF behavior with Fetch',as
   const denied=new Request(origin+base+'/resources/tasks',{method:'POST',headers:{'Content-Type':'application/json'}})
   assert.equal(handle(denied,f.user).status,403)
   assert.equal((await f.repository.get('tasks',value.id)).value.title,value.title)
+ }finally{f.db.close()}
+})
+test('generated client reuses protected transport and validates real command outputs',async()=>{
+ const {ApplicationClient}=await import('../src/lib/backend/generated.ts')
+ const f=fixture();try{
+  const http=new JsonTransport(base,()=>f.user.csrf,(url,init)=>f.handle(new Request(origin+url,{...init,headers:{...init.headers,Origin:origin}}),f.user))
+  const client=new ApplicationClient(http),task={id:randomUUID(),title:'Generated transport',notes:{type:'doc'},completed:false,priority:'none'}
+  const input={value:task,idempotencyKey:randomUUID()},first=await client.call('create_task',input)
+  assert.equal(first.value.id,task.id);assert.deepEqual(await client.call('create_task',input),first)
+  const bad=new ApplicationClient(new JsonTransport(base,()=>f.user.csrf,async()=>new Response(JSON.stringify({value:{id:task.id},revision:'wrong'}),{headers:{'Content-Type':'application/json'}})))
+  await assert.rejects(bad.call('create_task',input),{code:'invalid_response'})
  }finally{f.db.close()}
 })

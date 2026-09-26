@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Trusted launcher. Repository tests see only a verified disposable UDS, never Docker/production.
-import pathlib,json,subprocess,sys,re,os,stat
+import pathlib,json,subprocess,sys,re,os,stat,time,hashlib,tarfile
 assert os.geteuid()==0, "Run this trusted launcher with sudo; test process drops all capabilities"
 repo=pathlib.Path(__file__).resolve().parents[1];q=repo/'.qualification';r=json.loads((q/'runtime-launch.json').read_text());plan=r['plan'];run=plan['runId']
 assert re.fullmatch('[a-f0-9]{32}',run) and plan['environment']=='acceptance' and plan['network']=='none' and plan['syntheticOnly'] is True
@@ -15,20 +15,39 @@ assert c['Config']['Labels']['meos.acceptance.run']==run and c['Config']['Labels
 assert v['Labels']['meos.acceptance.run']==run and v['Labels']['meos.environment']=='acceptance' and v['Driver']=='local' and not v.get('Options')
 assert not c['HostConfig'].get('Binds') and not c['HostConfig'].get('PortBindings') and not c['HostConfig'].get('Privileged')
 mounts=[x for x in c['Mounts'] if x['Type']!='tmpfs'];assert len(mounts)==1 and mounts[0]['Name']==v['Name'] and mounts[0]['Destination']=='/data'
+deadline=time.monotonic()+30
+while not (pathlib.Path(v['Mountpoint'])/'server.sock').is_socket() and time.monotonic()<deadline:time.sleep(0.1)
+assert (pathlib.Path(v['Mountpoint'])/'server.sock').is_socket(),'disposable socket not ready'
 sandbox=q/('live-sandbox-'+run);assert not sandbox.is_symlink();sandbox.mkdir(exist_ok=True);os.chown(sandbox,10001,10001);os.chmod(sandbox,0o755)
 for filename in ['synthetic-credentials.json','acceptance-endpoint.json']:
  data=(q/filename).read_bytes();assert json.loads(data)['runId']==run
  fd=os.open(sandbox/filename,os.O_WRONLY|os.O_CREAT|os.O_TRUNC|os.O_NOFOLLOW,0o600)
  with os.fdopen(fd,'wb') as f:f.write(data)
  os.chown(sandbox/filename,10001,10001);os.chmod(sandbox/filename,0o600)
-proxy=sys.argv[1:]==['--proxy'];assert len(sys.argv)==1 or proxy,'no operator endpoint/script override'
-script='backend-proxy-live.mjs' if proxy else 'backend-live-tests.py'
+proxy=sys.argv[1:]==['--proxy'];mcp=sys.argv[1:]==['--mcp'];assert len(sys.argv)==1 or proxy or mcp,'no operator endpoint/script override'
+script='backend-mcp-live.mjs' if mcp else 'backend-proxy-live.mjs' if proxy else 'backend-live-tests.py'
 node='/home/clawy/.local/share/mise/installs/node/24.19.0'
 props={'PrivateNetwork':'yes','ProtectHome':'tmpfs','ProtectSystem':'strict','NoNewPrivileges':'yes','PrivateTmp':'yes','InaccessiblePaths':'/mnt /var/lib -/run/docker.sock -/run/k3s','BindPaths':str(sandbox)+':'+str(q),'BindReadOnlyPaths':v['Mountpoint']+':/run/meos-acceptance-data '+str(repo/'scripts')+' '+str(repo/'backend')+' '+node,'MemoryMax':'256M','TasksMax':'32','CapabilityBoundingSet':'CAP_SETUID CAP_SETGID CAP_SETPCAP','WorkingDirectory':str(q)}
-cmd=['systemd-run','--wait','--pipe','--collect']+[f'--property={k}={x}' for k,x in props.items()]+['/usr/bin/setpriv','--reuid=10001','--regid=10001','--clear-groups','--bounding-set=-all','/usr/bin/env','-i','PATH=/usr/bin:/bin',node+'/bin/node' if proxy else '/usr/bin/python3',str(repo/'scripts'/script)]
+if mcp:
+ audit=q/'mcporter-audit';inventory=json.loads((repo/'backend/mcp-qualification-dependencies.json').read_text())
+ assert hashlib.sha256((audit/'package-lock.json').read_bytes()).hexdigest()==inventory['lockSHA256']
+ installed=json.loads((audit/'node_modules/.package-lock.json').read_text())['packages']
+ assert set(installed)=={'node_modules/'+p['name'] for p in inventory['packages']}
+ for package in inventory['packages']:
+  assert package['license'] in ['MIT','ISC']
+  key='node_modules/'+package['name'];archive=audit/'archives'/(hashlib.sha256(key.encode()).hexdigest()+'.tgz')
+  assert hashlib.sha256(archive.read_bytes()).hexdigest()==package['sha256']
+  with tarfile.open(archive) as tar:
+   for item in tar:
+    if not item.isfile():continue
+    assert item.name.startswith('package/') and '..' not in pathlib.PurePosixPath(item.name).parts
+    target=audit/key/item.name[len('package/'):]
+    assert target.read_bytes()==tar.extractfile(item).read(), 'installed MCPorter dependency differs from reviewed archive'
+ props['BindReadOnlyPaths']+=' '+str(audit/'node_modules')+':/run/meos-mcporter/node_modules'
+cmd=['systemd-run','--wait','--pipe','--collect']+[f'--property={k}={x}' for k,x in props.items()]+['/usr/bin/setpriv','--reuid=10001','--regid=10001','--clear-groups','--bounding-set=-all','/usr/bin/env','-i','PATH=/usr/bin:/bin',node+'/bin/node' if proxy or mcp else '/usr/bin/python3',str(repo/'scripts'/script)]
 result=subprocess.run(cmd)
 if result.returncode==0:
- for filename in (['proxy-live-checks.json'] if proxy else ['live-checks.json','live-fixture.json']):
+ for filename in (['mcp-live-checks.json'] if mcp else ['proxy-live-checks.json'] if proxy else ['live-checks.json','live-fixture.json']):
   source=sandbox/filename;assert stat.S_ISREG(source.lstat().st_mode) and source.stat().st_size<1000000
   data=source.read_bytes();assert json.loads(data)['runId']==run
   (q/filename).write_bytes(data);owner=q.stat();os.chown(q/filename,owner.st_uid,owner.st_gid)

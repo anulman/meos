@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "licenses": "node scripts/licenses.mjs",
     "test:browser": "node scripts/browser.mjs",
-    "preview:deploy": "pnpm run licenses && pnpm build && pnpm typecheck && docker compose up --build -d"
+    "preview:deploy": "pnpm run licenses && pnpm build && pnpm typecheck && docker compose up --build -d",
+    "contract:generate": "node scripts/generate-contract.mjs",
+    "contract:check": "node scripts/generate-contract.mjs --check"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
