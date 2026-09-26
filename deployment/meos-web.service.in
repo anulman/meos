@@ -1,0 +1,30 @@
+[Unit]
+Description=MeOS protected web adapter
+Requires=@PREFIX@-backend.service
+After=@PREFIX@-backend.service
+PartOf=@PREFIX@-backend.service
+
+[Service]
+Type=simple
+ExecStartPre=+/usr/bin/python3 @RELEASE@/scripts/production-uid-check.py
+ExecStart=/usr/bin/setpriv --reuid=61002 --regid=61002 --clear-groups --bounding-set=-all --inh-caps=-all --ambient-caps=-all /usr/bin/python3 /app/scripts/production-web-exec.py
+WorkingDirectory=/app
+Environment=PATH=/opt/node/bin:/usr/bin:/bin
+Environment=HOME=/tmp
+PrivateNetwork=yes
+PrivateTmp=yes
+ProtectHome=tmpfs
+ProtectSystem=strict
+ProtectProc=invisible
+ProcSubset=pid
+NoNewPrivileges=yes
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_SETPCAP
+AmbientCapabilities=
+RestrictNamespaces=yes
+TemporaryFileSystem=/run /opt
+InaccessiblePaths=/mnt /var/lib /root -/etc/ssl/private -/etc/ssh
+BindReadOnlyPaths=@RELEASE@:/app @NODE@:/opt/node @SOCKET@:/run/meos/backend.sock @IDENTITY@:/run/meos/runtime.json
+MemoryMax=512M
+TasksMax=64
+Restart=on-failure
+RestartSec=3

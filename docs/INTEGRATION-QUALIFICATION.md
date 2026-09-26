@@ -109,7 +109,27 @@ A browser navigation timing error was fixed by awaiting the Week view before
 selecting the current week; this was harness synchronization, not a product defect.
 Failed release runs cannot retain a successful combined proof receipt.
 
-Production lifecycle staging/bootstrap/restart qualification is separate and
-still pending at this checkpoint. Node runtime dependency-policy admission and
-secure ordinary-owner input remain production-only gates. Production, public
-routing and existing preview have not been modified.
+Production lifecycle qualification subsequently passed **9 checks** on separate
+synthetic run `4befa85ebb07441aa13ff1af1e10cdb3`: host-visible occupied webUID
+prestart denial; real socket activation/private network/zero caps; exact shell;
+private/demo routes denied; ordinary-owner login; backend restart with fresh
+socket/web PID and session persistence; stop propagation; socket reactivation;
+and no credential output. Independent review verified all50 staged manifest
+files, including27 supplemental Node notices, all reviewed helper hashes, and
+cleanup (proof units absent/inactive, synthetic container stopped, volume kept).
+Evidence is under `/var/lib/meos-qualification/4befa85ebb07441aa13ff1af1e10cdb3/`.
+
+Qualification caught and fixed two actual deployment-path failures: exact Docker
+missing-volume diagnostic case and a hardcoded Docker data-root path. Regression
+proofs admit exact absent objects/relocated data-root while rejecting daemon,
+permission, wrong-object, source/name/label mismatch errors. Missing supplemental
+runtime notices are rejected before stage output; all27 staged hashes are checked.
+The full lifecycle is the meaningful regression for unit socket/restart behavior.
+
+The exact Node bundled/custom grants and preserved notices passed independent
+review. Explicit host glibc/GCC dynamic-link policy exception and secure
+ordinary-owner input remain production-only gates; subsequent controlled cutover
+must revalidate target identity and rollback readiness. No qualification tests
+will run against production. Public routing and preview were not changed by this
+integration lane; independent review's live cleanup proof is scoped to acceptance,
+not a universal audit of production resources.
