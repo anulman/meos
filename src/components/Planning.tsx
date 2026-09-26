@@ -8,11 +8,11 @@ import type {PeriodNote} from '../lib/planner-contracts'
 import {NotesEditor} from './NotesEditor'
 import {TaskRows} from '../components'
 
-const PlanningContext=createContext<{next:boolean;setNext:(v:boolean)=>void;openOutcome:()=>void}>({next:false,setNext:()=>{},openOutcome:()=>{}})
+const PlanningContext=createContext<{next:boolean;setNext:(v:boolean)=>void;openOutcome:()=>void;openPeriodNote:(note:PeriodNote)=>void}>({next:false,setNext:()=>{},openOutcome:()=>{},openPeriodNote:()=>{}})
 export const usePlanning=()=>useContext(PlanningContext)
 export function PlanningProvider({children}:{children:ReactNode}) {
- const [next,setNext]=useState(false);const [outcomePeriod,setOutcomePeriod]=useState<DatePeriod|null>(null);const clock=usePlannerClock()
- return <PlanningContext.Provider value={{next,setNext,openOutcome:()=>setOutcomePeriod(Object.freeze({...next?clock.nextWeek:clock.thisWeek}))}}>{children}{outcomePeriod&&<OutcomeEditor period={outcomePeriod} onClose={()=>setOutcomePeriod(null)}/>}</PlanningContext.Provider>
+ const [next,setNext]=useState(false);const [outcomePeriod,setOutcomePeriod]=useState<DatePeriod|null>(null);const [noteDraft,setNoteDraft]=useState<PeriodNote|null>(null);const clock=usePlannerClock()
+ return <PlanningContext.Provider value={{next,setNext,openPeriodNote:setNoteDraft,openOutcome:()=>setOutcomePeriod(Object.freeze({...next?clock.nextWeek:clock.thisWeek}))}}>{children}{outcomePeriod&&<OutcomeEditor period={outcomePeriod} onClose={()=>setOutcomePeriod(null)}/ >}{noteDraft&&<PeriodNoteEditor initial={noteDraft} onClose={()=>setNoteDraft(null)}/>}</PlanningContext.Provider>
 }
 export function Sheet({title,onClose,dirty=false,children}:{title:string;onClose:()=>void;dirty?:boolean;children:ReactNode}) {
  const ref=useRef<HTMLDialogElement>(null);const backdrop=useRef(false)
@@ -22,8 +22,8 @@ export function Sheet({title,onClose,dirty=false,children}:{title:string;onClose
  return <dialog ref={ref} className="resource-dialog" aria-label={title} onCancel={e=>{e.preventDefault();close()}} onPointerDown={e=>{backdrop.current=outside(e)}} onPointerUp={e=>{if(backdrop.current&&outside(e))close();backdrop.current=false}}><div className="resource-top"><h2>{title}</h2><button className="quiet-action" onClick={close} aria-label="Close planner details">Close ×</button></div>{children}</dialog>
 }
 export function PeriodNotesButton({kind,period}:{kind:'day'|'week';period:DatePeriod}) {
- const {data:notes=[],isLoading,isError}=useLiveQuery(q=>q.from({note:periodNotesCollection}));const [draft,setDraft]=useState<PeriodNote|null>(null)
- return <><button className="quiet-action" disabled={isLoading||isError} onClick={()=>{const existing=notes.find(n=>n.kind===kind&&samePeriod(n.period,period));setDraft(existing?{...existing,period:Object.freeze({...existing.period})}:{id:crypto.randomUUID(),kind,period:Object.freeze({...period}),notes:{type:'doc'}})}}>{kind==='day'?'Day':'Week'} Notes <span aria-hidden="true">↗</span></button>{isError&&<span role="alert">Notes unavailable</span>}{draft&&<PeriodNoteEditor initial={draft} onClose={()=>setDraft(null)}/>}</>
+ const {data:notes=[],isLoading,isError}=useLiveQuery(q=>q.from({note:periodNotesCollection}));const {openPeriodNote}=usePlanning()
+ return <><button className="quiet-action" disabled={isLoading||isError} onClick={()=>{const existing=notes.find(n=>n.kind===kind&&samePeriod(n.period,period));openPeriodNote(existing?{...existing,period:Object.freeze({...existing.period})}:{id:crypto.randomUUID(),kind,period:Object.freeze({...period}),notes:{type:'doc'}})}}>{kind==='day'?'Day':'Week'} Notes <span aria-hidden="true">↗</span></button>{isError&&<span role="alert">Notes unavailable</span>}</>
 }
 function PeriodNoteEditor({initial,onClose}:{initial:PeriodNote;onClose:()=>void}) {
  const [notes,setNotes]=useState(initial.notes);const [dirty,setDirty]=useState(false);const [error,setError]=useState('');const [saving,setSaving]=useState(false)
@@ -38,7 +38,7 @@ export function OutcomeEditor({period,onClose}:{period:DatePeriod;onClose:()=>vo
  let id=taskId
  if(!id){if(!title.trim())throw Error('Choose a task or name a new one.');if(!created.current)created.current=await saveTask({id:crypto.randomUUID(),title,completed:false,priority:'none',notes:{type:'doc'}},true);id=created.current.id}
  await savePlanner('outcomes',{id:crypto.randomUUID(),taskId:id,period,position:outcomes.filter(o=>samePeriod(o.period,period)).length});onClose()
- }catch(e){setError(String(e))}finally{setSaving(false)}}}><div className="resource-body"><p className="muted">{period.start} – {period.end}</p><p className="muted">An outcome links a task to this week. It does not change its priority or scheduled date.</p><label>Choose an existing task<select value={taskId} onChange={e=>{setTaskId(e.target.value);setTitle('')}}><option value="">Create a new task instead</option>{eligible.map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</select></label>{!taskId&&<label>New outcome name<input value={title} onChange={e=>setTitle(e.target.value)} maxLength={200} disabled={!!created.current}/></label>}{error&&<p role="alert">{error} Your draft is preserved.</p>}</div><div className="resource-actions"><button className="save-button" disabled={saving}>Add to week</button></div></form></Sheet>
+ }catch(e){setError(String(e))}finally{setSaving(false)}}}><div className="resource-body"><p className="muted">{period.start} – {period.end}</p><p className="muted">An outcome links a task to this week. It does not change its priority or scheduled date.</p><label>Choose an existing task<select value={taskId} disabled={saving||!!created.current} onChange={e=>{setTaskId(e.target.value);setTitle('')}}><option value="">Create a new task instead</option>{eligible.map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</select></label>{!taskId&&<label>New outcome name<input value={title} onChange={e=>setTitle(e.target.value)} maxLength={200} disabled={saving||!!created.current}/></label>}{created.current&&<p className="muted">Your task has been created. Retry to link it to this week.</p>}{error&&<p role="alert">{error} Your draft is preserved.</p>}</div><div className="resource-actions"><button className="save-button" disabled={saving}>Add to week</button></div></form></Sheet>
 }
 export function WeeklyOutcomes({period}:{period:DatePeriod}) {
  const {data:tasks=[]}=useLiveQuery(q=>q.from({task:tasksCollection}));const {data:outcomes=[],isLoading,isError}=useLiveQuery(q=>q.from({outcome:outcomesCollection}));const [error,setError]=useState('')

@@ -36,3 +36,9 @@ Independent review and deployed exact-tree evidence are recorded at closeout, no
 ## Qualification correction
 
 ProseMirror suppressed native Escape while its editor had focus. The shared NotesEditor now delegates Escape to `dialog.requestClose()`, preserving each existing cancel/dirty guard and focus restoration. C awaits the actual discard dialog (rather than merely observing the editor remained open), then tests cancellation and subsequent save. Corrected C passes.
+
+## Independent review corrections
+
+Review of `35d378b..1dee407` reproduced two issues. Captured Day Notes opened from Week's selected-day agenda could unmount at a weekly rollover; editor ownership now lives in the stable PlanningProvider. A failed outcome-association save after successful task creation could strand its title after picker changes; the retained task identity is now locked for safe retry, with explanatory feedback. C injects a one-time membership 503 and verifies retry creates no duplicate task. D covers the Week-selected-day draft across Sunday-to-Monday rollover in addition to Today midnight. Different artificial clock origins use independent browser contexts rather than sharing one ServiceWorker registration.
+
+Independent reviewer `/root/meos_frontend_dates/frontend_review` rechecked both corrections with separate browser reproductions: captured original period/draft persisted and saved correctly; membership retry produced exactly one task and one membership. No browser errors or remaining blocking findings in that focused recheck.
