@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "checkedAt": "2026-09-26T21:42:31.981292+00:00",
+  "checkedAt": "2026-09-26T21:43:35.086329+00:00",
   "baseline": "83abc2f",
   "status": "source-qualified-not-deployed",
   "checks": {
@@ -21,7 +21,7 @@
     "production deployment"
   ],
   "files": {
-    "tools/backup/meos-backup.py": "c6f2e193e7e80a57e19c8174906ed009f6ec8c9868fa338b3fdb6ce6b9d4f6ff",
+    "tools/backup/meos-backup.py": "bd427fd12bbaf9d4b853487fd244550f5d48674762064d0c52d1d7e436c97540",
     "tools/backup/package.py": "0b577da57e1e8cca48362c31af00d8fc8bdc889868712c6b3445f90cae7705b1",
     "tools/backup/test_backup.py": "b70e65baf89727206255688ad6495034c708afc9f96c07f3e66ee106905797ff",
     "tools/backup/test-isolated.sh": "d8ab156cf4b2c4fe0d9ba4e7ee9f6aec464bc88ee5edd1e04c70fcca26d9aa0b",

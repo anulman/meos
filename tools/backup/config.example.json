@@ -16,7 +16,7 @@
     "calendar": "/var/lib/meos-calendar",
     "configuration": "/etc/meos",
     "release": "/REPLACE_WITH_CURRENT_IMMUTABLE_RELEASE",
-    "units": "/REPLACE_WITH_PRIVATE_DIRECTORY_OF_MEOS_UNIT_FILES"
+    "units": "/etc/systemd/system"
   },
   "workDirectory": "/var/lib/meos-backup",
   "paused": false,

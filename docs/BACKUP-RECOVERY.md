@@ -57,7 +57,9 @@ preserves existing objects. Do not disable to conceal a known error.
    credentials. `requiredConfiguration` names their paths relative to that root;
    every role must exist. Consolidation/copying into a new install layout needs
    its own deployment procedure; **do not substitute stale copies** of live files.
-   Units directory must contain all five units listed in the example service.
+   The units source should be `/etc/systemd/system`: only the five named MeOS
+   units are selected, explicitly excluding unrelated host units/symlinks. All
+   five must be real files.
    Keep installation changes mutually exclusive with backups.
 3. Generate an age identity using the bundled `runtime/age-keygen`; pass only its
    public recipient in configuration. Keep the private identity in a root-owned

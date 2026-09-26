@@ -142,7 +142,8 @@ def stage(c, target):
         require(not Path(c['workDirectory']).is_relative_to(p), 'work directory overlaps source')
     for label, source in c['sources'].items():
         source = Path(source)
-        for p in sorted(source.rglob('*')):
+        paths = [source/u for u in UNITS] if label == 'units' else sorted(source.rglob('*'))
+        for p in paths:
             rel = Path(label)/p.relative_to(source); dest = target/rel; info = p.lstat()
             require(not stat.S_ISLNK(info.st_mode), 'symlink in source')
             if stat.S_ISDIR(info.st_mode):
