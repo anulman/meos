@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import './install-platform.mjs'
 import url from 'whatwg-url'
-import {readIncomingText} from './streams.mjs'
+import {readIncomingText,writeOutgoingBytes} from './streams.mjs'
 import sql from 'trailbase:database/sqlite@0.1.1'
 import http from 'wasi:http/types@0.2.12'
 import outgoing from 'wasi:http/outgoing-handler@0.2.12'
@@ -11,6 +11,8 @@ import {createCommands} from '../commands.mjs'
 import {createSynchronousHttpHandler} from '../http-handler.mjs'
 import {DomainError} from '../domain.mjs'
 import {readInstance} from '../instance.mjs'
+import {createBridge} from '../bridge.mjs'
+import {isWeatherMaintenance,pruneWeather} from '../maintenance.mjs'
 import {createSynchronousWeather} from '../weather.mjs'
 import {createWeatherStorage} from '../weather-storage.mjs'
 
@@ -28,7 +30,7 @@ function fetchWeather(address,{timeoutMs}) {
  if(target.origin!=='https://api.open-meteo.com'||target.pathname!=='/v1/forecast'||target.username||target.password)throw new DomainError('unavailable','Invalid provider target')
  const fields=new http.Fields();fields.set('accept',[encode.encode('application/json')])
  const request=new http.OutgoingRequest(fields)
- request.setMethod({tag:'get'});request.setScheme({tag:'https'});request.setAuthority(target.host);request.setPathWithQuery(target.pathname+target.search)
+ request.setMethod({tag:'get'});request.setScheme({tag:'HTTPS'});request.setAuthority(target.host);request.setPathWithQuery(target.pathname+target.search)
  const options=new http.RequestOptions(),timeout=timeoutMs*1000000
  options.setConnectTimeout(timeout);options.setFirstByteTimeout(timeout);options.setBetweenBytesTimeout(timeout)
  let future,pollable
@@ -45,9 +47,10 @@ function fetchWeather(address,{timeoutMs}) {
 const weather=createSynchronousWeather({storage:createWeatherStorage(database),fetcher:fetchWeather,readText:(response,maxBytes)=>{
  try{return readText(response,maxBytes)}finally{dispose(response.incoming)}
 }})
-const handle=createSynchronousHttpHandler({commands,weather,origin},{readText})
+const bridge=createBridge({database,weather})
+const handle=createSynchronousHttpHandler({commands,weather,bridge,origin},{readText})
 export const initEndpoint={getManifest(){
- return JSON.stringify({metadata:{display_name:'MeOS',guest_runtime:'ecma_script',version:'0.1.0'},http_handlers:['get','post','put','delete'].map(method=>({method,path:'/api/meos/v1/{*path}'})),job_handlers:[],sqlite_functions:[]})
+ return JSON.stringify({metadata:{display_name:'MeOS',guest_runtime:'ecma_script',version:'0.1.0'},http_handlers:['get','post','put','delete'].map(method=>({method,path:'/api/meos/v1/{*path}'})),job_handlers:[{name:'meos-weather-prune',spec:'0 * * * * *',timeout:5000}],sqlite_functions:[]})
 }}
 export const sqliteFunctionEndpoint={dispatchScalarFunction(){throw {tag:'other',val:'No SQL functions registered'}}}
 function respond(out,value) {
@@ -59,7 +62,7 @@ function respond(out,value) {
  let output
  try {
   output=body.write()
-  for(let start=0;start<value.bytes.length;start+=16384)output.blockingWriteAndFlush(value.bytes.subarray(start,start+16384))
+  writeOutgoingBytes(output,value.bytes)
  }finally{dispose(output)}
  http.OutgoingBody.finish(body,null)
 }
@@ -69,6 +72,12 @@ export const incomingHandler={handle(incoming,out){
   headers=incoming.headers()
   const values=new GuestHeaders(headers.entries().map(([key,value])=>[key,decode.decode(value)]))
   const authority=incoming.authority(),path=incoming.pathWithQuery(),method=incoming.method().tag.toUpperCase()
+  const hostContext=JSON.parse(values.get('__context')??'null')
+  if(isWeatherMaintenance(hostContext,{authority,method})) {
+   readInstance(database,MEOS_GUEST_ENVIRONMENT)
+   pruneWeather(createWeatherStorage(database))
+   try{respond(out,new GuestResponse(null,{status:204}))}finally{dispose(incoming)};return
+  }
   if(authority!==new URL(origin).host||typeof path!=='string'||!path.startsWith('/'))throw new DomainError('validation','Invalid request target')
   const instance=readInstance(database,MEOS_GUEST_ENVIRONMENT)
   const request={url:origin+path,method,headers:values,incoming}

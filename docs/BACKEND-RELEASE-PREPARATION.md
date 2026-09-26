@@ -4,19 +4,28 @@ No production changes or cutover are authorized by this document. B5 cutover sti
 
 ## Artifact lock status
 
-- Frontend image/commit: not selected until frontend qualification and integration.
-- TrailBase runtime digest: **not admitted**; stock archive includes unapproved GEOS as recorded in `upstream-findings.json`.
-- MeOS guest-handler artifact: not built; extension ABI/toolchain/license path unresolved.
-- Migrations: `U1790380800__planner.sql`, `U1790380801__weather.sql`; exercised against disposable SQLite only, not TrailBase.
-- Bootstrap: not implemented; must create one ordinary owner and defaults repeat-safely against a verified instance, with masked/protected secret input and a seal. Recovery/revocation stays a separate operator action.
+- Frontend image/commit: still requires a separately owned same-screen browser integration run.
+- Native service: source-built TrailBase v0.33.22, static musl, explicit embedded native assets/migrations, no GEOS. Exact local image and retained source/notices hashes live in `backend/reviewed-artifacts.json`; this is local admission, not production release approval.
+- Independent guest: compiled and exercised through native SQL/HTTP/auth/WASI. `backend/componentizer-qualification.json` binds its exact bytes. Final image must include these bytes, not depend on a development volume update.
+- Migrations: planner, weather, immutable bridge-owner binding and private maintenance receipt; exercised in real isolated TrailBase, with additive upgrade and third-instance restore proof.
+- Synthetic bootstrap: `sudo python3 scripts/backend-bootstrap.py`; checks the managed container/volume/instance identity, creates ordinary users through the reviewed current schema and native password hasher, stores synthetic credentials privately, never resets completed users. Repeated bootstrap preserved all three password hashes and preference revisions. This is acceptance-only tooling, not a production account-creation authorization.
+- Retained source/notices and conservative linked/runtime component closure are hash-bound in the registry. Build tools and caches are excluded from the scratch runtime image.
 
-No placeholder image or unqualified manifest may be promoted into the reviewed launch registry. Selected artifacts must have actual bytes/digests, retained matching source/notices and complete reviewed runtime/linked-component license closure.
+## Verified backend evidence and remaining acceptance
+
+46 focused tests pass. Separate live suites cover planner29, session13, short-TTL expiry/refresh6, protected proxy7, bridge/weather21, restore19 and actual WASI provider/cache9 checks. These counts include overlapping login assertions and must not be summed as unique checks. Private cron pruning, repeat-safe bootstrap, real provider-only egress and denial of unrelated/host destinations were also proved. Evidence receipts are `backend/live-*-evidence.json`.
+
+Signed native auth JWTs remain usable until expiry even after refresh-session logout; browser cookie deletion is not immediate server-side JWT revocation. Normal TTL config was restored after the synthetic short-TTL test.
+
+Final image fresh-run planner29/proxy7 and migration004 seal checks pass. Independent static review found one P2 sealed-binding REPLACE gap, now fixed and rechecked with no further findings. Remaining: same-origin browser integration using the real client adapter/screens (including identity cache clearing and retry journeys), concrete production config/bootstrap plan and later explicit release authorization. No production cutover is implied by backend HTTP or restore proofs.
 
 ## Required protected routing
 
 Use separate deployment resources for production and acceptance. No shared volumes, credentials, network, database, host ports or instance identity. Acceptance contains only synthetic data; its browser runner must have no network route to production. Foundation network=none is not the final browser topology.
 
-Proposed same-origin application paths: static client plus `/api/meos/v1/*` custom handlers, narrowly qualified native form-login/logout paths. Deny public admin/native record write APIs, public registration and raw `/auth/status` token export. Never forward admin credentials into public runtime config. Exact routes/config depend on pinned auth qualification, not assumptions in this proposal.
+Use `createProtectedApiProxy({origin, upstream})` from `backend/protected-proxy.mjs` alongside static client routing. Allow form-only POST `/api/auth/v1/login`, safe `/api/meos/v1/*` and same-origin CSRF-checked POST `/api/meos/auth/logout`. Deny the bridge ingress on this public adapter, all other native auth/status/admin/record/signup APIs and raw token export. Strip forged host context/authorization forwarding. Normalize auth cookies to Secure/HttpOnly/SameSite=Lax; logout emits canonical Max-Age=0 deletions. `sudo python3 scripts/backend-live-runner.py --proxy` exercises the real native form-login/session/logout through this helper, not a browser.
+
+Bridge ingress uses a separate ordinary native identity bound immutably to one owner, never a caller-provided owner. Expose it only through a separately authenticated integration route, not the public browser proxy. A production location feed remains unconfigured and unauthorized by this acceptance proof.
 
 ## Before release authorization
 

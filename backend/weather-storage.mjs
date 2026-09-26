@@ -13,6 +13,11 @@ export function createWeatherStorage({begin}) {
   }),
   cached:(owner,key)=>tx(db=>{const row=db.query('SELECT doc FROM weather_cache WHERE owner_id=? AND cache_key=?',[blob(owner),key])[0];return row?JSON.parse(row[0]):undefined}),
   save:(owner,key,value)=>tx(db=>db.execute('INSERT INTO weather_cache(owner_id,cache_key,doc,fetched_at,expires_at) VALUES(?,?,?,?,?) ON CONFLICT(owner_id,cache_key) DO UPDATE SET doc=excluded.doc,fetched_at=excluded.fetched_at,expires_at=excluded.expires_at',[blob(owner),key,canonical(value),Date.parse(value.fetchedAt),Date.parse(value.expiresAt)])),
+  maintenancePurge:(timestamp,now)=>tx(db=>{
+   const count=db.execute('DELETE FROM weather_cache WHERE fetched_at<=?',[timestamp])
+   db.execute("INSERT INTO _meos_maintenance(job,ran_at,run_count) VALUES('weather-prune',?,1) ON CONFLICT(job) DO UPDATE SET ran_at=excluded.ran_at,run_count=run_count+1",[now])
+   return count
+  }),
   purgeBefore:timestamp=>tx(db=>db.execute('DELETE FROM weather_cache WHERE fetched_at<=?',[timestamp]))
  }
 }

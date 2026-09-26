@@ -1,0 +1,71 @@
+{
+  "sourceRunId": "48c006581c5494589e69af1b123dec97",
+  "restoreRunId": "ab9603e037e143889b27a7f3d3478cbb",
+  "containerId": "dbf31b8522dad69b888d06f3135241d6787a26d577d4e3dc140da47e9df773b3",
+  "volume": "meos-acceptance-ab9603e037e143889b27a7f3d3478cbb-data",
+  "network": "none",
+  "tableFingerprintsVerified": {
+    "projects": {
+      "rows": 4,
+      "sha256": "8a88acc0108dbb0a31899fd310e62f202746ba6921b6488ac6affdcc3dc7344f"
+    },
+    "tasks": {
+      "rows": 4,
+      "sha256": "15c3d1abfefdea82be9f13ec9a20fb0bb17f60f2310c365b668fa1eb6b6d7cdf"
+    },
+    "routines": {
+      "rows": 1,
+      "sha256": "de023ccb9fb670c49ce7824a7ea82dcf910ad9835722381b808a7f16415dae66"
+    },
+    "occurrences": {
+      "rows": 1,
+      "sha256": "1775bcfe6906e00568ad0c627b1ae01ff1ff8da6b4b540c0233c1cf4a962e26f"
+    },
+    "outcomes": {
+      "rows": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "period_notes": {
+      "rows": 1,
+      "sha256": "662d66f064a7794c137fde516affa9fefce8073ed244f5f68620f9638b95accf"
+    },
+    "preferences": {
+      "rows": 3,
+      "sha256": "77a4b0052619fc8cc16534873417e877f292c7461f83018f4922b5f5c7029e5c"
+    },
+    "latest_location": {
+      "rows": 1,
+      "sha256": "4aa5fc9f57572ccaf412a233676430e1dc3da3b4c79f9e1b1d3464023b6ee1ab"
+    },
+    "_meos_bridge_binding": {
+      "rows": 1,
+      "sha256": "6cb3c52eb1b5e12018c68f2f18b78b7e7f2b4e5adbaef169cc37e802c639057a"
+    }
+  },
+  "signingKeysRotated": true,
+  "sourceArchiveSHA256": "4a78c1068f63d990a4c42068e005ddd3806f0aab6ca073dc5f3d0174634c7932",
+  "state": "restored login/HTTP and table fingerprints verified",
+  "checks": [
+    "form login token-free",
+    "two Secure HttpOnly cookies",
+    "safe session identity",
+    "restored runtime has different sealed identity",
+    "source-instance cookies rejected after key rotation",
+    "form login token-free",
+    "two Secure HttpOnly cookies",
+    "safe session identity",
+    "restored ordinary owner identity preserved",
+    "restored real HTTP task and notes readable",
+    "restored projects fingerprint",
+    "restored tasks fingerprint",
+    "restored routines fingerprint",
+    "restored occurrences fingerprint",
+    "restored outcomes fingerprint",
+    "restored period_notes fingerprint",
+    "restored preferences fingerprint",
+    "restored latest_location fingerprint",
+    "restored _meos_bridge_binding fingerprint"
+  ],
+  "count": 19,
+  "evidenceRecordedAt": "2026-09-26T06:38:59.762449+00:00"
+}

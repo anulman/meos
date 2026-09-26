@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 import pathlib,json,os,http.client,urllib.parse,socket,uuid
 q=pathlib.Path(__file__).resolve().parents[1]/'.qualification';e=json.loads((q/'acceptance-endpoint.json').read_text());creds=json.loads((q/'synthetic-credentials.json').read_text());assert e['runId']==creds['runId'];os.chdir('/run/meos-acceptance-data')
+assert os.getuid()==10001
+assert 'CapEff:\t0000000000000000' in pathlib.Path('/proc/self/status').read_text()
 class UnixConnection(http.client.HTTPConnection):
  def connect(self):self.sock=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);self.sock.settimeout(20);self.sock.connect('server.sock')
 def request(method,path,body=None,headers=None):
@@ -46,6 +48,9 @@ s,j=command('POST','/commands/occurrence',occurrence,0);check('occurrence natura
 s,j=command('POST','/commands/occurrence',occurrence,0);check('occurrence retry idempotent',s==200 and j['revision']==1)
 period={'start':'2026-09-28','end':'2026-10-04'}
 note={'id':str(uuid.uuid4()),'kind':'week','period':period,'notes':{'type':'doc','content':[{'type':'paragraph','content':[{'type':'text','text':'Synthetic weekly reflection'}]}]}}
+s,existing=command('GET','/resources/periodNotes')
+for row in existing.get('items',[]):
+ if row['value']['kind']=='week' and row['value']['period']==period:note['id']=row['value']['id']
 s,j=command('POST','/commands/period-note',note,0);check('week note live',s==200 and j['value']==note)
 outcome={'id':str(uuid.uuid4()),'taskId':t['id'],'period':period,'position':0}
 s,j=command('POST','/resources/outcomes',outcome);check('weekly outcome live',s==201)

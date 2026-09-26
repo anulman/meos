@@ -2,13 +2,21 @@
 # Trusted acceptance-only launcher: exact Docker identity checked before any database write.
 import json,pathlib,subprocess,os,sqlite3,secrets,re,stat,uuid,time
 q=pathlib.Path(__file__).resolve().parents[1]/'.qualification';r=json.loads((q/'runtime-launch.json').read_text());plan=r['plan'];run=plan['runId'];assert re.fullmatch('[a-f0-9]{32}',run);name='meos-acceptance-'+run
+assert plan['environment']=='acceptance' and plan['network']=='none' and plan['syntheticOnly'] is True, 'acceptance-only plan required'
+assert plan['volume']=='fresh-managed' and plan['credentials']=='fresh-in-container' and plan['endpoint']=='container-unix-socket' and plan['identity']=='fresh-synthetic', 'external target or identity forbidden'
+assert r['volume']==name+'-data', 'unexpected volume identity'
 clean={'PATH':'/usr/bin:/bin'}
 def docker(*args):
  p=subprocess.run(['/usr/bin/docker','--host','unix:///var/run/docker.sock',*args],env=clean,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
  if p.returncode:raise RuntimeError('Docker '+args[0]+' failed: '+p.stderr.decode().replace(args[-1],'[redacted]'))
  return p.stdout
 c=json.loads(docker('inspect',name))[0];v=json.loads(docker('volume','inspect',r['volume']))[0]
+assert c['Id']==r['containerId']
 assert c['Image']==plan['image'] and c['HostConfig']['NetworkMode']=='none' and c['HostConfig']['ReadonlyRootfs'] and c['Config']['User']=='10001:10001'
+assert not c['HostConfig'].get('Privileged') and not c['HostConfig'].get('Binds') and not c['HostConfig'].get('PortBindings')
+assert c['HostConfig'].get('CapDrop')==['ALL'] and 'no-new-privileges' in c['HostConfig'].get('SecurityOpt',[])
+assert c['Config']['Labels']['meos.environment']=='acceptance'
+assert set(c['NetworkSettings']['Networks'])=={'none'}, 'additional runtime network attached'
 assert c['Config']['Labels']['meos.acceptance.run']==run and v['Labels']['meos.acceptance.run']==run and v['Labels']['meos.environment']=='acceptance'
 assert v['Name']==name+'-data' and v['Driver']=='local' and not v.get('Options')
 mounts=[x for x in c['Mounts'] if x['Type']!='tmpfs'];assert len(mounts)==1 and mounts[0]['Name']==v['Name'] and mounts[0]['Destination']=='/data'
@@ -31,11 +39,13 @@ if cp.exists():
  state=json.loads(cp.read_text());assert state['runId']==run, 'never reuse credentials from another instance'
  assert state.get('schema')==1, 'unrecognized bootstrap receipt; reconcile without reset'
 else:
- state={'schema':1,'runId':run,'users':[{'id':str(uuid.uuid4()),'email':role+'-'+run+'@example.invalid','password':secrets.token_urlsafe(32),'provisioned':False} for role in ['owner','other']]}
+ state={'schema':1,'runId':run,'users':[{'id':str(uuid.uuid4()),'email':role+'-'+run+'@example.invalid','password':secrets.token_urlsafe(32),'provisioned':False} for role in ['owner','other','bridge']]}
  persist(state) # Persist intent before creating identities, so interrupted attempts resume.
+if not any(user['email'].startswith('bridge-') for user in state['users']):
+ state['users'].append({'id':str(uuid.uuid4()),'email':'bridge-'+run+'@example.invalid','password':secrets.token_urlsafe(32),'provisioned':False});persist(state)
 for user in state['users']:
- assert re.fullmatch(r'(owner|other)-'+run+r'@example\.invalid',user['email'])
- conn=sqlite3.connect(root/'data/main.db')
+ assert re.fullmatch(r'(owner|other|bridge)-'+run+r'@example\.invalid',user['email'])
+ conn=sqlite3.connect(root/'data/main.db');conn.execute('PRAGMA foreign_keys=ON')
  conn.create_function('is_uuid',1,lambda value:int(isinstance(value,bytes) and len(value)==16))
  conn.create_function('is_email',1,lambda value:int(value is None or value==user['email']))
  conn.execute('BEGIN IMMEDIATE');row=conn.execute('SELECT id,admin FROM _user WHERE email=?',(user['email'],)).fetchone()
@@ -53,5 +63,11 @@ for user in state['users']:
   # completed owner or reset an existing password on a successful rerun.
   docker('exec',name,'/bin/trail','--depot','/data','user','change-password',user['email'],user['password'])
   user['provisioned']=True;persist(state)
+owner=next(user for user in state['users'] if user['email'].startswith('owner-'))
+bridge=next(user for user in state['users'] if user['email'].startswith('bridge-'))
+conn=sqlite3.connect(root/'data/main.db');conn.execute('BEGIN IMMEDIATE')
+conn.execute('INSERT INTO _meos_bridge_binding VALUES(?,?) ON CONFLICT DO NOTHING',(uuid.UUID(bridge['id']).bytes,uuid.UUID(owner['id']).bytes))
+assert conn.execute('SELECT owner_id FROM _meos_bridge_binding WHERE bridge_id=?',(uuid.UUID(bridge['id']).bytes,)).fetchone()==(uuid.UUID(owner['id']).bytes,)
+conn.commit();conn.close()
 (q/'acceptance-endpoint.json').write_text(json.dumps({'runId':run,'container':name,'socket':str(root/'server.sock'),'origin':'https://meos-acceptance.invalid','environment':'acceptance','ownerUid':10001},indent=2)+'\n')
-print('Acceptance identity sealed; two synthetic users provisioned; credentials retained privately')
+print('Acceptance identity sealed; ordinary synthetic owner, second user and scoped bridge provisioned; credentials retained privately')

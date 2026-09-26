@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "reviewer": "/root/meos_backend_approved/backend_review",
+  "scope": "Static independent read-only current backend authority/isolation/cookies/guest/bridge/launcher review",
+  "finding": "P2 INSERT OR REPLACE could bypass update/delete sealed bridge triggers when recursive_triggers is off; no existing public path exposes it",
+  "fix": "Additive U1790380804__bridge_seal.sql checks conflicting bridge/owner before insert; same pair remains idempotent",
+  "verification": "Reviewer verified P2 resolved, both directions guarded, bootstrap idempotent; no further findings.3 focused regression tests pass (worker execution).",
+  "limitations": "No independent reproduction of runtime proofs; frontend browser acceptance remains outstanding",
+  "liveFixVerification": "Fresh final image loaded migration004; both REPLACE rebinding directions rejected; original binding unchanged. See live-final-image-evidence.json."
+}

@@ -1,0 +1,15 @@
+{
+  "runId": "48c006581c5494589e69af1b123dec97",
+  "checks": [
+    "live form proxy does not export native tokens",
+    "live login cookies normalized Secure HttpOnly Lax",
+    "proxy reload uses safe session projection",
+    "native token admin logout and bridge paths denied",
+    "live logout rejects wrong CSRF",
+    "live logout emits browser-valid cookie deletions",
+    "proxy logout revokes native refresh session"
+  ],
+  "count": 7,
+  "network": "none; UID10001 and zero effective capabilities",
+  "evidenceRecordedAt": "2026-09-26T06:38:59.762449+00:00"
+}

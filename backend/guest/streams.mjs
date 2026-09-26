@@ -19,3 +19,8 @@ export function readIncomingText(incoming,maxBytes) {
   return new Utf8Decoder('utf-8',{fatal:true}).decode(bytes)
  }finally{dispose(stream);dispose(body)}
 }
+
+/** WASIp2 blocking-write-and-flush accepts at most4096 bytes per call. */
+export function writeOutgoingBytes(output,bytes) {
+ for(let at=0;at<bytes.length;at+=4096)output.blockingWriteAndFlush(bytes.subarray(at,at+4096))
+}

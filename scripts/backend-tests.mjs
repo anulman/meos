@@ -17,8 +17,8 @@ const image = 'example.invalid/meos/trailbase@sha256:' + 'a'.repeat(64)
 const plan = {schema:1,environment:'acceptance',runId:'b'.repeat(32),image,syntheticOnly:true,network:'none',credentials:'fresh-in-container',endpoint:'container-unix-socket',volume:'fresh-managed',identity:'fresh-synthetic'}
 const names = validatePlan(plan)
 const fixture = () => ({
- container:{Image:'sha256:image',Config:{User:'10001:10001',Labels:{'meos.acceptance.run':plan.runId,'meos.environment':'acceptance'},Env:['PATH=/usr/bin:/bin']},
-  HostConfig:{NetworkMode:'none',ReadonlyRootfs:true,Privileged:false,CapDrop:['ALL'],SecurityOpt:['no-new-privileges'],PortBindings:{}},
+ container:{Image:'sha256:image',NetworkSettings:{Networks:{none:{}}},Config:{User:'10001:10001',Labels:{'meos.acceptance.run':plan.runId,'meos.environment':'acceptance'},Env:['PATH=/usr/bin:/bin']},
+  HostConfig:{Memory:536870912,NanoCpus:1000000000,PidsLimit:128,NetworkMode:'none',ReadonlyRootfs:true,Privileged:false,CapDrop:['ALL'],SecurityOpt:['no-new-privileges'],PortBindings:{}},
   Mounts:[{Type:'volume',Name:names.volume,Destination:'/data'}]},
  volume:{Name:names.volume,Driver:'local',Options:null,Labels:{'meos.acceptance.run':plan.runId,'meos.environment':'acceptance'}}
 })
@@ -99,7 +99,12 @@ test('runtime inspection catches changed instance, volumes, networks and identit
   f=>{f.container.Image='sha256:production'},
   f=>{f.container.Config.User='0:0'},
   f=>{f.container.HostConfig.NetworkMode='host'},
+  f=>{f.container.NetworkSettings.Networks.production={}},
   f=>{f.container.HostConfig.Privileged=true},
+  f=>{f.container.HostConfig.IpcMode='container:production'},
+  f=>{f.container.HostConfig.CapAdd=['SYS_ADMIN']},
+  f=>{f.container.HostConfig.SecurityOpt.push('seccomp=unconfined')},
+  f=>{f.container.HostConfig.Memory=0},
   f=>{f.container.HostConfig.PortBindings={'80/tcp':[{}]}},
   f=>{f.container.HostConfig.Binds=['/production:/data']},
   f=>{f.container.Mounts[0].Name='production-data'},

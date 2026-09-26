@@ -5,7 +5,7 @@ import {createProtectedApiProxy} from '../backend/protected-proxy.mjs'
 const origin='https://meos-acceptance.invalid'
 test('proxy denies native token/admin/record paths and JSON login before upstream',async()=>{
  let calls=0;const handle=createProtectedApiProxy({origin,upstream:()=>{calls++;throw Error('unexpected')}})
- for(const path of ['/api/auth/v1/status','/api/auth/v1/logout','/api/auth/v1/register','/api/admin/v1/users','/api/records/v1/tasks'])assert.equal((await handle(new Request(origin+path))).status,404)
+ for(const path of ['/api/auth/v1/status','/api/auth/v1/logout','/api/auth/v1/register','/api/admin/v1/users','/api/records/v1/tasks','/api/meos/v1/bridge/location'])assert.equal((await handle(new Request(origin+path))).status,404)
  assert.equal((await handle(new Request(origin+'/api/auth/v1/login',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'}))).status,403)
  assert.equal(calls,0)
 })

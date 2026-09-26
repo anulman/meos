@@ -153,3 +153,37 @@ is not an exact final-image signoff.
 No production changes. B1 acceptance is still in progress; B2's command surface
 has live coverage, not final browser acceptance. Restore, provider smoke and B4
 independent review remain outstanding.
+
+
+## Superseding B3/runtime checkpoint — 2026-09-26
+
+The preceding outstanding runtime items are now resolved as follows (historical
+checkpoint text above is retained): 46 focused tests pass; actual short-TTL auth
+expiry/refresh6, narrow protected proxy7, bridge/weather21 and third-instance
+restore19 checks pass. Private host cron actually pruned an expired cache row.
+Repeated synthetic bootstrap leaves all3 identities/password hashes/preferences
+unchanged. The trusted live-test launcher now executes repository tests as UID10001
+with zero effective capabilities, private network and only a verified synthetic UDS.
+
+Actual independent-guest WASI HTTPS fetched168 hourly/7 daily forecast entries at
+synthetic0,0 and reused the native persisted cache (9 checks). Restricted provider
+network rules denied an unrelated destination and the host gateway. All temporary
+egress rules/network were removed; acceptance instances are again network-none.
+Provider response writes exposed WASIp2's4096-byte blocking-write limit; guest
+streaming now chunks accordingly with a large-Unicode regression. No personal
+location feed or production runtime was involved.
+
+All suites include overlapping login assertions; counts are not summed. Exact
+final-image packaging, independent review and frontend same-screen browser B4
+acceptance remain. B5 cutover still requires later explicit release authority.
+
+### Final backend artifact checkpoint
+
+Scratch image `sha256:9a42759ad1d1239023c7d0f4d56c9908b6700b75ffe8a021c2ba58bc20ceab35`
+started in fresh run `e204270d24e9575477eeae7236b17847`.29 planner and7 protected
+proxy checks pass without development guest replacement. Guest bytes match the
+qualified component. Independent static review found one sealed-binding REPLACE
+gap; additive migration004 fixes it, both rebinding directions are denied in the
+live final image, and reviewer recheck reports no further findings.46 focused
+tests pass. Same-screen frontend B4 remains unperformed; production unchanged.
+See `BACKEND-ACCEPTANCE-HANDOFF.md` and `live-final-image-evidence.json`.

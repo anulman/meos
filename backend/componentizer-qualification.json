@@ -42,9 +42,9 @@
   },
   "guestProof": {
     "file": ".qualification/meos-guest.wasm",
-    "sha256": "d325f2e84b08c60fcaeef8fce913ecf08645deb121dfd14493541cbbf8e3e067",
-    "bytes": 5255766,
+    "sha256": "1588f5e215882f98c42633d09945633cdd4460c54873ce97a6d2f7a3072f4842",
+    "bytes": 5282436,
     "compiled": true,
-    "liveRuntimeQualified": "partial:29 HTTP planner checks;13 cookie/session checks; final image/browser lifecycle pending"
+    "liveRuntimeQualified": "Fresh final-image planner29/proxy7 and live migration004 seal proof pass; earlier lifecycle/restore/provider receipts preserved; frontend B4 browser acceptance pending"
   }
 }

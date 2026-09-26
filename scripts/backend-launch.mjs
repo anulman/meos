@@ -6,6 +6,8 @@ import { admitArtifact, createArgs, deny, validatePlan, verifyRuntime } from '..
 
 const root = new URL('../backend/', import.meta.url)
 const image = process.argv[2]
+const prepareRestore=process.argv[3]==='--prepare-restore'
+deny(process.argv.length===(prepareRestore?4:3),'unexpected launcher arguments')
 const registry = JSON.parse(await readFile(new URL('reviewed-artifacts.json', root), 'utf8'))
 // Registry selection occurs before evidence or Docker access. A candidate cannot admit itself.
 const selected = registry.artifacts.find(entry => entry.image === image)
@@ -38,6 +40,10 @@ docker(createArgs(plan, entry))
 const container = JSON.parse(docker(['container','inspect',names.name]))[0]
 const volume = JSON.parse(docker(['volume','inspect',names.volume]))[0]
 verifyRuntime(container, volume, plan, imageInfo.Id)
+if(prepareRestore) {
+ console.log(JSON.stringify({state:'prepared-for-disposable-restore',plan,containerId:container.Id,volume:names.volume,network:'none'},null,2))
+ process.exit(0)
+}
 docker(['start',names.name])
 const started = JSON.parse(docker(['container','inspect',names.name]))[0]
 deny(started.State?.Running === true, 'container did not stay running')

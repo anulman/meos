@@ -13,7 +13,7 @@ function csrfEqual(left,right) {
 /** Runtime binding supplies `user` from authenticated TrailBase context, NOT body/headers.
  * This is a handler function, not a second general-purpose server or an auth implementation.
  */
-function createHttpFlow({commands,weather,origin,basePath='/api/meos/v1'}) {
+function createHttpFlow({commands,weather,bridge,origin,basePath='/api/meos/v1'}) {
  const expected=new URL(origin)
  if(expected.origin!==origin||!['https:','http:'].includes(expected.protocol)||!/^\/[a-z0-9/_-]+$/.test(basePath))throw new Error('Invalid handler routing configuration')
  return function* handle(request,user) {
@@ -37,6 +37,11 @@ function createHttpFlow({commands,weather,origin,basePath='/api/meos/v1'}) {
     try{body=JSON.parse(text)}catch{throw new DomainError('validation','Invalid JSON')}
     if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(key=>!['value','expectedRevision'].includes(key)))throw new DomainError('validation','Invalid command envelope')
    }
+   if(parts.length===2&&parts[0]==='bridge'&&parts[1]==='location'&&method==='POST'&&bridge) {
+    if(body.expectedRevision!==undefined)throw new DomainError('validation','Revision is not a location field')
+    return response(yield {kind:'bridge',userId:user.id,observation:body.value})
+   }
+   if(bridge?.ownerFor(user.id))throw new DomainError('forbidden','Bridge identity cannot access planner resources')
    if(parts[0]==='resources'&&resources.has(parts[1])) {
     const kind=parts[1],id=parts[2]
     if(parts.length>3)throw new DomainError('not_found','Route not found')
@@ -72,7 +77,7 @@ export function createHttpHandler(options) {
   while(!step.done) {
    try {
     const effect=step.value
-    const value=await (effect.kind==='body'?boundedText(effect.request,effect.maxBytes):options.weather.read(effect.userId,effect.preferences))
+    const value=await (effect.kind==='body'?boundedText(effect.request,effect.maxBytes):effect.kind==='bridge'?options.bridge.ingest(effect.userId,effect.observation):options.weather.read(effect.userId,effect.preferences))
     step=iterator.next(value)
    }catch(error){step=iterator.throw(error)}
   }
@@ -86,7 +91,7 @@ export function createSynchronousHttpHandler(options,{readText}) {
   while(!step.done) {
    try {
     const effect=step.value
-    const value=effect.kind==='body'?readText(effect.request,effect.maxBytes):options.weather.read(effect.userId,effect.preferences)
+    const value=effect.kind==='body'?readText(effect.request,effect.maxBytes):effect.kind==='bridge'?options.bridge.ingest(effect.userId,effect.observation):options.weather.read(effect.userId,effect.preferences)
     if(value&&typeof value.then==='function')throw new Error('Async effect in synchronous guest')
     step=iterator.next(value)
    }catch(error){step=iterator.throw(error)}

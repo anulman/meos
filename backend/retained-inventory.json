@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "image": "sha256:3918dfad6c60e06fd242098a4088470ead65b90467a43a609ec716f5decce175",
+  "image": "sha256:9a42759ad1d1239023c7d0f4d56c9908b6700b75ffe8a021c2ba58bc20ceab35",
   "coverage": "complete-runtime-and-linked-components",
   "method": "Conservative selected native normal/build and admin package source closures, exact guest runtime SBOM plus URL dependencies. Node-only lightningcss/argparse/caniuse excluded from runtime; their source/notices retained. Static ELF lacks interpreter/DT_NEEDED. Explicit rust-embed/debug-embed compiled native assets and migrations. Scratch file allowlist excludes build tools/caches.",
   "components": [
@@ -12858,7 +12858,7 @@
     },
     {
       "path": "data/wasm/meos.wasm",
-      "digest": "sha256:8de3808ad77bd7aed419587597562c7e63be0baeb16d41a2f8be8f1d07bb6ffc"
+      "digest": "sha256:1588f5e215882f98c42633d09945633cdd4460c54873ce97a6d2f7a3072f4842"
     },
     {
       "path": "data/migrations/main/U1790380800__planner.sql",
@@ -12867,6 +12867,14 @@
     {
       "path": "data/migrations/main/U1790380801__weather.sql",
       "digest": "sha256:22229cec2215f85f38630231ef5dfaa398122e859e05e05fe65ecf4a8a81a2ae"
+    },
+    {
+      "path": "data/migrations/main/U1790380804__bridge_seal.sql",
+      "digest": "sha256:bad62129aab8b320c3eb057f86871fae15380562d61825f78c0ad3fbf0a013d0"
+    },
+    {
+      "path": "data/migrations/main/U1790380803__bridge.sql",
+      "digest": "sha256:d46440a4b43b9ec8545a8144bb07a90784b62ee8878903615974aef269457e34"
     },
     {
       "path": "data/migrations/main/U1790380802__instance.sql",

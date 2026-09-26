@@ -2,7 +2,7 @@
   "schema": 1,
   "artifacts": [
     {
-      "image": "sha256:3918dfad6c60e06fd242098a4088470ead65b90467a43a609ec716f5decce175",
+      "image": "sha256:9a42759ad1d1239023c7d0f4d56c9908b6700b75ffe8a021c2ba58bc20ceab35",
       "version": "0.33.22",
       "reviewStatus": "approved",
       "cliSourceReviewed": true,
@@ -21,9 +21,9 @@
       ],
       "review": "Local source/artifact admission only; live acceptance pending. OSL41790, build-only version policy41831.",
       "inventoryFile": "retained-inventory.json",
-      "inventoryDigest": "sha256:8a4833f13c407875fa0bbc726ce35e756082960b08019a03fd2830d301a20929",
+      "inventoryDigest": "sha256:94a94a6bcc6d9cafe37379610f8c8158bb556776d310613eb69f314e47c1314a",
       "sourceFile": "retained-source.tar.gz",
-      "sourceDigest": "sha256:3b8ec9973f9fcf6388d46bec145b0233acc7175bfdf67cee72fbb2052f09793a",
+      "sourceDigest": "sha256:66c0aff74a9eb6c07aed6a5154ee6390552722e3242269b3d1f82933288783e5",
       "noticesFile": "retained-notices.txt",
       "noticesDigest": "sha256:645142e7a8046a12ce6cb75abf3da3cdfa32a223d8e39b903d2543b971559abf"
     }
