@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "enabled": false,
+  "bucket": "",
+  "endpoint": "https://s3.example.invalid",
+  "region": "us-east-1",
+  "prefix": "meos/instance-id",
+  "instanceId": "00000000000000000000000000000000",
+  "age": "/opt/meos-backup/runtime/age",
+  "recipient": "age1REPLACE_WITH_PUBLIC_RECIPIENT",
+  "identityFile": "/etc/meos-backup/recovery-identity.txt",
+  "credentialsFile": "/etc/meos-backup/s3-credentials.json",
+  "runtimeStateFile": "/etc/meos/runtime-state.json",
+  "sources": {
+    "native": "/REPLACE_WITH_VERIFIED_DOCKER_VOLUME_MOUNTPOINT",
+    "calendar": "/var/lib/meos-calendar",
+    "configuration": "/etc/meos",
+    "release": "/REPLACE_WITH_CURRENT_IMMUTABLE_RELEASE",
+    "units": "/REPLACE_WITH_PRIVATE_DIRECTORY_OF_MEOS_UNIT_FILES"
+  },
+  "workDirectory": "/var/lib/meos-backup",
+  "paused": false,
+  "requiredPreupgrade": true,
+  "cadenceSeconds": 86400,
+  "keepLast": 0,
+  "requiredConfiguration": {
+    "webIdentity": "web/web-identity.json",
+    "owner": "web/owner.json",
+    "accessKeys": "access-keys",
+    "calendarConfig": "calendar/config.json",
+    "calendarOAuth": "calendar/oauth.json",
+    "calendarPlanner": "calendar/planner.json"
+  },
+  "maxArchiveBytes": 268435456
+}

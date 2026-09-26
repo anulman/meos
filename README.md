@@ -61,3 +61,7 @@ optional schedules, bounded materialization, OpenAPI/generated types, scoped MCP
 tools, transactional scheduling and deferred Calendar sync foundations.
 Run `pnpm contract:check` to check generated-contract drift.
 
+
+## Optional recovery tooling
+
+The native/Calendar deployment has a host-side [backup and recovery guide](docs/BACKUP-RECOVERY.md). No bucket means silent no-op; no service, cloud resource, or policy is enabled by this repository.

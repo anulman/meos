@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "checkedAt": "2026-09-26T21:42:31.981292+00:00",
+  "baseline": "83abc2f",
+  "status": "source-qualified-not-deployed",
+  "checks": {
+    "isolatedSyntheticTests": 14,
+    "actualAge": "v1.3.2",
+    "fakeS3Only": true,
+    "networkNamespaceEgressDenied": true,
+    "productionPathsHidden": true,
+    "bundledRuntimeSmoke": true,
+    "licenseArtifactAndNoticeGate": true,
+    "pythonAST": true,
+    "diffWhitespace": true
+  },
+  "notProven": [
+    "real S3 provider compatibility",
+    "installed service closure",
+    "application login/readiness/restart restore",
+    "production deployment"
+  ],
+  "files": {
+    "tools/backup/meos-backup.py": "c6f2e193e7e80a57e19c8174906ed009f6ec8c9868fa338b3fdb6ce6b9d4f6ff",
+    "tools/backup/package.py": "0b577da57e1e8cca48362c31af00d8fc8bdc889868712c6b3445f90cae7705b1",
+    "tools/backup/test_backup.py": "b70e65baf89727206255688ad6495034c708afc9f96c07f3e66ee106905797ff",
+    "tools/backup/test-isolated.sh": "d8ab156cf4b2c4fe0d9ba4e7ee9f6aec464bc88ee5edd1e04c70fcca26d9aa0b",
+    "scripts/calendar-upgrade.py": "49180065bf952b483422daec6df75b52906c5d2a011f08d913b6bca0335a238f",
+    "scripts/production-stage.py": "fcad140f33769b3a776aab91ff61aec70fa1e475d5864b22169728dd5c5e1e38",
+    "tools/backup/licenses.json": "354c5bc9a0b8fa80dfd2806685e77b4ec9b1bee94146d7bcadff4b0a35f987ad"
+  }
+}

@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# Select cadenceSeconds in policy; this example checks hourly, not always backs up.
+[Unit]
+Description=MeOS backup cadence check (opt-in)
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1h
+Persistent=true
+Unit=meos-backup.service
+[Install]
+WantedBy=timers.target

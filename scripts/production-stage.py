@@ -39,7 +39,7 @@ closure=['access-owner','node-web-server','protected-proxy','body','domain','con
 for relative in ['backend/'+name+'.mjs' for name in closure]+['scripts/serve-real.mjs','scripts/serve-calendar.mjs']:
  copy(source/relative,relative,qualification['sourceFiles'][relative])
 helpers=['production-ready.py','production-web-exec.py','production-uid-check.py','production-access-keys.py','calendar-uid-check.py']
-assert set(admission['helperFiles'])=={'scripts/'+name for name in helpers}
+assert set(admission['helperFiles'])=={'scripts/'+name for name in helpers}|{'tools/backup/meos-backup.py'}
 for relative,digest in admission['helperFiles'].items():copy(repo/relative,relative,digest)
 # The runtime binary and its full distributed notices need explicit independent
 # license/artifact admission. Build-only Node approval is not runtime approval.
