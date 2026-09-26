@@ -17,3 +17,9 @@ Suggested participation: 20–30 minutes. Use for strategic weekly reconciliatio
 6. Apply and verify authorized revision-checked changes. Planning farther ahead does not authorize notification scheduling beyond seven days.
 
 **Result:** chosen priorities/outcomes, verified scheduled blocks, explicit deferrals, identified gaps and a short unresolved decision list. Persist a checkpoint if the review is interrupted rather than restarting it.
+
+## Optional agent lifecycle boundaries
+
+Use the shared contract's durable run lifecycle when actually available. Useful weekly phases are **review**, **plan**, and **apply/verify**; do not create an event for every item. Before-hooks run before mutations under trusted registration policy. Record core success only after verified changes and a saved result/checkpoint.
+
+A user-registered after-success hook may render the approved summary to PDF and submit it through a discovered host printer tool. The running agent owns that callback; MeOS supplies run/artifact references and durable hook receipts only if those capabilities are implemented. Persist separate core/hook outcomes, reconcile uncertain submissions, and never rerun successful schedule changes to recover a failed print. Finally-hooks also run on failure/cancellation and must not be mistaken for success printing. No hook is enabled by this skill.
