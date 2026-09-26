@@ -1,11 +1,14 @@
+import { validTimezone } from './timezones'
 import { http, HttpResponse } from 'msw'
 import { setupWorker } from 'msw/browser'
 import { getConfig } from './config'
-import type { Task, Project } from './contracts'
+import type { Task, Project, Routine, Occurrence } from './contracts'
+import type { WeeklyOutcome, PeriodNote } from './planner-contracts'
+import { assertDate, weekPeriod, dateInZone } from './dates'
 const config=getConfig()
-const today=new Intl.DateTimeFormat('en-CA',{timeZone:config.timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
+const today=dateInZone(Date.now(),config.timezone)
 export let projects:Project[]=[{id:'a05a6d7e-83e0-4cba-ae9f-cb994b4fbabb',title:'A greener balcony',notes:{type:'doc'}}]
-let tasks:Task[]=['Choose herbs for the balcony','Take a quiet afternoon walk','Sketch a weekend breakfast'].map((title,i)=>({id:['0dd996fc-092d-4dbb-bac1-165e0d559c44','0dd996fc-092d-4dbb-bac1-165e0d559c45','0dd996fc-092d-4dbb-bac1-165e0d559c46'][i],title,completed:false,priority:i===0?'high':'none',schedule:{date:today,time:i===0?'10:00':undefined,timezone:config.timezone},projectId:i===0?projects[0].id:undefined,notes:{type:'doc'}}))
+let tasks:Task[]=['Choose herbs for the balcony','Take a quiet afternoon walk','Sketch a weekend breakfast'].map((title,i)=>({id:['0dd996fc-092d-4dbb-bac1-165e0d559c44','0dd996fc-092d-4dbb-bac1-165e0d559c45','0dd996fc-092d-4dbb-bac1-165e0d559c46'][i],title,completed:false,priority:i===0?'high':'none',schedule:{date:today,time:['10:00','14:00','16:30'][i],timezone:config.timezone},projectId:i===0?projects[0].id:undefined,notes:{type:'doc'}}))
 tasks.push({id:'0dd996fc-092d-4dbb-bac1-165e0d559c47',title:'Find a frame for the hallway',completed:false,priority:'low',notes:{type:'doc'}})
 function validate(value:Task|Project,kind:'tasks'|'projects') {
  if(!value || typeof value.id!=='string' || typeof value.title!=='string' || !value.title.trim()) return 'Give this resource a name.'
@@ -17,8 +20,8 @@ function validate(value:Task|Project,kind:'tasks'|'projects') {
   if(task.projectId && !projects.some(p=>p.id===task.projectId&&!p.archived)) return 'Choose an active project, or No project.'
   if(task.durationMinutes!==undefined && (!Number.isInteger(task.durationMinutes)||task.durationMinutes<1||task.durationMinutes>1440)) return 'Duration must be between 1 and 1440 minutes.'
   if(task.schedule) {
-   if(!validDate(task.schedule.date)||task.schedule.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(task.schedule.time)) return 'Choose a valid scheduled date and time.'
-   try{new Intl.DateTimeFormat('en',{timeZone:task.schedule.timezone})}catch{return 'Choose a valid timezone.'}
+   if(!validDate(task.schedule.date)||typeof task.schedule.time!=='string'|| !/^([01]\d|2[0-3]):[0-5]\d$/.test(task.schedule.time)) return 'Choose a valid scheduled date and time.'
+   if(!validTimezone(task.schedule.timezone))return 'Choose a valid IANA timezone.'
   }
  } else if((value as Project).targetDate && !validDate((value as Project).targetDate!)) return 'Choose a valid target date.'
  return null
@@ -50,5 +53,55 @@ const handlers=(['tasks','projects'] as const).flatMap(kind=>[
   return HttpResponse.json(value)
  }))
 ])
-const worker=setupWorker(...handlers)
+const seedPeriod=weekPeriod(today,1)
+const planner:{routines:Routine[];occurrences:Occurrence[];outcomes:WeeklyOutcome[];'period-notes':PeriodNote[]}={
+ routines:[{id:'routine-morning',title:'Morning care',weekdays:[0,1,2,3,4,5,6],time:'08:00',timezone:config.timezone,durationMinutes:30,notes:{type:'doc'}},{id:'routine-evening',title:'Evening wind-down',weekdays:[0,1,2,3,4,5,6],time:'18:00',timezone:config.timezone,durationMinutes:20,notes:{type:'doc'}}],
+ occurrences:[],outcomes:[{id:'seed-outcome',taskId:tasks[0].id,period:seedPeriod,position:0}], 'period-notes':[],
+}
+tasks.push({id:'seed-completed',title:'Water the kitchen plants',completed:true,priority:'none',schedule:{date:today,time:'09:00',timezone:config.timezone},notes:{type:'doc'}})
+tasks.push({id:'seed-archived',title:'Put away the summer blanket',completed:false,priority:'none',archived:true,notes:{type:'doc'}})
+function plannerError(kind:keyof typeof planner,value:any):string|null {
+ if(!value||typeof value.id!=='string'||!value.id)return 'A resource identity is required.'
+ try {
+  if(kind==='routines') {
+   if(typeof value.title!=='string'||!value.title.trim())return 'Give this routine a name.'
+   if(!Array.isArray(value.weekdays)||!value.weekdays.length||value.weekdays.some((d:unknown)=>!Number.isInteger(d)||Number(d)<0||Number(d)>6))return 'Choose at least one valid weekday.'
+   if(!validTimezone(value.timezone))return 'Choose a valid IANA timezone.'
+   if(value.time!==undefined&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(value.time))return 'Choose a valid time.'
+   if(value.durationMinutes!==undefined&&(!Number.isInteger(value.durationMinutes)||value.durationMinutes<1||value.durationMinutes>1440))return 'Duration must be 1–1440 minutes.'
+  }
+  if(kind==='occurrences') {
+   assertDate(value.date)
+   if(!planner.routines.some(r=>r.id===value.routineId)||typeof value.completed!=='boolean')return 'Invalid routine occurrence.'
+   if(planner.occurrences.some(o=>o.id!==value.id&&o.routineId===value.routineId&&o.date===value.date))return 'Occurrence already exists.'
+  }
+  if(kind==='outcomes'||kind==='period-notes') {
+   assertDate(value.period.start);assertDate(value.period.end)
+   if(value.period.end<value.period.start)return 'Invalid period.'
+  }
+  if(kind==='outcomes') {
+   if(!tasks.some(t=>t.id===value.taskId&&!t.archived))return 'Choose an active task.'
+   if(!Number.isInteger(value.position)||value.position<0)return 'Invalid outcome order.'
+   if(planner.outcomes.some(o=>o.id!==value.id&&o.taskId===value.taskId&&o.period.start===value.period.start&&o.period.end===value.period.end))return 'This task is already an outcome for this week.'
+  }
+  if(kind==='routines'||kind==='period-notes')if(value.notes?.type!=='doc')return 'Notes must be a document.'
+  if(kind==='period-notes') {
+   if(!['day','week'].includes(value.kind))return 'Invalid note kind.'
+   if(planner['period-notes'].some(n=>n.id!==value.id&&n.kind===value.kind&&n.period.start===value.period.start&&n.period.end===value.period.end))return 'A note already exists for this period.'
+  }
+ } catch{return 'Choose valid calendar dates and timezone.'}
+ return null
+}
+const plannerHandlers=(['routines','occurrences','outcomes','period-notes'] as const).flatMap(kind=>[
+ http.get(`${config.apiBase}/${kind}`,()=>HttpResponse.json(planner[kind])),
+ http.put(`${config.apiBase}/${kind}/:id`,async({request,params})=>{
+  const value={...await request.json() as object,id:String(params.id)}
+  const error=plannerError(kind,value);if(error)return HttpResponse.json({error},{status:400})
+  const list=planner[kind] as Array<{id:string}>;const index=list.findIndex(item=>item.id===value.id)
+  if(index<0)list.push(value);else list[index]=value
+  return HttpResponse.json(value)
+ }),
+])
+plannerHandlers.push(http.delete(`${config.apiBase}/outcomes/:id`,({params})=>{planner.outcomes=planner.outcomes.filter(o=>o.id!==params.id);return HttpResponse.json({ok:true})}))
+const worker=setupWorker(...handlers,...plannerHandlers)
 export const ready=worker.start({quiet:true,onUnhandledRequest:'bypass'})

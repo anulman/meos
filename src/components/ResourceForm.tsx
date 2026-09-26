@@ -1,11 +1,13 @@
 import { useState, type ReactNode } from 'react'
 import { useForm } from '@tanstack/react-form'
 import type { Notes, Project, Task, Priority, LinkedReference } from '../lib/contracts'
-import { getConfig } from '../lib/config'
+import { usePlannerClock } from '../lib/planner-clock'
 import { saveProject, saveTask } from '../lib/store'
+import { TimezoneSelect } from './TimezoneSelect'
 import { NotesEditor } from './NotesEditor'
 
-export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,children}:{kind:'task'|'project';resource:Task|Project;projects?:Project[];isNew?:boolean;onSaved:(resource:Task|Project)=>void;children?:ReactNode}) {
+export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNotesChange,children}:{kind:'task'|'project';resource:Task|Project;projects?:Project[];isNew?:boolean;onSaved:(resource:Task|Project)=>void;onNotesChange?:()=>void;children?:ReactNode}) {
+ const clock=usePlannerClock()
  const [error,setError]=useState('')
  const [saving,setSaving]=useState(false)
  const task=resource as Task;const project=resource as Project
@@ -13,14 +15,15 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,chil
   title:resource.title,completed:resource.completed??false,notes:resource.notes,
   references:resource.references??[] as LinkedReference[],
   projectId:task.projectId??'',priority:task.priority??'none' as Priority,
-  date:task.schedule?.date??'',time:task.schedule?.time??'',timezone:task.schedule?.timezone??getConfig().timezone,
+  date:task.schedule?.date??'',time:task.schedule?.time??'',timezone:task.schedule?.timezone??clock.preferences.timezone,
   duration:task.durationMinutes?.toString()??'',targetDate:project.targetDate??'',
  },onSubmit:async({value})=>{
   setError('');setSaving(true)
   try{
    if(kind==='task'&&value.time&&!value.date)throw new Error('Choose a scheduled date before adding a time.')
+   if(kind==='task'&&value.date&&!value.time)throw new Error('Choose a time for this scheduled task.');
    const base={id:resource.id,title:value.title,completed:value.completed,notes:value.notes,references:value.references,archived:resource.archived??false}
-   const saved=kind==='task'?await saveTask({...base,priority:value.priority,projectId:value.projectId||undefined,schedule:value.date?{date:value.date,time:value.time||undefined,timezone:value.timezone}:undefined,durationMinutes:value.duration?Number(value.duration):undefined},isNew):await saveProject({...base,targetDate:value.targetDate||undefined},isNew)
+   const saved=kind==='task'?await saveTask({...base,priority:value.priority,projectId:value.projectId||undefined,schedule:value.date?{date:value.date,time:value.time,timezone:value.timezone}:undefined,durationMinutes:value.duration?Number(value.duration):undefined},isNew):await saveProject({...base,targetDate:value.targetDate||undefined},isNew)
    onSaved(saved)
   }catch(cause){setError(cause instanceof Error?cause.message:'Could not save. Your draft is still here.')}
   finally{setSaving(false)}
@@ -42,15 +45,17 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,chil
    <div className="plan-fields">
     {kind==='task'?<>
      <form.Field name="projectId">{field=><label>Project<select value={field.state.value} onChange={e=>field.handleChange(e.target.value)}><option value="">No project</option>{projects.filter(p=>!p.archived).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>}</form.Field>
+     <p className="muted">Scheduling is optional. Tasks without a date and time stay in the task lists in Settings, outside daily views.</p>
+     <button type="button" className="quiet-action" onClick={()=>{form.setFieldValue('date','');form.setFieldValue('time','')}}>Clear schedule</button>
      <form.Field name="date">{field=><label>Scheduled date<input type="date" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
-     <form.Field name="time">{field=><label>Time (optional)<input type="time" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
-     <form.Field name="timezone">{field=><label>Timezone<input value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
+     <form.Field name="time">{field=><label>Time (required when scheduled)<input type="time" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
+     <form.Field name="timezone">{field=><TimezoneSelect label="Timezone" value={field.state.value} onChange={field.handleChange}/>}</form.Field>
      <form.Field name="duration">{field=><label>Duration (minutes)<input type="number" min="1" max="1440" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
      <form.Field name="priority">{field=><label>Priority<select value={field.state.value} onChange={e=>field.handleChange(e.target.value as Priority)}>{(['none','low','medium','high'] as const).map(p=><option key={p}>{p}</option>)}</select></label>}</form.Field>
     </>:<form.Field name="targetDate">{field=><label>Target date (optional)<input type="date" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>}
    </div>
   </details>
-  <section className="resource-section"><h2>Notes</h2><form.Field name="notes">{field=><NotesEditor value={field.state.value} onChange={(notes:Notes)=>field.handleChange(notes)}/>}</form.Field></section>
+  <section className="resource-section"><h2>Notes</h2><form.Field name="notes">{field=><NotesEditor value={field.state.value} onChange={(notes:Notes)=>{field.handleChange(notes);onNotesChange?.()}}/>}</form.Field></section>
   <section className="resource-section"><h2>Linked references</h2>
    <form.Field name="references">{field=><>
     {field.state.value.map((reference,index)=><div className="reference-row" key={reference.id}>
