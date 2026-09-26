@@ -89,15 +89,75 @@ Inspect only actual release-owned resources using the manifest's resource names/
 
 ## Recovery planning and verification
 
-This guide does **not** enable backups or recovery. Before installation/upgrade approval, explain the selected release's recovery path, expected data-loss window and restoration limits using evidence, not promises. Reuse existing approvals; otherwise obtain the actual backup destination, retention/deletion policy, access authority and any costs before provisioning. Do not assume a vendor, retention period or cloud spending grant. Compose is the first single-host path; keep the maintained Helm example for a later cluster installation, not a prerequisite.
+Backups are optional. If no S3-compatible bucket is supplied, do nothing: do not
+provision resources, request credentials, install a schedule, or warn about a
+missing optional component. A requested but failing configured backup is an error,
+not the same as an absent bucket. This guide itself grants no backup authority.
 
-- Use the release/database-supported **consistent snapshot or export** mechanism, not a live database-file copy. Cover persistent application data plus the private configuration and secret material needed to restore; protect and restore secrets safely without putting them in receipts or chat.
-- Verify an authorized **off-host copy** by its actual upload/integrity receipts; a local snapshot alone does not cover host loss. Document what is excluded and how encryption keys/configuration are recoverable by the owner.
-- Restore into an **isolated** disposable target with verified test data/service identities and blocked real-provider egress (including Calendar sync, messaging and notifications). Verify restored data identities, intended login and supported migration behavior without touching production or exercising real providers. Record the restore result and remaining gaps.
-- Verify scheduler startup at boot, durable/persistent missed-run handling, bounded retry behavior, health and last-success evidence. Verify an authorized **external stale-backup alert** that can detect host/scheduler failure, not only an alert running on the backed-up host.
-- Record timer/job identity and next run, successful backup/run and off-host upload receipts, isolated restore receipt, and alert verification separately in the installation ledger. Do not claim recovery is enabled/verified from this text, an enabled timer or a configured destination alone. Report missing receipts or unsupported components explicitly.
+### Configure optional host backup tooling
 
-This section is a planning/verification requirement, not a backup implementation or permission to create services or spend money.
+For a release containing `tools/backup/meos-backup.py`, read that exact release's
+`docs/BACKUP-RECOVERY.md` before installation. It targets the native/Calendar Linux
+amd64 host deployment with Python 3.11+, systemd, Docker and pinned age, not an
+invented Compose/Helm sidecar or MeOS API. If the selected deployment does not match
+that contract, leave this optional component uninstalled and record the mismatch.
+
+1. Reuse the user's bucket/prefix and existing grants. Resolve only missing choices:
+   backup cadence, maximum data-loss interval, preupgrade requirement, pause state,
+   retention/deletion policy and an optional external freshness-alert destination.
+   No cloud account, paid resource, deletion policy or schedule is implicit.
+2. Verify the release's offline bundle and license/hash gate. Identify all five
+   live source roots and the actual writer closure: native depot, Calendar state,
+   installed configuration, immutable release and five MeOS units. Prove no other
+   host process writes these roots; a Docker volume check alone is insufficient.
+   Capacity admission must cover each destination filesystem, source growth and
+   the minimum 5 GiB reserve; never delete old evidence/backups to pass it.
+3. Configure the private age identity and S3 credential files using supported
+   private tooling, outside the archived roots. Escrow the recovery key separately
+   off-host. Keep secrets out of chat and the installation ledger. Use the exact
+   release's example schema, including verified runtime identity and required
+   configuration roles; do not substitute stale copies for live configuration.
+4. Under backup execution authority, run the documented `config-check`, `backup`
+   and `status` commands. Verify upload and isolated data-restore receipts
+   separately. The runner resumes recorded active writers in `finally`; reconcile
+   a surviving journal with `resume-writers` before another run. Data integrity
+   alone does not prove login, readiness, restart or application recovery:
+   `applicationRecoveryVerified` remains false.
+5. Only with scheduling authority, install the release's example service/timer
+   through supported host controls, adjusting the reviewed cadence. Reuse matching
+   owned units instead of creating duplicates. Verify boot startup, missed-run
+   behavior, next run and observed success. Verify the independently authorized
+   off-host stale-success alert; an enabled timer cannot detect a dead host.
+6. Restore into a new isolated disposable target first, with real Calendar,
+   messaging and notification egress denied. Use the independently escrowed key,
+   compare restored identities/data, then separately qualify application login,
+   readiness and restart with the exact release. Production replacement requires
+   its own explicit approval and preserved rollback state; this tool never
+   overwrites a live target or starts restored services.
+
+### Inspect, pause, update and remove optional backups
+
+- **Inspect:** use `status` and actual scheduler/provider receipts. Record backup
+  and data-restore times, separate application-recovery evidence, policy, owned
+  unit IDs and alert verification in the ledger without credentials.
+- **Pause:** `paused: true` suppresses scheduled `due` runs but fails explicit or
+  required preupgrade backups. `enabled: false` disables all operations; do not
+  use it to conceal a configured failure. Preserve keys, objects and receipts.
+- **Update:** reverify bundle/source hashes and compatibility. The Calendar upgrade
+  guard holds the backup lock through the transition and rejects failed required
+  preupgrade backups. Preserve the retained-depot/runtime admission checks; do
+  not bypass the guard or reinterpret source qualification as deployment approval.
+- **Retention:** `keepLast: 0` retains everything. Inspect `retention` first;
+  `retention --apply` deletes only under explicit deletion authority. Provider
+  lifecycle policies are separate and must not expire the only recovery copy.
+- **Uninstall:** stop/remove only owned backup triggers/services within scope.
+  Preserve remote objects, private recovery keys, receipts and application data
+  unless their deletion is separately authorized. Record what remains recoverable.
+
+Report configured, uploaded, data-restored and application-recovery-qualified as
+separate states. Real-provider compatibility, installed writer closure and
+application recovery need installation evidence; synthetic source tests do not
+satisfy those gates.
 
 ## Stage 3 — Prove persistent MeOS works
 
