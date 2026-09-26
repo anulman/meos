@@ -33,7 +33,7 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,chil
   finally{setSaving(false)}
  }
  return <form className="resource-form" onSubmit={event=>{event.preventDefault();event.stopPropagation();void form.handleSubmit()}}>
-  <div className="resource-title-row">
+  <div className="resource-body"><div className="resource-title-row">
    <form.Field name="completed">{field=><button className="status-icon" type="button" aria-label={field.state.value?'Mark incomplete':'Mark complete'} aria-pressed={field.state.value} onClick={()=>field.handleChange(!field.state.value)}>{field.state.value?'✓':'○'}</button>}</form.Field>
    <form.Field name="title">{field=><input className="resource-title-input" aria-label={`${kind==='task'?'Task':'Project'} name`} placeholder={`Name this ${kind}`} value={field.state.value} onChange={e=>field.handleChange(e.target.value)} required maxLength={200}/>}</form.Field>
   </div>
@@ -63,6 +63,6 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,chil
   </section>
   {children}
   {error&&<p role="alert" className="save-error">{error} Your unsaved changes are preserved.</p>}
-  <div className="resource-actions"><button className="save-button" type="submit" disabled={saving}>{saving?'Saving…':isNew?`Create ${kind}`:'Save changes'}</button>{!isNew&&<button type="button" className="archive-button" onClick={()=>void archive()} disabled={saving}>Archive {kind}</button>}</div>
+  </div><div className="resource-actions"><button className="save-button" type="submit" disabled={saving}>{saving?'Saving…':isNew?`Create ${kind}`:'Save changes'}</button>{!isNew&&<button type="button" className="archive-button" onClick={()=>void archive()} disabled={saving}>Archive {kind}</button>}</div>
  </form>
 }

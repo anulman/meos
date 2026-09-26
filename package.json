@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
+    "@floating-ui/react-dom": "2.1.9",
     "@stylexjs/stylex": "0.19.1",
     "@tanstack/query-db-collection": "1.2.15",
     "@tanstack/react-db": "0.4.1",
