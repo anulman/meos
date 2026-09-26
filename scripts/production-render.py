@@ -5,7 +5,7 @@ The root-owned state comes from trusted bootstrap (production) or acceptance pro
 """
 import argparse,hashlib,json,os,pathlib,re,stat,subprocess
 assert os.geteuid()==0
-parser=argparse.ArgumentParser();parser.add_argument('--state',required=True);parser.add_argument('--release',required=True);parser.add_argument('--output',required=True);args=parser.parse_args()
+parser=argparse.ArgumentParser();parser.add_argument('--state',required=True);parser.add_argument('--release',required=True);parser.add_argument('--output',required=True);parser.add_argument('--access-config');parser.add_argument('--owner-file');parser.add_argument('--access-keys-dir');args=parser.parse_args()
 repo=pathlib.Path(__file__).resolve().parents[1]
 state_path=pathlib.Path(args.state).absolute();release=pathlib.Path(args.release).absolute();output=pathlib.Path(args.output).absolute()
 def secure(path,directory=False):
@@ -34,8 +34,20 @@ for relative,digest in manifest['files'].items():
 required=['scripts/production-ready.py','scripts/production-uid-check.py','scripts/production-web-exec.py','scripts/serve-real.mjs','backend/node-web-server.mjs','client/_shell.html']
 assert all(path in manifest['files'] for path in required)
 prefix='meos' if state['environment']=='production' else 'meos-proof-'+run
+assert args.access_config and args.owner_file and args.access_keys_dir, 'Access owner wiring is mandatory'
+access_path=pathlib.Path(args.access_config).absolute();owner_path=pathlib.Path(args.owner_file).absolute();keys_dir=pathlib.Path(args.access_keys_dir).absolute()
+secure(access_path);secure(owner_path);secure(keys_dir,True)
+assert stat.S_IMODE(owner_path.stat().st_mode)==0o600 and owner_path.stat().st_nlink==1
+access=json.loads(access_path.read_text());owner=json.loads(owner_path.read_text())
+assert set(owner)=={'email','password'} and access['email']==owner['email'] and len(owner['password'])>=32
+assert set(access)=={'issuer','audience','email','ownerId'}
+if state['environment']=='production':
+ assert access['issuer']=='https://anulman.cloudflareaccess.com' and access['email']=='anulman@gmail.com'
+else:assert access['issuer']=='https://synthetic.cloudflareaccess.com' and access['email'].endswith('@example.invalid')
+assert re.fullmatch('[a-f0-9]{64}',access['audience']) and re.fullmatch('[a-f0-9-]{36}',access['ownerId'])
 assert not output.exists();output.mkdir(mode=0o700,parents=False)
-identity=output/'web-identity.json';identity.write_text(json.dumps({'environment':'production','instanceId':run,'origin':state['origin']})+'\n');os.chmod(identity,0o644)
+identity=output/'web-identity.json';identity.write_text(json.dumps({'environment':'production','instanceId':run,'origin':state['origin'],'access':access})+'\n');os.chmod(identity,0o644)
+runtime_owner=output/'owner.json';runtime_owner.write_text(json.dumps(owner));os.chown(runtime_owner,0,61002);os.chmod(runtime_owner,0o440);del owner
 # Discover the daemon's actual volume root (Docker data-root may be relocated).
 # Never accept a caller-selected socket or assume /var/lib/docker.
 def inspect(kind,name):
@@ -54,10 +66,12 @@ assert len(mounts)==1 and mounts[0]['Type']=='volume' and mounts[0]['Name']==sta
 volume_root=pathlib.Path(volume['Mountpoint']);assert volume_root.is_absolute() and volume_root.is_dir() and not volume_root.is_symlink()
 socket_path=str(volume_root/'server.sock')
 node=str(release/'runtime/node')
-values={'PREFIX':prefix,'CONTAINER':state['containerId'],'RELEASE':str(release),'NODE':node,'SOCKET':socket_path,'IDENTITY':str(identity),'STATE':str(state_path),'PORT':'3190' if state['environment']=='production' else '3191'}
+values={'PREFIX':prefix,'CONTAINER':state['containerId'],'RELEASE':str(release),'NODE':node,'SOCKET':socket_path,'IDENTITY':str(identity),'STATE':str(state_path),'OWNER':str(runtime_owner),'ACCESS_KEYS':str(keys_dir),'PORT':'3190' if state['environment']=='production' else '3191'}
 for value in values.values():assert re.fullmatch(r'[A-Za-z0-9_./:-]+',value), 'Unsafe systemd substitution'
 rendered={}
-for source,suffix in [('meos-backend.service.in','-backend.service'),('meos-web.service.in','-web.service'),('meos-web.socket','-web.socket')]:
+templates=[('meos-backend.service.in','-backend.service'),('meos-web.service.in','-web.service'),('meos-web.socket','-web.socket')]
+if state['environment']=='production':templates += [('meos-access-keys.service.in','-access-keys.service'),('meos-access-keys.timer','-access-keys.timer')]
+for source,suffix in templates:
  text=(repo/'deployment'/source).read_text()
  for key,value in values.items():text=text.replace('@'+key+'@',value)
  assert not re.search('@[A-Z_]+@',text)

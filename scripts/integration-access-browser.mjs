@@ -1,0 +1,29 @@
+// SPDX-License-Identifier: Apache-2.0
+// Actual production entrypoint, behind a synthetic TLS Access edge in isolated namespace.
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import https from 'node:https'
+import http from 'node:http'
+import {spawnSync} from 'node:child_process'
+import {createHash} from 'node:crypto'
+import {chromium} from 'playwright'
+export async function proveAccessBrowser({port,origin,access,owner}){
+ const checks=[],errors=[]
+ assert.equal(spawnSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-keyout','/tmp/access-key.pem','-out','/tmp/access-cert.pem','-days','1','-subj','/CN='+new URL(origin).hostname],{stdio:'ignore'}).status,0)
+ let assertion=access.token
+ const server=https.createServer({key:fs.readFileSync('/tmp/access-key.pem'),cert:fs.readFileSync('/tmp/access-cert.pem')},(req,res)=>{
+  const headers={...req.headers,'Cf-Access-Jwt-Assertion':assertion};const out=http.request({host:'127.0.0.1',port,path:req.url,method:req.method,headers},up=>{res.writeHead(up.statusCode,up.headers);up.pipe(res)});out.on('error',()=>{res.writeHead(503);res.end()});req.pipe(out)
+ });await new Promise(resolve=>server.listen(8444,'127.0.0.1',resolve))
+ const publicKey=spawnSync('openssl',['x509','-in','/tmp/access-cert.pem','-pubkey','-noout']).stdout,spki=createHash('sha256').update(spawnSync('openssl',['pkey','-pubin','-outform','der'],{input:publicKey}).stdout).digest('base64')
+ const browser=await chromium.launch({executablePath:'/opt/playwright/browsers/chromium-1208/chrome-linux64/chrome',headless:true,args:['--no-sandbox','--ignore-certificate-errors-spki-list='+spki,'--no-proxy-server','--host-resolver-rules=MAP '+new URL(origin).hostname+' 127.0.0.1:8444']})
+ try{
+  const context=await browser.newContext({ignoreHTTPSErrors:true}),page=await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>errors.push(e.message))
+  await page.goto(origin+'/settings');await page.getByRole('heading',{name:'Settings',exact:true}).waitFor();assert.equal(await page.locator('input[type=password]').count(),0);assert.equal(await page.getByRole('button',{name:'Sign out',exact:true}).count(),0);checks.push('Access owner opens actual production Settings without password or second login')
+  await page.reload();await page.getByRole('heading',{name:'Settings',exact:true}).waitFor();await context.clearCookies();await page.reload();await page.getByRole('heading',{name:'Settings',exact:true}).waitFor();checks.push('reload persists and missing native cookies renew automatically behind verified Access')
+  const label='Access persistence '+Date.now();await page.getByRole('button',{name:'New project',exact:true}).click();const sheet=page.locator('dialog[open]');await sheet.getByLabel('Project name',{exact:true}).fill(label);await sheet.getByRole('button',{name:'Create project',exact:true}).click();await sheet.waitFor({state:'hidden'});await page.reload();await page.getByRole('button',{name:new RegExp(label)}).waitFor();checks.push('Access-mode ordinary save persists across browser reload')
+  const second=await context.newPage();await second.goto(origin+'/settings');await second.getByRole('button',{name:new RegExp(label)}).waitFor();await second.close();checks.push('second tab receives same single-owner persisted data without password')
+  assertion='spoofed';assert.equal(await page.evaluate(async()=> (await fetch('/api/meos/v1/session')).status),403);assert.equal((await page.goto(origin+'/settings')).status(),403);assert.equal(await page.locator('input[type=password]').count(),0);checks.push('invalid external assertion blocks native cookies and document access')
+  assertion=access.token;fs.writeFileSync('private/access-public/keys.json',JSON.stringify({...access.keys,fetchedAt:1}));assert.equal(await page.evaluate(async()=> (await fetch('/api/meos/v1/session')).status),403);fs.writeFileSync('private/access-public/keys.json',JSON.stringify(access.keys));await page.goto(origin+'/settings');await page.getByRole('button',{name:new RegExp(label)}).waitFor();checks.push('stale signing-key bundle fails closed and refresh restores passwordless browser access')
+  assert.deepEqual(errors,[]);fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:'artifacts/access-settings.png',fullPage:true});fs.writeFileSync('access-browser-evidence.json',JSON.stringify({runId:process.env.MEOS_ACCEPTANCE_RUN,count:checks.length,checks},null,2));console.log('PASS '+checks.length+' Access browser checks')
+ }catch(error){console.error('Access browser proof failed ('+error.name+')');throw Error('Access browser proof failed; inspect isolated trace')}finally{await browser.close();await new Promise(resolve=>server.close(resolve))}
+}

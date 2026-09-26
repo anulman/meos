@@ -62,7 +62,7 @@ def main():
  assert plan['reviewer'] and plan['reviewEvidence'];ZoneInfo(plan['timezone'])
  production=plan['environment']=='production'
  assert plan['reviewStatus']==('approved-for-production-bootstrap' if production else 'approved-for-isolated-qualification')
- assert plan['ownerInputKind']==('masked-owner-file' if production else 'synthetic-only-file')
+ assert plan['ownerInputKind']==('generated-owner-file' if production else 'synthetic-only-file')
  release_path=pathlib.Path(plan['releaseManifestFile']);assert release_path.is_absolute()
  manifest=read_root_json(release_path,manifest=True)
  assert hashlib.sha256(release_path.read_bytes()).hexdigest()==plan['releaseManifestSHA256'] and manifest['image']==IMAGE

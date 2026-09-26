@@ -1,3 +1,32 @@
+# Access-gated single-owner cutover — current authority
+
+The user approved Node across same-license versions and explicitly superseded the
+masked user-password input requirement below. Bootstrap uses the verified owner
+email and a generated internal random secret, never a user-entered app password.
+The single-owner web adapter verifies Cloudflare Access RS256 signatures, exact
+issuer/application audience/owner email, application-token type and validity
+on every request. Bare identity headers, native cookies without Access, wrong
+owners, stale keys and direct-origin requests without a valid assertion fail closed.
+
+Access mode automatically establishes/renews native sessions; it does not show an
+application password form or separate application sign-out. The existing external
+Access policy remains responsible for entry/session duration. Production remains
+conditionally authorized after fresh tests, independent review and recovery readiness.
+
+The web process has no network. A root-owned host refresh service fetches only the
+fixed issuer public signing keys every six hours and on initial setup; a public-only
+directory is mounted read-only into the web sandbox. Bundles older than 24 hours
+fail closed. Refresh failure leaves the last good bundle intact; unknown signing
+keys fail closed pending refresh. No Cloudflare API credentials are required.
+
+Internal owner credentials are root0600 inputs in root0700 state; the renderer
+copies only the runtime owner secret to root:61002 mode0440, mounted read-only
+at /run/meos/owner.json. They never enter source, argv, environment, journals or
+release manifests. Native password login is disabled in Access mode.
+
+Fresh qualification receipts supersede the pre-Access artifact details below;
+those details are historical until replaced by an executed cutover receipt.
+
 # Conditional production cutover — concrete pending plan
 
 Production cutover is user-authorized **after** relevant qualification/review
@@ -32,8 +61,10 @@ provisioning or routing change has occurred.
    or ambiguous prior deployment without read-only reconciliation. Allocate a
    fresh production-labelled volume and unique instance ID, never reuse/rename
    acceptance storage. No database import from tests.
-4. A trusted bootstrap consumes owner email/password from the existing masked
-   secret mechanism into a root-only temporary input. Neither argv, environment,
+4. A trusted bootstrap uses the known owner email and a generated high-entropy
+   backend password in a root-only input file. The user does not choose or enter
+   this internal credential; verified Cloudflare Access identity supplies the
+   single-player sign-in boundary. Neither argv, environment,
    chat, source tree nor logs may contain the password. Provision ordinary owner
    via the qualified private admin body API; revoke/remove bootstrap admin.
    Reconcile interruption by stable owner identity, never reset a password
@@ -125,15 +156,18 @@ and is included in independent review without modification by this lane.
 
 `production-bootstrap.py --plan ROOT0600_FILE --owner-file ROOT0600_FILE
 --receipt-dir ROOT0700_DIR` is a trusted controller, **not a test runner**. Only
-paths are arguments; email/password values must arrive through the masked broker
-into the root-only file. Parent owns broker interaction and actual provisioning.
+paths are arguments; the known owner email and generated internal password
+are written directly into the root-only file by the trusted controller. Parent
+owns actual provisioning. The user authorized generated credentials and does
+not need a separate MeOS password prompt.
 No chat fallback, environment variable, CLI password argument, raw upstream
 response or exception value is permitted. Input is bounded JSON containing only
 `email` and `password`, with O_NOFOLLOW, root ownership, single hard link,
 mode0600, stable fstat and root0700 parent checks; ancestors cannot be writable
 by nonroot. Input is never copied to release, Docker mounts, receipts or logs.
-The controller does not delete broker-owned input; parent/broker expires it after
-successful delivery or cancellation.
+The controller retains the protected internal credential needed for seamless
+backend session renewal. Rendering copies it to a root-owned, group61002-readable
+0440 runtime file, never to static assets or a release manifest.
 
 The separate nonsecret plan has exactly:
 
@@ -178,7 +212,8 @@ silently provisioned for the real owner.
 ### Rendered lifecycle proof, distinct from an adapter smoke
 
 `production-render.py --state ROOT_STATE --release IMMUTABLE_RELEASE
---output NEW_ROOT_DIR` verifies the manifest and every staged byte then renders
+--output NEW_ROOT_DIR --access-config ROOT_CONFIG --owner-file ROOT0600_FILE
+--access-keys-dir ROOT_PUBLIC_KEYS_DIR` verifies the manifest and every staged byte then renders
 three units; it does not install them. Production prefix is meos/port3190;
 acceptance prefix is meos-proof-<run>/port3191. State/manifest paths are strict
 root-owned nonwritable ancestors; substitutions reject systemd metacharacters.
@@ -215,7 +250,9 @@ preview, main browser candidate or acceptance data are altered. Production execu
   receipts; reconcile any later changes before production admission.
 - Admit exact staged Node runtime/license closure and helper hashes.
 - Preserve the frozen, tested client output and independently qualified hardened backend listed above; no rebuild at deployment.
-- Obtain owner input only through the masked mechanism; parent handles it.
+- Bootstrap the known owner email with a generated internal password; no user
+  password handoff is required. Verify signed Access issuer/audience/email and
+  ordinary owner UUID before seamless session establishment.
 - Production unit installation/routing must follow recorded readiness and
   existing conditional user authority; these scripts do not switch Caddy.
 
@@ -259,7 +296,7 @@ Production bootstrap opens and hashes the plan's actual root-owned immutable
 manifest; both bootstrap and renderer reject qualification-only status for a
 production target. The exact human exception packet is
 `docs/RELEASE-NODE-RUNTIME.md`; no production execution proceeds without the
-recorded exception and masked owner input.
+recorded applicable runtime exception and verified Access owner wiring.
 
 
 ### Executed isolated tooling proof
@@ -291,5 +328,35 @@ containerID/image, volumeName/driver and identity-label/mount checks; the host's
 relocated Docker data-root passed, while source/name/label mismatches reject.
 Neither fix relaxes namespace, credential or identity boundaries.
 
-Production remains held for the explicit human Node host-link policy exception
-and masked real-owner input; isolated qualification does not satisfy either gate.
+The user subsequently approved Node across versions carrying the same license
+and authorized generated internal credentials using the known owner email.
+Those are no longer missing user-input gates. Updated signed-Access runtime
+qualification and independent review still must pass before cutover.
+
+
+### Signed Access single-player lifecycle update
+
+The public web adapter must verify Cloudflare Access RS256 assertions locally
+against a host-refreshed public key bundle, including issuer, audience, owner
+email and token lifetime. Unsigned identity headers are insufficient. Every
+request remains Access-gated, including requests with a valid backend cookie.
+The browser session endpoint creates or renews the ordinary owner's backend
+session automatically; the browser password-login endpoint is disabled.
+The generated backend password remains a protected runtime secret, not a login
+interaction or a mock security boundary.
+
+`production-access-proof-prepare.py --bootstrap-dir ROOT_ACCEPTANCE_BOOTSTRAP`
+creates fresh synthetic signing material only under the existing separately
+provisioned acceptance qualification directory. It rejects production state and
+non-synthetic owner emails. Only its public JWKS directory is mounted into the
+web runtime; the private signing key remains root0600 outside that namespace.
+
+The updated lifecycle helper adds `--synthetic-signing-key ROOT0600_KEY`.
+It signs synthetic assertions and tests missing/unsigned/spoofed/wrong-owner/
+expired identity denial, disabled browser password login, seamless session
+creation with protected cookies, cookie-only bypass denial and expired backend
+session renewal, in addition to the existing actual systemd restart checks.
+These newly added checks are **not yet execution evidence** until a fresh
+combined release is staged and the helper emits a successful exact-tree receipt.
+Public-key refresh must occur outside the network-disabled web service; stale
+keys fail closed, and rotation must preserve atomic complete bundle replacement.

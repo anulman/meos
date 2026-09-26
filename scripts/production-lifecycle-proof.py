@@ -3,9 +3,9 @@
 acceptance-labelled synthetic target. No production target mode, no real input.
 No caller-selected network endpoint. Leaves disposable data/evidence intact.
 """
-import argparse,hashlib,http.client,json,os,pathlib,socket,stat,subprocess,time,urllib.parse
+import argparse,base64,hashlib,http.client,json,os,pathlib,socket,stat,subprocess,time
 assert os.geteuid()==0
-p=argparse.ArgumentParser();p.add_argument('--render-dir',required=True);p.add_argument('--bootstrap-dir',required=True);p.add_argument('--synthetic-owner-file',required=True);a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--render-dir',required=True);p.add_argument('--bootstrap-dir',required=True);p.add_argument('--synthetic-owner-file',required=True);p.add_argument('--synthetic-signing-key',required=True);a=p.parse_args()
 render=pathlib.Path(a.render_dir).absolute();bootstrap=pathlib.Path(a.bootstrap_dir).absolute();owner_path=pathlib.Path(a.synthetic_owner_file).absolute()
 clean={'PATH':'/usr/bin:/bin'}
 def read(path):
@@ -31,6 +31,22 @@ def verify_target():
   assert obj['Labels']['meos.environment']=='acceptance' and obj['Labels']['meos.acceptance.run']==run and obj['Labels']['meos.provisioning.intent']==intent['intent']
  return pathlib.Path(v['Mountpoint'])
 root=verify_target()
+access=read(render/'web-identity.json')['access']
+assert access['issuer']=='https://synthetic.cloudflareaccess.com' and access['email']==owner['email'] and access['ownerId']==intent['ownerId']
+signing=pathlib.Path(a.synthetic_signing_key).absolute()
+assert signing.parent==bootstrap.parent/'synthetic-access'
+si=signing.lstat();assert stat.S_ISREG(si.st_mode) and si.st_uid==0 and stat.S_IMODE(si.st_mode)==0o600 and si.st_nlink==1
+assert stat.S_IMODE(signing.parent.stat().st_mode)==0o700
+for parent in signing.parents:
+ pi=parent.lstat();assert stat.S_ISDIR(pi.st_mode) and pi.st_uid==0 and not pi.st_mode&0o022
+def b64(value):return base64.urlsafe_b64encode(value).rstrip(b'=').decode()
+def assertion(**override):
+ now=int(time.time());claims={'iss':access['issuer'],'aud':[access['audience']],'email':owner['email'],'sub':'synthetic-lifecycle-owner','type':'app','iat':now,'nbf':now-1,'exp':now+300,**override}
+ payload=(b64(json.dumps({'alg':'RS256','kid':'synthetic-lifecycle'}).encode())+'.'+b64(json.dumps(claims).encode())).encode()
+ signed=subprocess.run(['/usr/bin/openssl','dgst','-sha256','-sign',str(signing)],input=payload,env=clean,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=10)
+ assert signed.returncode==0
+ return payload.decode()+'.'+b64(signed.stdout)
+
 units=[prefix+'-backend.service',prefix+'-web.service',prefix+'-web.socket'];assert set(receipt['units'])==set(units)
 for name in units:
  path=render/name;assert hashlib.sha256(path.read_bytes()).hexdigest()==receipt['units'][name]
@@ -39,10 +55,10 @@ assert 'ListenStream=127.0.0.1:3191\n' in (render/units[2]).read_text()
 assert '@' not in (render/units[2]).read_text()
 occupied=socket.socket();occupied.bind(('127.0.0.1',3191));occupied.close()
 command('/usr/bin/systemd-analyze','verify','--man=no',*[str(render/name) for name in units])
-def request(method,path,body=None,headers=None):
+def request(method,path,body=None,headers=None,authenticated=True):
  client=http.client.HTTPConnection('127.0.0.1',3191,timeout=15)
  try:
-  client.request(method,path,body,{'Host':'meos.aidans.computer',**(headers or {})});response=client.getresponse();data=response.read(2000000)
+  client.request(method,path,body,{'Host':'meos.aidans.computer',**({'Cf-Access-Jwt-Assertion':assertion()} if authenticated else {}),**(headers or {})});response=client.getresponse();data=response.read(2000000)
   return response.status,data,response.getheaders()
  finally:client.close()
 def await_web():
@@ -89,9 +105,19 @@ try:
  for path in ['/api/_admin/user','/api/auth/v1/register','/api/meos/v1/mcp','/api/records/v1/tasks','/mockServiceWorker.js']:
   code,_,_=request('GET',path);assert code in [403,404]
  checks['privateAndDemoRoutesDenied']=True
- code,_,headers=request('POST','/api/auth/v1/login',urllib.parse.urlencode(owner),{'Content-Type':'application/x-www-form-urlencoded','Origin':state['origin']});assert code in [200,303]
- cookie='; '.join(value.split(';')[0] for key,value in headers if key.lower()=='set-cookie');assert cookie
- code,body,_=request('GET','/api/meos/v1/session',headers={'Cookie':cookie});assert code==200 and json.loads(body)['user']['id']==intent['ownerId'];checks['privateBodyProvisionedOwnerLogin']=True
+ for headers in [{},{'Cf-Access-Authenticated-User-Email':owner['email']},{'Cf-Access-Jwt-Assertion':'eyJhbGciOiJub25lIn0.e30.unsigned'},{'Cf-Access-Jwt-Assertion':assertion(email='other@example.invalid')},{'Cf-Access-Jwt-Assertion':assertion(exp=int(time.time())-1)}]:
+  code,_,_=request('GET','/api/meos/v1/session',headers=headers,authenticated=False);assert code==403
+ checks['missingUnsignedSpoofWrongOwnerExpiredAccessDenied']=True
+ code,_,_=request('POST','/api/auth/v1/login',body='email=ignored&password=ignored',headers={'Content-Type':'application/x-www-form-urlencoded','Origin':state['origin']});assert code==404
+ checks['browserPasswordLoginDisabled']=True
+ code,body,headers=request('GET','/api/meos/v1/session');assert code==200 and json.loads(body)['user']['id']==intent['ownerId']
+ cookies=[value for key,value in headers if key.lower()=='set-cookie'];assert len(cookies)==2 and all(all(flag in c for flag in ['Secure','HttpOnly','SameSite=Lax']) for c in cookies)
+ cookie='; '.join(value.split(';')[0] for value in cookies)
+ checks['signedAccessSeamlessOwnerSessionSecureCookies']=True
+ code,_,_=request('GET','/api/meos/v1/session',headers={'Cookie':cookie},authenticated=False);assert code==403
+ checks['backendCookieCannotBypassAccess']=True
+ code,body,_=request('GET','/api/meos/v1/session',headers={'Cookie':'auth_token=expired; refresh_token=expired'});assert code==200 and json.loads(body)['user']['id']==intent['ownerId']
+ checks['expiredBackendSessionSeamlesslyRenewed']=True
  inode=(root/'server.sock').stat().st_ino
  verify_target();command('/usr/bin/systemctl','restart',units[0]);await_web();after=web_identity()
  assert before!=after and (root/'server.sock').stat().st_ino!=inode

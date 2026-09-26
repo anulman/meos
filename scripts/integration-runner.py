@@ -47,6 +47,8 @@ private=sandbox/'private';private.mkdir(exist_ok=True)
 if mode in ['production-smoke','release']:
  assert candidate
  (sandbox/'dist').mkdir()
+ (private/'access-public').mkdir()
+ (private/'owner.json').write_text('{}')
  (private/'runtime.json').write_text(json.dumps({'origin':endpoint['origin'],'environment':'production','instanceId':run}))
 if mode=='restart':
  data=json.loads((q/(prefix+'persistence-fixture.json')).read_text());assert data['runId']==run;(private/'persistence-fixture.json').write_text(json.dumps(data))
@@ -81,7 +83,7 @@ if mode=='mcp':
     assert target.read_bytes()==tar.extractfile(item).read(),'Installed MCP dependency drift'
  props['BindReadOnlyPaths']+=' '+str(audit/'node_modules')+':/run/meos-mcporter/node_modules'
 if mode in ['production-smoke','release']:
- props['BindReadOnlyPaths']+=f' {sock}:/run/meos/backend.sock {private}/runtime.json:/run/meos/runtime.json'
+ props['BindReadOnlyPaths']+=f' {sock}:/run/meos/backend.sock {private}/runtime.json:/run/meos/runtime.json {private}/owner.json:/run/meos/owner.json {private}/access-public:/run/meos/access-public'
  props['BindPaths']+=f' {sandbox}/dist:/app'
 cmd=['systemd-run','--wait','--pipe','--collect']+[f'--property={k}={value}' for k,value in props.items()]+['/usr/bin/setpriv','--reuid=61001','--regid=61001','--clear-groups','--bounding-set=-all','/usr/bin/env','-i','PATH=/opt/node/bin:/usr/bin:/bin','HOME=/tmp','MEOS_ACCEPTANCE_RUN='+run,'/opt/node/bin/node','scripts/integration-harness.mjs',mode]
 try:
@@ -89,7 +91,7 @@ try:
  assert decoy.poll() is None,'Decoy exited; proc denial is unproven'
 finally:
  decoy.terminate();decoy.wait(timeout=5)
-for part in ['isolation-proof.json','integration-evidence.json','demo-evidence.json','persistence-fixture.json','persistence-evidence.json','production-path-evidence.json']:
+for part in ['isolation-proof.json','integration-evidence.json','demo-evidence.json','persistence-fixture.json','persistence-evidence.json','production-path-evidence.json','access-browser-evidence.json']:
  path=sandbox/part
  if path.is_file():
   assert path.stat().st_size<1000000 and not path.is_symlink();shutil.copyfile(path,q/(prefix+part));os.chown(q/(prefix+part),repo.stat().st_uid,repo.stat().st_gid)
@@ -106,6 +108,7 @@ if (sandbox/'dist/client').is_dir():
   if artifact.is_file():artifacts[str(artifact.relative_to(sandbox/'dist/client'))]=hashlib.sha256(artifact.read_bytes()).hexdigest()
 receipt={'runId':run,'mode':mode,'exitCode':result.returncode,'sourceDigest':source_digest,'sourceFiles':source_hashes,'clientArtifactDigest':hashlib.sha256(json.dumps(artifacts,sort_keys=True).encode()).hexdigest(),'clientFiles':artifacts,'sandbox':str(sandbox),'checkedAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())}
 if mode=='release' and result.returncode==0:
+ receipt['accessBrowserEvidence']=json.loads((sandbox/'access-browser-evidence.json').read_text());assert receipt['accessBrowserEvidence']['count']==6 and receipt['accessBrowserEvidence']['runId']==run
  receipt['browserEvidence']=json.loads((sandbox/'integration-evidence.json').read_text());receipt['productionPathEvidence']=json.loads((sandbox/'production-path-evidence.json').read_text())
  assert receipt['browserEvidence']['runId']==receipt['productionPathEvidence']['runId']==run
  assert receipt['browserEvidence']['count']==26 and receipt['productionPathEvidence']['count']==4

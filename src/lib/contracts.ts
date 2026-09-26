@@ -11,4 +11,5 @@ export interface Routine { _revision?:number; preferredTime?:PreferredTime; recu
 export interface Occurrence extends BackendOccurrence { _revision?:number }
 export interface Reference { id: ID; kind: 'task' | 'project' | 'routine'; entityId: ID }
 export interface Settings { timezone: string; weekStartsOn: 0 | 1 }
-export interface PublicConfig { timezone: string; apiBase: string; demo: boolean }
+export interface PublicConfig {
+  accessGated?: boolean; timezone: string; apiBase: string; demo: boolean }

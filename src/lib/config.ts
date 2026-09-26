@@ -7,5 +7,5 @@ export function getConfig(): PublicConfig {
  const apiBase = value.apiBase || '/api'
  if (!apiBase.startsWith('/') || apiBase.startsWith('//')) throw new Error('API base must be a same-origin absolute path')
  
- return { timezone, apiBase:apiBase.replace(/\/$/,''), demo:value.demo!==false }
+ return { accessGated:value.accessGated===true, timezone, apiBase:apiBase.replace(/\/$/,''), demo:value.demo!==false }
 }
