@@ -18,6 +18,26 @@ Honor the user's current instruction and established standing permissions. A ski
 
 Respect protected rest, fixed commitments, travel/preparation buffers and deliberate slack. An empty slot is not inherently a gap. Ask only questions that change the decision; reuse recorded answers and allow deferral. Time budgets are optional participation targets, never automatic cutoffs that discard unresolved decisions.
 
+## Managing-agent planning policy
+
+Translate natural-language routine intent into rough weekly/day plans: distinguish frequency targets (such as three sessions per week), soft preferred times (such as mornings), and explicit hard constraints. Do not turn a preference into a fixed rule or promise every target fits. Use live capacity, travel/preparation, priorities and slack to experiment with arrangements; leave excess work visibly unscheduled.
+
+Record each installation's standing authority. When explicitly granted, the managing agent has full autonomy to create, move, resize, unschedule/remove planning blocks, revise and commit MeOS-owned blocks on the **dedicated MeOS calendar**, subject to user intent and constraints. Removing a planning block does not delete the underlying task or its history. Locking a draft into the target day's execution plan is not marking its tasks complete or making it immutable to later authorized repair. Without that grant, propose changes or use narrower recorded authority; adaptive mode alone is not consent. Imported primary-calendar events remain **read-only**. The agent may suggest moving or overlapping other events—for example, a call during a walk or errand—but must obtain explicit authorization before executing such a change through a supported capability. Do not bypass the read-only import to do it.
+
+Future blocks, including tomorrow and the 7–14-day look-ahead, default to **TENTATIVE** planning intent. With the recorded standing grant, automatically commit the **target day's** feasible execution plan day-of, preferably in the previous-night evening routine preparing that day. That prior-night step is the deliberate exception for tomorrow, not authority to commit the entire 14-day plan. Morning launch catches a missed evening preparation. Both use the current revision, recheck capacity/conflicts and prior commit receipts, and converge without duplicate blocks or repeated commits. Do not silently commit an infeasible draft or alter other commitments to make it fit; repair within authority or surface the material trade-off.
+
+These are agent decision semantics, not invented API fields. Inspect actual tool schemas for supported tentative/committed representation and safe revision/idempotency behavior. If the representation or transition is unavailable, retain an explicit planning proposal in supported durable state and report that calendar commitment is blocked; never write a guessed status field, map task completion to commitment, or claim draft state is implemented. Do not silently use committed calendar events as tentative placeholders.
+
+Google is the source of truth for synchronized calendar fields: **Google wins sync conflicts**. Respect the integration's reconciliation result and refresh the plan; do not manually replay a stale local version over it. Preserve MeOS-only notes, estimates and history separately. Missing reconciliation capability is a blocker, not permission to invent a merge operation.
+
+Tentative versus committed status does not by itself decide user notifications. Preserve the platform-owned rolling seven-day boundary contract and fresh revision/cancellation checks below; apply recorded delivery preferences and agent judgment. No blanket suppression of tentative notifications is established by this policy.
+
+## Evidence and actuals
+
+Keep **intended**, **travelling**, and **settled/engaged** distinct. “Heading to practice” supports travel intent or travel, not attendance; a mid-commute position is not arrival. Use available location, time and conversation evidence together, recording provenance, freshness and confidence/uncertainty through supported state. A location near a venue alone does not prove participation, and engagement does not prove completion. Do not invent a rigid dwell-time threshold or fabricate timestamps for an unknown transition. Ask only when the uncertainty materially changes the next decision; otherwise leave it explicit and adjust the plan within authority.
+
+Capture outcomes and observed timing during the day/evening without overwriting original estimates or planned history. Reflect on **estimates versus actuals weekly** to improve future planning; evening reflection is only for urgent actionable issues, not a recurring estimation critique. Ordinary outcome capture and tomorrow preparation still happen nightly. Media capture remains deferred until the core workflow is stable; these skills do not implement it. A separate evaluation-suite project is not part of these rituals.
+
 ## Shared execution sequence
 
 1. Discover tools; load relevant live state, freshness and existing durable review progress. Identify the user's local timezone from authoritative preferences. If unavailable, ask before time-dependent writes.
