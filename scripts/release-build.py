@@ -2,7 +2,7 @@
 """Trusted offline candidate builder. Imports a NEW image; never admits or deploys it.
 Run with sudo after manual inspection. Fixed reviewed inputs, no credentials.
 """
-import fcntl,grp,hashlib,json,os,pathlib,pwd,shutil,subprocess,sys,tarfile,time
+import fcntl,grp,hashlib,importlib.util,json,os,pathlib,pwd,shutil,subprocess,sys,tarfile,time
 assert os.geteuid()==0
 assert sys.argv[1:] in [[],['--isolation-only']]
 isolation_only=bool(sys.argv[1:])
@@ -84,16 +84,16 @@ if isolation_only:
 target=out/'runtime-root';shutil.copytree(rt,target)
 shutil.copyfile(work/'meos-guest.wasm',target/'data/wasm/meos.wasm')
 (target/'data/config.textproto').write_text('server { application_name: "MeOS" site_url: "https://meos.aidans.computer" }\nauth { disable_password_auth: true enable_otp_signin: false enable_anonymous_signin: false }\n')
-# Add the reviewed append-only notification migration; never silently rewrite old schema.
-notification_migration='data/migrations/main/U1790380806__notifications.sql'
-for migration in (work/'backend/migrations').glob('*.sql'):
- relative='data/migrations/main/'+migration.name
- if relative in expected:assert sha(migration)==expected[relative], 'Existing migration changed'
- else:assert relative==notification_migration, 'Unreviewed additive migration'
- shutil.copyfile(migration,target/relative)
+# Ship every current migration, preserving already-reviewed applied history.
+sys.dont_write_bytecode=True
+depot_helper=repo/'scripts/calendar-depot-runtime.py'
+spec=importlib.util.spec_from_file_location('calendar_depot',depot_helper);depot=importlib.util.module_from_spec(spec);spec.loader.exec_module(depot)
+depot.package_migrations(work/'backend/migrations',target/'data/migrations/main')
 new_files={str(p.relative_to(target)):sha(p) for p in target.rglob('*') if p.is_file()}
 changes={k:{'before':expected.get(k),'after':v} for k,v in new_files.items() if expected.get(k)!=v}
-assert set(changes)=={'data/wasm/meos.wasm','data/config.textproto',notification_migration}
+assert set(expected)<=set(new_files)
+assert {'data/wasm/meos.wasm','data/config.textproto'}<=set(changes)
+assert all(k in ['data/wasm/meos.wasm','data/config.textproto'] or (k.startswith('data/migrations/main/') and k not in expected) for k in changes)
 with tarfile.open(out/'runtime-root.tar','w') as t:
  def ownership(i):
   i.uid=i.gid=10001 if i.name=='data' or i.name.startswith('data/') else 0;i.uname=i.gname='';return i
@@ -103,7 +103,7 @@ for name in ['retained-source.tar.gz','retained-notices.txt','retained-inventory
  shutil.copyfile(source/'backend'/name,out/name)
 image=subprocess.check_output(['docker','--host','unix:///var/run/docker.sock','import','--change','USER 10001:10001','--change','ENV RUST_LOG=warn XDG_CACHE_HOME=/data/.cache',str(out/'runtime-root.tar')],env=clean,text=True).strip()
 (out/'image-id.txt').write_text(image+'\n')
-receipt={'schema':1,'status':'candidate-not-admitted-not-deployed','baseImage':base,'image':image,'origin':'https://meos.aidans.computer','compiledEnvironment':'production','compilerDigest':'sha256:'+compiler_hash,'sourceCommit':subprocess.check_output(['git','-c','safe.directory='+str(repo),'-C',str(repo),'rev-parse','HEAD'],env=clean,text=True).strip(),'sourceFiles':source_manifest,'files':new_files,'changesFromReviewedRuntime':changes,'baseAdmission':admission,'artifacts':{n:sha(out/n) for n in ['application-source.tar.gz','retained-source.tar.gz','retained-notices.txt','retained-inventory.json','runtime-root.tar']},'isolationProof':json.loads((work/'isolation-proof.json').read_text())}
+receipt={'schema':1,'status':'candidate-not-admitted-not-deployed','baseImage':base,'image':image,'origin':'https://meos.aidans.computer','compiledEnvironment':'production','compilerDigest':'sha256:'+compiler_hash,'depotHelperDigest':sha(depot_helper),'sourceCommit':subprocess.check_output(['git','-c','safe.directory='+str(repo),'-C',str(repo),'rev-parse','HEAD'],env=clean,text=True).strip(),'sourceFiles':source_manifest,'files':new_files,'changesFromReviewedRuntime':changes,'baseAdmission':admission,'artifacts':{n:sha(out/n) for n in ['application-source.tar.gz','retained-source.tar.gz','retained-notices.txt','retained-inventory.json','runtime-root.tar']},'isolationProof':json.loads((work/'isolation-proof.json').read_text())}
 (out/'candidate.json').write_text(json.dumps(receipt,indent=2)+'\n')
 owner=repo.stat();os.chown(out,owner.st_uid,owner.st_gid);os.chown(out/'candidate.json',owner.st_uid,owner.st_gid)
 print(json.dumps({'candidate':str(out/'candidate.json'),'image':image,'status':receipt['status']}))

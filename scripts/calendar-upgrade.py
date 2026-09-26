@@ -6,7 +6,7 @@ arguments are non-secret paths. Interrupted transitions require reconciliation.
 """
 import argparse,hashlib,importlib.util,http.client,json,os,pathlib,re,shutil,socket,sqlite3,stat,subprocess,sys,time
 assert os.geteuid()==0
-p=argparse.ArgumentParser();p.add_argument('--state',required=True);p.add_argument('--release',required=True);p.add_argument('--admission',required=True);p.add_argument('--output',required=True);a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--state',required=True);p.add_argument('--release',required=True);p.add_argument('--admission',required=True);p.add_argument('--output',required=True);p.add_argument('--runtime',required=True);a=p.parse_args()
 clean={'PATH':'/usr/bin:/bin'}
 def secure(path,private=False):
  path=pathlib.Path(path).absolute();i=path.lstat();assert stat.S_ISREG(i.st_mode) and i.st_uid==0 and not i.st_mode&0o022 and i.st_nlink==1
@@ -16,18 +16,25 @@ def secure(path,private=False):
  return path
 state_path=secure(a.state,True);release=pathlib.Path(a.release).absolute();manifest_path=secure(release/'manifest.json');admission_path=secure(a.admission,True)
 state=json.loads(state_path.read_text());manifest=json.loads(manifest_path.read_text());admission=json.loads(admission_path.read_text())
+runtime=pathlib.Path(a.runtime).absolute();runtime_manifest_path=secure(runtime/'runtime-manifest.json');runtime_manifest=json.loads(runtime_manifest_path.read_text())
 assert admission['status']=='approved-calendar-preserved-upgrade' and admission['reviewer'] and admission['evidence']
 assert admission['scriptSHA256']==hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest()
 preservation_path=pathlib.Path(__file__).with_name('calendar-preservation.py');assert admission['preservationSHA256']==hashlib.sha256(preservation_path.read_bytes()).hexdigest()
 sys.dont_write_bytecode=True
 spec=importlib.util.spec_from_file_location('calendar_preservation',preservation_path);preservation=importlib.util.module_from_spec(spec);spec.loader.exec_module(preservation)
+depot_path=pathlib.Path(__file__).with_name('calendar-depot-runtime.py');assert admission['depotRuntimeSHA256']==hashlib.sha256(depot_path.read_bytes()).hexdigest()
+spec=importlib.util.spec_from_file_location('calendar_depot',depot_path);depot=importlib.util.module_from_spec(spec);spec.loader.exec_module(depot)
+assert admission['runtimeManifestSHA256']==hashlib.sha256(runtime_manifest_path.read_bytes()).hexdigest()
+assert runtime_manifest['image']==manifest['image'];expected_runtime=runtime_manifest['files']
+for relative in expected_runtime:secure(runtime/relative)
+depot.verify_bundle(runtime,expected_runtime)
 assert admission['stateSHA256']==hashlib.sha256(state_path.read_bytes()).hexdigest() and admission['manifestSHA256']==hashlib.sha256(manifest_path.read_bytes()).hexdigest()
 assert state['environment'] in ['production','acceptance'] and admission['environment']==state['environment']
 if state['environment']=='production':assert manifest['status']=='independently-reviewed' and manifest['runtimeUse']=='production-reviewed'
 else:assert manifest['status'] in ['qualification-only','independently-reviewed']
 assert re.fullmatch('sha256:[a-f0-9]{64}',manifest['image']) and manifest['image']==admission['newImage']
 run=state['instanceId'];assert re.fullmatch('[a-f0-9]{32}',run)
-name='meos-'+state['environment']+'-'+run;assert state['volume']==name+'-data';rollback=name+'-rollback-'+state['image'][7:19]
+name='meos-'+state['environment']+'-'+run;assert state['volume']==name+'-data';rollback=name+'-rollback-'+state['image'][7:19]+'-'+hashlib.sha256(str(a.output).encode()).hexdigest()[:8]
 out=pathlib.Path(a.output).absolute();assert str(out)==admission['output'] and not out.exists(),'Existing transition: reconcile, never retry automatically'
 for parent in out.parents:
  i=parent.lstat();assert stat.S_ISDIR(i.st_mode) and i.st_uid==0 and not i.st_mode&0o022
@@ -60,6 +67,15 @@ def invariants():
   assert db.execute('SELECT instance_id,environment FROM _meos_instance').fetchall()==[(run,'production')]
   return preservation.fingerprint(db)
 invariants() # Fail required-table/identity preflight before stopping any service.
+old_runtime=depot.inventory(root)
+assert all(expected_runtime.get(n)==d for n,d in old_runtime.items() if n.startswith('migrations/')),'Applied migration changed or removed'
+data_bytes=sum(p.stat().st_size for p in (root/'data').rglob('*') if p.is_file())
+runtime_bytes=sum((runtime/n).stat().st_size for n in expected_runtime)
+old_runtime_bytes=sum((root/n).stat().st_size for n in old_runtime)
+# Budget each filesystem independently and keep a hard256MiB free reserve.
+assert data_bytes+old_runtime_bytes+runtime_bytes <100*1024*1024,'Transition exceeds reviewed bounded allocation budget'
+assert shutil.disk_usage(out).free>=data_bytes+old_runtime_bytes+256*1024*1024
+assert shutil.disk_usage(root).free>=runtime_bytes+256*1024*1024
 
 save('before-state.json',state);save('before-manifest-reference.json',{'path':str(manifest_path),'sha256':hashlib.sha256(manifest_path.read_bytes()).hexdigest()})
 units=out/'before-units';units.mkdir(mode=0o700)
@@ -75,6 +91,7 @@ assert not docker('ps','-q','--filter','volume='+state['volume']).strip(),'Anoth
 before=invariants();save('before-data-digests.json',before)
 assert all(not p.is_symlink() and (p.is_file() or p.is_dir()) for p in (root/'data').rglob('*'))
 shutil.copytree(root/'data',out/'cold-data-copy',symlinks=False);save('cold-copy.json',{'sourceVolume':state['volume'],'databasePreserved':True})
+runtime_receipt=depot.stage(root,runtime,expected_runtime,out/'old-runtime');save('runtime-staged.json',runtime_receipt)
 docker('rename',state['containerId'],rollback);save('renamed.json',{'oldContainer':state['containerId'],'rollbackName':rollback})
 label='meos.'+('production.instance' if state['environment']=='production' else 'acceptance.run')
 new_id=docker('create','--name',name,'--network','none','--read-only','--user','10001:10001','--cap-drop','ALL','--security-opt','no-new-privileges','--memory','1200m','--pids-limit','128','--label','meos.environment='+state['environment'],'--label',label+'='+run,'--mount','type=volume,src='+state['volume']+',dst=/data','--tmpfs','/tmp:rw,noexec,nosuid,size=64m',manifest['image'],*old['Config']['Cmd']).decode().strip()
@@ -98,6 +115,9 @@ while True:
   if time.monotonic()>deadline:raise RuntimeError('New backend readiness failed; rollback artifacts retained')
   time.sleep(.2)
 os.close(root_fd)
+# Inspect through the running container mount namespace, not image metadata.
+loaded_root=pathlib.Path('/proc')/str(inspect(new_id)['State']['Pid'])/'root/data'
+assert depot.inventory(loaded_root)==expected_runtime,'Running container sees wrong runtime bytes'
 assert invariants()==before,'Persisted owner/domain rows changed during upgrade; hold web, reconcile cold copy'
-save('receipt.json',{'status':'backend-upgraded-web-held','environment':state['environment'],'instanceId':run,'oldContainer':state['containerId'],'newContainer':new_id,'image':manifest['image'],'volume':state['volume'],'oldContainerPreserved':True,'coldCopyRetained':True,'ownerAndDomainRowsUnchanged':True,'state':str(out/'runtime-state.json')})
+save('receipt.json',{'status':'backend-upgraded-web-held','environment':state['environment'],'instanceId':run,'oldContainer':state['containerId'],'newContainer':new_id,'image':manifest['image'],'volume':state['volume'],'oldContainerPreserved':True,'coldCopyRetained':True,'ownerAndDomainRowsUnchanged':True,'mountVisibleRuntimeVerified':True,'bridgeCapabilityVerified':False,'runtimeFiles':expected_runtime,'oldRuntimePreserved':True,'state':str(out/'runtime-state.json')})
 print(json.dumps({'status':'backend-upgraded-web-held','receipt':str(out/'receipt.json')}))
