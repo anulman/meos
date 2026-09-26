@@ -66,6 +66,20 @@ Run `pnpm contract:check` to check generated-contract drift.
 
 The native/Calendar deployment has a host-side [backup and recovery guide](docs/BACKUP-RECOVERY.md). No bucket means silent no-op; no service, cloud resource, or policy is enabled by this repository.
 
+## Native agent notification client (source candidate)
+
+See [native client installation and durable dispatch contract](clients/meos-agent/README.md)
+and [authenticated long-poll architecture](docs/agent-notifications/ARCHITECTURE.md).
+The dependency-free Go client is distributed as source. Install a reviewed commit
+with Go, or use its source and documented durable dispatch contract to build and
+qualify a client for another environment. See the client guide for bootstrap
+selection and supervision. This source does not claim the endpoint is deployed.
+
+Bootstrap also supports scoped maintenance: unchanged reruns preserve resources,
+selected feature enablement preserves planning state, and read-only inspection
+is distinct from active client verification or repair. See the bootstrap skill
+for partial-run recovery and installation evidence requirements.
+
 ## Agent operating skills
 
 Discover the tool-only MeOS planning and board procedures through [llms.txt](llms.txt). The canonical [shared contract](public/skills/contract.md), seven core operating skills and [install/bootstrap skill](public/skills/meos-bootstrap/SKILL.md) live under `public/skills/`; Vite serves these files unchanged at `/skills/` and the public index at `/llms.txt`. Bootstrap targets a post-cutover production release with Docker Compose and Helm installation paths, persistent-data/login verification, then MCP access, host schedules, execution settings, authority and event long-polling. Its command templates resolve release-supplied artifacts rather than assume chart/image names; a maintainer note distinguishes that target from this branch's demo-only Compose file. Publishing these documents does not install services or enable recurring prompts, notifications or Calendar sync.
