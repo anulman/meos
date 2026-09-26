@@ -55,4 +55,4 @@ MEOS_TEST_URL=http://127.0.0.1:3181 node scripts/browser-anchor.mjs
 
 ## Agent operating skills
 
-Discover the tool-only MeOS planning and board procedures through [llms.txt](llms.txt). The canonical [shared contract](public/skills/contract.md) and seven skills live under `public/skills/`; Vite serves these files unchanged at `/skills/` and the public index at `/llms.txt`. Publishing these documents does not enable recurring prompts, notifications or Calendar sync.
+Discover the tool-only MeOS planning and board procedures through [llms.txt](llms.txt). The canonical [shared contract](public/skills/contract.md), seven core operating skills and [install/bootstrap skill](public/skills/meos-bootstrap/SKILL.md) live under `public/skills/`; Vite serves these files unchanged at `/skills/` and the public index at `/llms.txt`. Bootstrap configures supported host schedules, execution settings, authority and event long-polling when invoked with appropriate authorization. Publishing these documents does not enable recurring prompts, notifications or Calendar sync.

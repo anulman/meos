@@ -1,12 +1,12 @@
 # MeOS operating contract
 
-Shared contract for the seven operating skills. Fetch this document through a URL/resource-reading tool before executing a skill; no filesystem access is required. If it cannot be retrieved, stop before mutations and report the missing capability.
+Shared contract for the seven core operating skills and the [install/bootstrap skill](meos-bootstrap/SKILL.md). Fetch this document through a URL/resource-reading tool before executing a skill; no filesystem access is required. If it cannot be retrieved, stop before mutations and report the missing capability.
 
 ## Tools and truth
 
 Discover the current MeOS MCP and host capabilities and their schemas. Operation names in design documents are examples, not proof a tool exists. Use tools to read tasks, events, routines/occurrences, priorities, actuals, preferences, timezone, revisions and sync freshness; query capacity; persist review progress; ask questions; and send messages. Use only capabilities actually available. Missing reads limit conclusions; missing writes produce an explicit proposal, not a claim of application. Calendar sync and agent notifications may not yet be operational: verify them, never imply readiness from this document.
 
-Run entirely through MCP/resource/host tools. Do not require shell commands, local files, filesystem memory, cron processes, polling loops or background agent sleeps. The platform owns timers, polling, durable wakeups and event delivery. If durable progress or event acknowledgment is unavailable, report the limitation and do not pretend the workflow will resume autonomously.
+Run entirely through MCP/resource/host tools. Runtime rituals do not require shell commands, local files, filesystem memory, agent-owned cron processes, polling loops or background agent sleeps. The platform owns boundary timers, its rolling event window and event delivery. The install/bootstrap skill may configure supported host schedules and a supervised durable service consuming an actually available event API; the host handles waiting and wakes the agent for actionable work. Bootstrap does not implement missing platform capabilities or add lifecycle callbacks. No filesystem or shell access is required when supported host configuration tools suffice. If durable progress, event acknowledgment or necessary host capabilities are unavailable, report the limitation and do not pretend the workflow will resume autonomously.
 
 ## Authority and operating mode
 
@@ -38,4 +38,4 @@ Respect protected rest, fixed commitments, travel/preparation buffers and delibe
 
 ## Bounded result
 
-Report: reviewed scope; authorized changes verified; important decisions/deferrals; unresolved choices or capability blockers; next concrete action. Quiet-mode results may be recorded without a message unless an actionable exception exists. Do not claim a timer, reminder, integration or recurring ritual is enabled without a verified platform receipt.
+Report: reviewed scope; authorized changes verified; important decisions/deferrals; unresolved choices or capability blockers; next concrete action. Quiet-mode results may be recorded without a message unless an actionable exception exists. Do not claim a timer, reminder, integration or recurring ritual is enabled without a verified receipt from the platform or host that owns it.
