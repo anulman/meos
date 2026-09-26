@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+import { isTimezone } from './timezones.mjs'
 export class DomainError extends Error {
  constructor(code, message, details) { super(message); this.name='DomainError'; this.code=code; this.details=details }
 }
@@ -20,7 +21,7 @@ export function date(value,field='date') {
 }
 export function timezone(value,field='timezone') {
  if(typeof value!=='string'||value.length>100||/^[+-]/.test(value))fail(field,'Expected an IANA timezone')
- try {new Intl.DateTimeFormat('en',{timeZone:value})} catch {fail(field,'Expected an IANA timezone')}
+ if(!isTimezone(value))fail(field,'Expected an IANA timezone')
  return value
 }
 const time = (value,field='time') => {if(typeof value!=='string'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(value))fail(field,'Expected HH:mm')}
@@ -74,6 +75,12 @@ export function notes(value) {
  visit(value,0,null)
  return value
 }
+// Transport values are JSON data; keep cloning independent of browser-only APIs.
+function cloneData(value) {
+ if(value===null||typeof value!=='object')return value
+ if(Array.isArray(value))return value.map(cloneData)
+ return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,cloneData(item)]))
+}
 const base=['id','title','notes']
 const fields={
  projects:[...base,'completed','archived','targetDate','references'],
@@ -84,7 +91,7 @@ const fields={
 export function validateResource(kind,input) {
  if(!fields[kind])fail('resource','Unsupported resource')
  keys(input,fields[kind],'resource');uuid(input.id)
- const value=structuredClone(input)
+ const value=cloneData(input)
  if(base.every(key=>fields[kind].includes(key))){value.title=text(value.title,'title');notes(value.notes)}
  for(const flag of ['completed','archived'])if(value[flag]!==undefined)boolean(value[flag],flag)
  if(value.durationMinutes!==undefined)integer(value.durationMinutes,'durationMinutes',1,1440)
@@ -114,7 +121,7 @@ export function validatePreferences(input) {
  if(!['latest','manual'].includes(input.weather.source)||!['celsius','fahrenheit'].includes(input.weather.units))fail('weather','Invalid weather preferences')
  if(input.weather.manual!==undefined)coarseLocation(input.weather.manual)
  if(input.weather.enabled&&input.weather.source==='manual'&&!input.weather.manual)fail('weather.manual','Manual location required')
- const result=structuredClone(input)
+ const result=cloneData(input)
  if(result.weather.manual)result.weather.manual=coarseLocation(result.weather.manual)
  return result
 }

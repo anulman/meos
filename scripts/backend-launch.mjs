@@ -17,7 +17,7 @@ for (const key of ['inventory','source','notices']) {
  evidence[key] = await readFile(new URL(path, root))
 }
 const entry = admitArtifact(image, registry, evidence)
-const plan = {schema:1,environment:'acceptance',runId:randomBytes(16).toString('hex'),image,syntheticOnly:true,network:'none',credentials:'fresh-in-container',endpoint:'container-loopback',volume:'fresh-managed',identity:'fresh-synthetic'}
+const plan = {schema:1,environment:'acceptance',runId:randomBytes(16).toString('hex'),image,syntheticOnly:true,network:'none',credentials:'fresh-in-container',endpoint:'container-unix-socket',volume:'fresh-managed',identity:'fresh-synthetic'}
 const names = validatePlan(plan)
 function docker(args, optional = false) {
  // No production env/DOCKER_HOST/context or credentials forwarded. Local Unix daemon only.
@@ -31,7 +31,7 @@ const containers = docker(['container','ls','-a','--format','{{.Names}}']).split
 const volumes = docker(['volume','ls','--format','{{.Name}}']).split('\n')
 deny(!containers.includes(names.name) && !volumes.includes(names.volume), 'run resource already exists')
 const imageInfo = JSON.parse(docker(['image','inspect',image]))[0]
-deny(imageInfo.RepoDigests?.includes(image), 'locally cached image digest mismatch')
+deny(image.startsWith('sha256:')?imageInfo.Id===image:imageInfo.RepoDigests?.includes(image), 'locally cached image digest mismatch')
 deny(!imageInfo.Config?.Volumes || Object.keys(imageInfo.Config.Volumes).every(path => path === '/data'), 'image declares unexpected volumes')
 docker(['volume','create','--driver','local','--label',`meos.acceptance.run=${plan.runId}`,'--label','meos.environment=acceptance',names.volume])
 docker(createArgs(plan, entry))
@@ -42,4 +42,4 @@ docker(['start',names.name])
 const started = JSON.parse(docker(['container','inspect',names.name]))[0]
 deny(started.State?.Running === true, 'container did not stay running')
 verifyRuntime(started, volume, plan, imageInfo.Id)
-console.log(JSON.stringify({state:'running',plan,containerId:started.Id,volume:names.volume,network:'none',identityQualified:false,note:'Only process isolation verified; auth/data and browser acceptance remain pending'},null,2))
+console.log(JSON.stringify({state:'started',plan,containerId:started.Id,volume:names.volume,network:'none',identityQualified:false,note:'Only process isolation verified at start; continued liveness, auth/data and browser acceptance remain pending'},null,2))

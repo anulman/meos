@@ -1,0 +1,68 @@
+--- a/crates/core/src/lib.rs
++++ b/crates/core/src/lib.rs
+@@ -27,6 +27,8 @@
+ struct Ctx {
+     wasi: WasiCtx,
+     table: ResourceTable,
++    http: wasmtime_wasi_http::WasiHttpCtx,
++    http_hooks: SnapshotHttp,
+ }
+ 
+ impl WasiView for Ctx {
+@@ -34,6 +36,27 @@
+         WasiCtxView {
+             ctx: &mut self.wasi,
+             table: &mut self.table,
++        }
++    }
++}
++
++struct SnapshotHttp;
++impl wasmtime_wasi_http::p2::WasiHttpHooks for SnapshotHttp {
++    fn send_request(
++        &mut self,
++        _request: hyper::Request<wasmtime_wasi_http::p2::body::HyperOutgoingBody>,
++        _config: wasmtime_wasi_http::p2::types::OutgoingRequestConfig,
++    ) -> wasmtime_wasi_http::p2::HttpResult<wasmtime_wasi_http::p2::types::HostFutureIncomingResponse> {
++        Err(wasmtime_wasi_http::p2::HttpError::trap(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Network access denied during guest snapshot")))
++    }
++}
++
++impl wasmtime_wasi_http::p2::WasiHttpView for Ctx {
++    fn http(&mut self) -> wasmtime_wasi_http::p2::WasiHttpCtxView<'_> {
++        wasmtime_wasi_http::p2::WasiHttpCtxView {
++            ctx: &mut self.http,
++            table: &mut self.table,
++            hooks: &mut self.http_hooks,
+         }
+     }
+ }
+@@ -216,7 +239,7 @@
+     config.wasm_component_model_async(true);
+ 
+     let engine = Engine::new(&config)?;
+-    let mut store = Store::new(&engine, Ctx { wasi, table });
++    let mut store = Store::new(&engine, Ctx { wasi, table, http: wasmtime_wasi_http::WasiHttpCtx::new(), http_hooks: SnapshotHttp });
+ 
+     let wizer = Wizer::new();
+     let (cx, instrumented) = wizer.instrument_component(component)?;
+@@ -227,6 +250,8 @@
+     linker.define_unknown_imports_as_traps(&comp)?;
+     wasmtime_wasi::p2::add_to_linker_async(&mut linker)?;
+     wasmtime_wasi::p3::add_to_linker(&mut linker)?;
++    // Keep HTTP aliases coherent with the real WASI I/O resource registrations.
++    wasmtime_wasi_http::p2::add_only_http_to_linker_async(&mut linker)?;
+ 
+     register_module_loader(&mut linker, resolver.clone())?;
+ 
+--- a/crates/core/Cargo.toml
++++ b/crates/core/Cargo.toml
+@@ -42,6 +42,8 @@
+ wasi-preview1-component-adapter-provider = "46"
+ wasmtime.workspace = true
+ wasmtime-wasi.workspace = true
++hyper = { version = "=1.11.1", default-features = false }
++wasmtime-wasi-http = { version = "=46.0.1", default-features = false, features = ["p2"] }
+ wasmtime-wizer = { version = "46", features = ["component-model", "wasmtime"] }
+ wac-graph = "0.10"
+ indexmap = "2"

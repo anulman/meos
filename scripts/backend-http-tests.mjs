@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { randomUUID } from 'node:crypto'
 import { createCommands } from '../backend/commands.mjs'
-import { createHttpHandler } from '../backend/http-handler.mjs'
+import { createHttpHandler, createSynchronousHttpHandler } from '../backend/http-handler.mjs'
 registerHooks({resolve(specifier,context,next){if(context.parentURL?.includes('/src/lib/')&&specifier.startsWith('.')&&!/\.[a-z]+$/.test(specifier))return next(specifier+'.ts',context);return next(specifier,context)}})
 const { JsonTransport }=await import('../src/lib/backend/transport.ts')
 const { FetchMeosRepository }=await import('../src/lib/backend/fetch-repository.ts')
@@ -22,7 +22,7 @@ function fixture(){
  }}})
  const handle=createHttpHandler({commands,origin}),user={id:owner,csrf:'synthetic-csrf'}
  const http=new JsonTransport(base,()=>user.csrf,(url,init)=>handle(new Request(origin+url,{...init,headers:{...init.headers,Origin:origin}}),user))
- return {db,handle,user,repository:new FetchMeosRepository(http)}
+ return {db,commands,handle,user,repository:new FetchMeosRepository(http)}
 }
 test('same real fetch repository and command handler preserve committed CRUD/CAS/archive behavior',async()=>{
  const f=fixture();try{
@@ -64,4 +64,19 @@ test('weather decoder rejects malformed success payloads rather than trusting se
  assert.throws(()=>decodeWeather({...empty,status:'fresh'}),{code:'invalid_response'})
  assert.throws(()=>decodeWeather({...empty,hourly:[{at:'2026-02-31T12:00',temperature:20,rainProbability:5,windSpeed:1}]}),{code:'invalid_response'})
  assert.throws(()=>decodeWeather({...empty,location:{latitude:0.123456,longitude:0,source:'bridge',observedAt:'2026-09-26T12:00:00.000Z'}}),{code:'invalid_response'})
+})
+
+
+test('synchronous WASI routing core shares CRUD and CSRF behavior with Fetch',async()=>{
+ const f=fixture();try {
+  const value={id:randomUUID(),title:'Synthetic midnight task',completed:false,priority:'none',schedule:{date:'2026-09-26',time:'00:00',timezone:'UTC'},notes:{type:'doc'}}
+  const handle=createSynchronousHttpHandler({commands:f.commands,origin},{readText:request=>request.commandText})
+  const request=new Request(origin+base+'/resources/tasks',{method:'POST',headers:{Origin:origin,'X-CSRF-Token':f.user.csrf,'Content-Type':'application/json'}})
+  request.commandText=JSON.stringify({value})
+  const response=handle(request,f.user)
+  assert.equal(response.status,201);assert.equal((await response.json()).value.schedule.time,'00:00')
+  const denied=new Request(origin+base+'/resources/tasks',{method:'POST',headers:{'Content-Type':'application/json'}})
+  assert.equal(handle(denied,f.user).status,403)
+  assert.equal((await f.repository.get('tasks',value.id)).value.title,value.title)
+ }finally{f.db.close()}
 })

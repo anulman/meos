@@ -163,3 +163,14 @@ test('scheduled tasks require a clock time and invalid updates preserve the stor
   assert.equal(unchanged.value.schedule.time,'00:00')
  }finally{f.close()}
 })
+
+test('wire validation clones data without browser structuredClone',()=>{
+ const saved=globalThis.structuredClone
+ try {
+  globalThis.structuredClone=undefined
+  const input={id:'11111111-1111-4111-8111-111111111111',title:'Guest compatibility',notes:{type:'doc',content:[{type:'paragraph'}]}}
+  const output=validateResource('projects',input)
+  output.notes.content.push({type:'paragraph'})
+  assert.equal(input.notes.content.length,1)
+ }finally{globalThis.structuredClone=saved}
+})

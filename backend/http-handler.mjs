@@ -13,10 +13,10 @@ function csrfEqual(left,right) {
 /** Runtime binding supplies `user` from authenticated TrailBase context, NOT body/headers.
  * This is a handler function, not a second general-purpose server or an auth implementation.
  */
-export function createHttpHandler({commands,weather,origin,basePath='/api/meos/v1'}) {
+function createHttpFlow({commands,weather,origin,basePath='/api/meos/v1'}) {
  const expected=new URL(origin)
  if(expected.origin!==origin||!['https:','http:'].includes(expected.protocol)||!/^\/[a-z0-9/_-]+$/.test(basePath))throw new Error('Invalid handler routing configuration')
- return async function handle(request,user) {
+ return function* handle(request,user) {
   try {
    if(!user)throw new DomainError('unauthenticated','Sign in required')
    uuid(user.id)
@@ -33,7 +33,7 @@ export function createHttpHandler({commands,weather,origin,basePath='/api/meos/v
     if(!/^application\/json(?:\s*;|$)/i.test(request.headers.get('Content-Type')??''))throw new DomainError('validation','JSON body required')
     const length=Number(request.headers.get('Content-Length')??0)
     if(length>150000)throw new DomainError('validation','Request too large')
-    const text=await boundedText(request,150000)
+    const text=yield {kind:'body',request,maxBytes:150000}
     try{body=JSON.parse(text)}catch{throw new DomainError('validation','Invalid JSON')}
     if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(key=>!['value','expectedRevision'].includes(key)))throw new DomainError('validation','Invalid command envelope')
    }
@@ -53,12 +53,44 @@ export function createHttpHandler({commands,weather,origin,basePath='/api/meos/v
     if(method==='GET')return response(commands.getPreferences(user.id))
     if(method==='PUT')return response(commands.savePreferences(user.id,body.value,body.expectedRevision))
    }
-   if(parts.length===1&&parts[0]==='weather'&&method==='GET'&&weather)return response(await weather.read(user.id,commands.getPreferences(user.id).value))
+   if(parts.length===1&&parts[0]==='weather'&&method==='GET'&&weather)return response(yield {kind:'weather',userId:user.id,preferences:commands.getPreferences(user.id).value})
    throw new DomainError('not_found','Route not found')
   }catch(error){
    if(error instanceof DomainError)return response({error:{code:error.code,message:error.message,...(error.details?{details:error.details}:{})}},status[error.code]??500)
    // No SQL, request body, coordinates, stack or credential detail leaves this boundary.
    return response({error:{code:'unavailable',message:'Service unavailable'}},503)
   }
+ }
+}
+
+/** Async Fetch adapter and synchronous WASIp2 adapter drive identical routing,
+ * authorization, validation and command code. Effects are the only difference. */
+export function createHttpHandler(options) {
+ const flow=createHttpFlow(options)
+ return async (request,user)=>{
+  const iterator=flow(request,user);let step=iterator.next()
+  while(!step.done) {
+   try {
+    const effect=step.value
+    const value=await (effect.kind==='body'?boundedText(effect.request,effect.maxBytes):options.weather.read(effect.userId,effect.preferences))
+    step=iterator.next(value)
+   }catch(error){step=iterator.throw(error)}
+  }
+  return step.value
+ }
+}
+export function createSynchronousHttpHandler(options,{readText}) {
+ const flow=createHttpFlow(options)
+ return (request,user)=>{
+  const iterator=flow(request,user);let step=iterator.next()
+  while(!step.done) {
+   try {
+    const effect=step.value
+    const value=effect.kind==='body'?readText(effect.request,effect.maxBytes):options.weather.read(effect.userId,effect.preferences)
+    if(value&&typeof value.then==='function')throw new Error('Async effect in synchronous guest')
+    step=iterator.next(value)
+   }catch(error){step=iterator.throw(error)}
+  }
+  return step.value
  }
 }

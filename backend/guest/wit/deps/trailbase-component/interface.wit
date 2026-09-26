@@ -1,0 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
+// Independent declarations of host-required initialization and dispatch ABI.
+package trailbase:component@0.2.0;
+interface init-endpoint {
+  get-manifest: func(args: string) -> result<string, string>;
+}
+interface sqlite-function-endpoint {
+  variant error { other(string) }
+  variant value { null, text(string), blob(list<u8>), integer(s64), real(f64) }
+  record arguments { function-name: string, arguments: list<value> }
+  dispatch-scalar-function: func(args: arguments) -> result<value, error>;
+}

@@ -1,0 +1,23 @@
+{
+  "checks": [
+    "form login token-free",
+    "two Secure HttpOnly cookies",
+    "safe session identity",
+    "form login token-free",
+    "two Secure HttpOnly cookies",
+    "safe session identity",
+    "reload preserves same identity",
+    "native logout emits two empty short-lived cookies",
+    "logged-out browser anonymous",
+    "logout revokes refresh session",
+    "pinned logout semantics measured",
+    "public signup disabled",
+    "admin API absent from public socket"
+  ],
+  "count": 13,
+  "runId": "48c006581c5494589e69af1b123dec97",
+  "copiedUnexpiredAuthCookieStillValid": true,
+  "nativeLimitation": "Logout deletes refresh sessions and browser cookies; copied signed auth JWT remains valid until expiry.",
+  "guestSHA256": "d325f2e84b08c60fcaeef8fce913ecf08645deb121dfd14493541cbbf8e3e067",
+  "network": "none; private test-runner namespace with only verified acceptance socket"
+}

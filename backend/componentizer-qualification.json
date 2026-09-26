@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "tool": "componentize-qjs0.4.2",
+  "usage": "isolated compilation of independent MeOS JS guest; MIT QuickJS interpreter may enter guest; compiler/Wasmtime build host do not enter guest",
+  "sourceCommit": "cea7b3e173356d89779e576f545bd1d1c0f03ad1",
+  "binarySHA256": "4813a54f609f46e1dd9a2315578481b2c1c2f4b8c1ea05e5117e00dad5204e1d",
+  "releaseArchiveSHA256": "4b0f95f43356230f8697af7ef4de8f6423f6675927f8eda75c1bd3c7f3c34677",
+  "sourceInventorySHA256": "566be1bc62362852ab340e7282e91dce42b5aa8a0fc8a76f4b87e78391c58e71",
+  "runtimeSBOMComponents": 74,
+  "runtime": [
+    {
+      "name": "runtime-opt-size-sync.wasm",
+      "sha256": "b1a04525e3cb736071b2f3587d65268974cd4cb096e11cb3abd1f50cdf0fa069"
+    },
+    {
+      "name": "runtime-opt-size.wasm",
+      "sha256": "99950122cb0a650fb40317a790d43590cf007dfbcab054bacec36e38db29cc22"
+    },
+    {
+      "name": "runtime-sync.wasm",
+      "sha256": "7aa24bcae07489386dec9254d07231609992438e77b3536a6ce71b05a08ca7e9"
+    },
+    {
+      "name": "runtime.wasm",
+      "sha256": "eb97faf3376befba57b5e932f8d4480dc0091c3d42161bcc0ad2a719cf9f0242"
+    }
+  ],
+  "review": [
+    "Runtime wasm bytes matched verbatim inside release CLI and npm binding.",
+    "rquickjs-sys0.12.0 bundled QuickJS LICENSE is MIT.",
+    "wit-dylib-ffi missing manifest field resolved by exact repository README license grant and retained root licenses.",
+    "Dual GPL/BSD ittapi selects BSD; self_cell selects Apache2.0.",
+    "LLVM/WASI runtime selected Apache2.0 with LLVM exception; existing host libc/libm/libgcc system dynamic runtime not redistributed.",
+    "Retained exact source and notice inventory; no copyleft engine selected."
+  ],
+  "patch": {
+    "file": "backend/tooling/qjs-http-linker.patch",
+    "sha256": "918f712a0c97576616ce087cc292f20fbce563ede6c583592010f9bc4d13ee36",
+    "purpose": "Coherent HTTP/I/O resource aliases during Wizer snapshot; explicit outbound HTTP denial at snapshot time",
+    "patchedBinarySHA256": "37e0325a1ec55e030a66dbb220fff44d9b34ce453a53240ca9bb945897a6a143",
+    "buildResult": "success"
+  },
+  "guestProof": {
+    "file": ".qualification/meos-guest.wasm",
+    "sha256": "d325f2e84b08c60fcaeef8fce913ecf08645deb121dfd14493541cbbf8e3e067",
+    "bytes": 5255766,
+    "compiled": true,
+    "liveRuntimeQualified": "partial:29 HTTP planner checks;13 cookie/session checks; final image/browser lifecycle pending"
+  }
+}

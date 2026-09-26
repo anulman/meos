@@ -14,10 +14,10 @@ registerHooks({resolve(specifier, context, next) {
 const codecs = await import('../src/lib/backend/codecs.ts')
 const { JsonTransport } = await import('../src/lib/backend/transport.ts')
 const image = 'example.invalid/meos/trailbase@sha256:' + 'a'.repeat(64)
-const plan = {schema:1,environment:'acceptance',runId:'b'.repeat(32),image,syntheticOnly:true,network:'none',credentials:'fresh-in-container',endpoint:'container-loopback',volume:'fresh-managed',identity:'fresh-synthetic'}
+const plan = {schema:1,environment:'acceptance',runId:'b'.repeat(32),image,syntheticOnly:true,network:'none',credentials:'fresh-in-container',endpoint:'container-unix-socket',volume:'fresh-managed',identity:'fresh-synthetic'}
 const names = validatePlan(plan)
 const fixture = () => ({
- container:{Image:'sha256:image',Config:{Labels:{'meos.acceptance.run':plan.runId,'meos.environment':'acceptance'},Env:['PATH=/usr/bin:/bin']},
+ container:{Image:'sha256:image',Config:{User:'10001:10001',Labels:{'meos.acceptance.run':plan.runId,'meos.environment':'acceptance'},Env:['PATH=/usr/bin:/bin']},
   HostConfig:{NetworkMode:'none',ReadonlyRootfs:true,Privileged:false,CapDrop:['ALL'],SecurityOpt:['no-new-privileges'],PortBindings:{}},
   Mounts:[{Type:'volume',Name:names.volume,Destination:'/data'}]},
  volume:{Name:names.volume,Driver:'local',Options:null,Labels:{'meos.acceptance.run':plan.runId,'meos.environment':'acceptance'}}
@@ -97,6 +97,7 @@ test('runtime inspection catches changed instance, volumes, networks and identit
  const good=fixture();verifyRuntime(good.container,good.volume,plan,'sha256:image')
  for(const mutate of [
   f=>{f.container.Image='sha256:production'},
+  f=>{f.container.Config.User='0:0'},
   f=>{f.container.HostConfig.NetworkMode='host'},
   f=>{f.container.HostConfig.Privileged=true},
   f=>{f.container.HostConfig.PortBindings={'80/tcp':[{}]}},
@@ -121,7 +122,7 @@ test('invented candidate cannot self-admit; unknown/compound component license f
 })
 test('actual launcher denies unreviewed artifact before Docker or service creation',()=>{
  const registry=JSON.parse(readFileSync(new URL('../backend/reviewed-artifacts.json',import.meta.url),'utf8'))
- assert.deepEqual(registry.artifacts,[],'fixture admission must never populate real registry')
+ assert.equal(registry.artifacts.some(entry=>entry.image===image),false,'fixture admission must never populate real registry')
  const result=spawnSync(process.execPath,[new URL('./backend-launch.mjs',import.meta.url).pathname,image],{encoding:'utf8',env:{PATH:'/nonexistent'}})
  assert.notEqual(result.status,0);assert.match(result.stderr,/image absent from reviewed registry/)
  assert.doesNotMatch(result.stderr,/Docker operation failed/)

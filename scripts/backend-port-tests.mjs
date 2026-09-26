@@ -49,3 +49,17 @@ test('host identity conversion is canonical and safe session output contains no 
  assert.equal(decodeHostContext(JSON.stringify({kind:'Http',user:null})),null)
  for(const raw of ['bad',JSON.stringify({kind:'Http',user:{...host.user,id}}),JSON.stringify({kind:'Http',user:{...host.user,csrf_token:''}})])assert.throws(()=>decodeHostContext(raw))
 })
+
+test('QuickJS numeric WIT adapter rejects unsafe SQL integers and preserves safe values',async()=>{
+ const {quickJsTransactionClass}=await import('../backend/trailbase-port.mjs')
+ let unsafe=false
+ class Native {
+  query(_sql,values){return unsafe?[[{tag:'integer',val:2**53}]]:[values]}
+  execute(){return 1}
+  commit(){} rollback(){}
+ }
+ const port=createDatabasePort(quickJsTransactionClass(Native)),tx=port.begin()
+ assert.deepEqual(tx.query('echo',[Number.MAX_SAFE_INTEGER]),[[Number.MAX_SAFE_INTEGER]])
+ assert.equal(tx.execute('x'),1)
+ unsafe=true;assert.throws(()=>tx.query('bad'),{code:'unavailable'})
+})

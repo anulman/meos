@@ -83,3 +83,73 @@ The existing exception explicitly disallows version expansion. Building the unmo
 Backend validation now requires `HH:mm` whenever a task has a schedule. Missing time and `Anytime` are rejected; midnight is valid. Command-level regression proves a rejected update preserves both stored time and revision. Unscheduled Inbox tasks remain distinct from scheduled tasks.
 
 QuickJS componentizer 0.4.2 exact source was retained from npm gitHead `cea7b3e173356d89779e576f545bd1d1c0f03ad1`. Its `Context::full` supplies ECMAScript, not the Web API/Intl environment used by these handlers. A compiled WASI HTTP bridge plus qualified URL/UTF-8/stream/timezone support is still required; do not claim the existing Node tests prove this binding. Componentizer/native runtime closure and generated component remain unqualified and unexecuted. No alternate general-purpose backend has been introduced.
+
+## Approved continuation: compiled guest and first runtime (2026-09-26)
+
+Telegram41831 authorizes version changes to previously approved packages when the
+license and approved usage remain unchanged. Source-reviewed permissive grants
+are documented in `BACKEND-LICENSE-SELECTIONS.md`; no new copyleft usage is inferred.
+
+- Native GNU build completed, then a static-musl build completed. ELF inspection
+  finds no interpreter and no DT_NEEDED libraries. GNU artifact stays private.
+- Independent JS guest uses four qualified URL-parser dependencies and the
+  published QuickJS runtime; it does not import TrailBase's guest SDK. A small
+  Apache/MIT compiler patch supplies coherent HTTP/I/O linker aliases and rejects
+  outbound HTTP during snapshot. Guest component compiled to5,251,233bytes.
+-36 focused tests pass, including synchronous/async handler parity, explicit
+  scheduled-task times, strict integer ABI conversion, UTF8 and instance fencing.
+- A scratch image was source-admitted and executed with UID/GID10001, networknone,
+  readonly root, fresh labeled volume, bounded resources and tmpfs cache. The
+  actual guest instance endpoint returned its sealed acceptance instance ID.
+- Live auth bootstrap uncovered missing native tables: debug RustEmbed used
+  source-tree files rather than embedding migrations/assets. The candidate was
+  withdrawn from the registry and the instance stopped. Rebuilding with explicit
+  `rust-embed/debug-embed` is an implementation fix, not a new license decision.
+
+This is **not** B1/B4 completion: native auth and all persistence/tenant/browser
+acceptance remain unqualified until the corrected fresh runtime passes. No
+production runtime/data/credentials were touched.
+
+### Live fixes after first admission
+
+The explicit RustEmbed feature build completed in1m15s. Native tables are now
+present. Form login succeeded with two Secure/HttpOnly cookies and the safe session
+projection exposed only user UUID and CSRF. The pinned CLI's `user add` command
+still inserts a removed `verified` column; `backend-bootstrap.py` therefore uses
+the reviewed current-schema ordinary-user insert and native `change-password`
+operation, with private persisted intent and no completed-owner password reset.
+
+QuickJS imported WIT errors are `Error{payload: variant}`. Stream EOF handling now
+uses that actual ABI, with Unicode/size/failure/disposal regression tests.38 focused
+tests pass. Runtime compiled-component cache is confined to `/data/.cache` on the
+unique acceptance volume; it is not a redistributed build tool or shared cache.
+Native service image has explicit embedded assets/migrations, no GEOS, no system
+libc and no compiler/toolchain/cache copied from the build stage.
+
+### Real HTTP checkpoint
+
+The guest domain validator no longer relies on browser `structuredClone`; its
+JSON-data clone is independently tested.39 focused tests pass. The admitted native
+image now runs with a development-updated guest, whose separate SHA is recorded
+in `live-planner-evidence.json` and `live-session-evidence.json`. This explicitly
+is not an exact final-image signoff.
+
+-29 live planner checks pass: ordinary-owner login, protected cookies, token-free
+ session, anonymous/forged-host-context/second-owner denial, rich-note CRUD, required
+ scheduled times, CAS conflict, atomic project archive, routines, occurrence retry,
+ weekly notes/outcomes, pagination, preferences and disabled weather.
+-13 cookie/session checks pass: reload identity, native logout refresh invalidation,
+ anonymous after dropping cookies, disabled signup with a complete request, and no
+ admin API on the public socket. The suites share several login assertions; their
+ counts are separate, not a count of unique assertions.
+- Native logout returns empty cookies with `SameSite=None; Max-Age=1` without
+ `Secure`. The public route adapter must issue canonical Secure/HttpOnly/Lax
+ `Max-Age=0` deletions, with same-origin POST and verified CSRF. Do not expose native
+ GET logout or raw status/JSON-login/token APIs directly to the browser.
+- As documented by upstream, logout revokes refresh sessions but a copied signed
+ auth JWT remains valid until expiry. Browser cookie removal is not server-side
+ JWT revocation. Exact short-TTL expiry/refresh and browser checks remain next.
+
+No production changes. B1 acceptance is still in progress; B2's command surface
+has live coverage, not final browser acceptance. Restore, provider smoke and B4
+independent review remain outstanding.

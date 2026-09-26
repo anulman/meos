@@ -85,3 +85,20 @@ export function sessionResponse(user) {
   status:200,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Vary':'Cookie'},
  })
 }
+
+/** QuickJS0.4.x maps WIT64-bit integers to Number, unlike Jco's BigInt ABI.
+ * MeOS intentionally accepts only safe integers; reject before conversion in
+ * both directions so precision loss can never become an accepted SQL value. */
+export function quickJsTransactionClass(Transaction) {
+ const checked=value=>{if(!Number.isSafeInteger(value))return invalid();return value}
+ const toRuntime=value=>value.tag==='integer'?{tag:'integer',val:checked(Number(value.val))}:value
+ const fromRuntime=value=>value?.tag==='integer'?{tag:'integer',val:BigInt(checked(value.val))}:value
+ return class QuickJsTransaction {
+  constructor(){this.resource=new Transaction()}
+  query(sql,values){return this.resource.query(sql,values.map(toRuntime)).map(row=>row.map(fromRuntime))}
+  execute(sql,values){return BigInt(checked(this.resource.execute(sql,values.map(toRuntime))))}
+  commit(){return this.resource.commit()}
+  rollback(){return this.resource.rollback()}
+  [Symbol.dispose](){this.resource[Symbol.dispose]?.()}
+ }
+}

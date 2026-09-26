@@ -88,6 +88,31 @@
     "license": "MPL-2.0",
     "selectedBy": "@tailwindcss/node@4.3.3 -> admin @tailwindcss/vite@4.3.3",
     "scope": "unchanged isolated admin-UI build tools; exclude binaries from service/browser assets",
-    "approved": false
+    "approved": true,
+    "approval": "Telegram41831: previously approved packages may change versions for security/compatibility when license and approved usage remain unchanged"
+  },
+  "gnuBuild": {
+    "state": "completed",
+    "binarySHA256": "e60098122b6139efc2126c7df550acf0c061ef7d7c7933933584f0b36a15cf95",
+    "duration": "13m06s",
+    "peakRAM": "1.2GiB",
+    "peakSwap": "319.5MiB",
+    "serviceExecuted": false,
+    "runtimeAdmitted": false,
+    "dynamicLibraries": [
+      "libgcc_s.so.1",
+      "libm.so.6",
+      "libc.so.6",
+      "ld-linux-x86-64.so.2"
+    ],
+    "next": "musl-static service image candidate; GNU build stays private qualification evidence"
+  },
+  "runtimeContinuation": {
+    "staticMuslBuild": true,
+    "embeddedAssetsFeature": "rust-embed/debug-embed",
+    "focusedTests": 39,
+    "livePlannerChecks": 29,
+    "liveSessionChecks": 13,
+    "finalImageAndBrowserAcceptance": false
   }
 }
