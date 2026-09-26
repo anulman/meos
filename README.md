@@ -61,3 +61,6 @@ optional schedules, bounded materialization, OpenAPI/generated types, scoped MCP
 tools, transactional scheduling and deferred Calendar sync foundations.
 Run `pnpm contract:check` to check generated-contract drift.
 
+## Agent operating skills
+
+Discover the tool-only MeOS planning and board procedures through [llms.txt](llms.txt). The canonical [shared contract](public/skills/contract.md), seven core operating skills and [install/bootstrap skill](public/skills/meos-bootstrap/SKILL.md) live under `public/skills/`; Vite serves these files unchanged at `/skills/` and the public index at `/llms.txt`. Bootstrap targets a post-cutover production release with Docker Compose and Helm installation paths, persistent-data/login verification, then MCP access, host schedules, execution settings, authority and event long-polling. Its command templates resolve release-supplied artifacts rather than assume chart/image names; a maintainer note distinguishes that target from this branch's demo-only Compose file. Publishing these documents does not install services or enable recurring prompts, notifications or Calendar sync.
