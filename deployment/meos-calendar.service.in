@@ -2,6 +2,7 @@
 Description=MeOS private Google Calendar service
 Requires=meos-calendar.socket
 After=meos-calendar.socket
+@PLANNER_DEPENDENCY@
 
 [Service]
 Type=simple

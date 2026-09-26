@@ -35,7 +35,7 @@ config={'origin':origin,'redirectUri':origin+'/api/calendar/google/callback','ow
 for name,value in [('config.json',config),('oauth.json',{'clientId':credentials['MEOS_GOOGLE_CLIENT_ID'],'clientSecret':credentials['MEOS_GOOGLE_CLIENT_SECRET']}),('planner.json',planner)]:
  target=out/name;target.write_text(json.dumps(value));os.chown(target,0,61004);os.chmod(target,0o440)
 repo=pathlib.Path(__file__).resolve().parents[1]
-values={'RELEASE':str(release),'NODE_DIR':str(release/'runtime/node'),'CONFIG':str(out/'config.json'),'OAUTH':str(out/'oauth.json'),'PLANNER_BIND':f'BindReadOnlyPaths={planner_socket}:/run/meos-planner/backend.sock {out}/planner.json:/run/meos-calendar/planner.json','STATE':'/var/lib/meos-calendar','GOOGLE_ALLOW':'\n'.join('IPAddressAllow='+ip+'/32' for ips in pins.values() for ip in ips)}
+values={'PLANNER_DEPENDENCY':'Requires=meos-backend.service\nAfter=meos-backend.service\nPartOf=meos-backend.service','RELEASE':str(release),'NODE_DIR':str(release/'runtime/node'),'CONFIG':str(out/'config.json'),'OAUTH':str(out/'oauth.json'),'PLANNER_BIND':f'BindReadOnlyPaths={planner_socket}:/run/meos-planner/backend.sock {out}/planner.json:/run/meos-calendar/planner.json','STATE':'/var/lib/meos-calendar','GOOGLE_ALLOW':'\n'.join('IPAddressAllow='+ip+'/32' for ips in pins.values() for ip in ips)}
 for name in ['meos-calendar.service.in','meos-calendar.socket']:
  text=(repo/'deployment'/name).read_text()
  for key,value in values.items():text=text.replace('@'+key+'@',value)

@@ -19,13 +19,13 @@ state=base/'state';state.mkdir(mode=0o700);os.chown(state,61004,61004)
 config={'origin':'https://calendar.example.invalid','ownerId':'synthetic-owner','ownerEmail':'owner@example.invalid','redirectUri':'https://calendar.example.invalid/api/calendar/google/callback','googlePins':{'oauth2.googleapis.com':['203.0.113.1'],'www.googleapis.com':['203.0.113.1']}}
 for name,value in [('config.json',config),('oauth.json',{'clientId':'synthetic.apps.googleusercontent.com','clientSecret':'synthetic-no-real-credential'})]:
  p=base/name;p.write_text(json.dumps(value));os.chown(p,0,61004);os.chmod(p,0o440)
-values={'PLANNER_BIND':'','RELEASE':str(release),'NODE_DIR':str(node),'CONFIG':str(base/'config.json'),'OAUTH':str(base/'oauth.json'),'STATE':str(state),'GOOGLE_ALLOW':'IPAddressAllow=203.0.113.1/32'}
+values={'PLANNER_DEPENDENCY':'Requires='+prefix+'-backend.service\nAfter='+prefix+'-backend.service\nPartOf='+prefix+'-backend.service','PLANNER_BIND':'','RELEASE':str(release),'NODE_DIR':str(node),'CONFIG':str(base/'config.json'),'OAUTH':str(base/'oauth.json'),'STATE':str(state),'GOOGLE_ALLOW':'IPAddressAllow=203.0.113.1/32'}
 unit=(repo/'deployment/meos-calendar.service.in').read_text().replace('meos-calendar.socket',prefix+'.socket')
 for key,value in values.items():unit=unit.replace('@'+key+'@',value)
 assert '@' not in unit
 socket_path='/run/'+prefix+'/control.sock'
 socket_unit=(repo/'deployment/meos-calendar.socket').read_text().replace('/run/meos-calendar/control.sock',socket_path)
-units={prefix+'.service':unit,prefix+'.socket':socket_unit}
+units={prefix+'.service':unit,prefix+'.socket':socket_unit,prefix+'-backend.service':'[Unit]\nDescription=Synthetic Calendar dependency stand-in\n[Service]\nType=simple\nExecStart=/usr/bin/sleep infinity\nNoNewPrivileges=yes\nPrivateNetwork=yes\nProtectHome=yes\nProtectSystem=strict\n'}
 def command(*args):
  r=subprocess.run(args,env=clean,capture_output=True,text=True,timeout=30);assert r.returncode==0,(args[0],r.returncode,r.stderr[-500:]);return r.stdout
 class UnixConnection(http.client.HTTPConnection):
@@ -45,9 +45,9 @@ try:
  status=pathlib.Path('/proc/'+str(pid)+'/status').read_text().splitlines();assert next(x for x in status if x.startswith('Uid:')).split()[1:]==['61004']*4;assert all(int(x.split()[1],16)==0 for x in status if x.startswith(('CapEff:','CapPrm:','CapBnd:','CapAmb:')))
  checks['uid61004ZeroCapabilities']=True
  code,data=call('connect',{'ownerId':'synthetic-owner','session':'synthetic-flow'});assert code==200 and data['authorizationUrl'].startswith('https://accounts.google.com/o/oauth2/v2/auth?')
- command('/usr/bin/systemctl','restart',prefix+'.service')
+ command('/usr/bin/systemctl','restart',prefix+'-backend.service')
  assert call('status',{'ownerId':'synthetic-owner'})==(200,{'state':'connecting','syncActive':False,'lastSyncAt':None,'nextSyncAt':None,'syncError':None,'plannerActive':False,'plannerLastSyncAt':None,'conflicts':[]})
- assert pid!=int(command('/usr/bin/systemctl','show','--property=MainPID','--value',prefix+'.service'));checks['privateStateSurvivesRestart']=True
+ assert pid!=int(command('/usr/bin/systemctl','show','--property=MainPID','--value',prefix+'.service'));checks['privateStateSurvivesRestart']=True;checks['backendRestartRestartsCalendar']=True
  assert call('status',{'ownerId':'other'})[0]==503;checks['wrongOwnerRejected']=True
  assert call('disconnect',{'ownerId':'synthetic-owner'})[0]==200
  assert call('status',{'ownerId':'synthetic-owner'})==(200,{'state':'disconnected','syncActive':False,'lastSyncAt':None,'nextSyncAt':None,'syncError':None,'plannerActive':False,'plannerLastSyncAt':None,'conflicts':[]})
@@ -57,6 +57,6 @@ try:
  proof={'runId':run,'environment':'acceptance','syntheticOnly':True,'checks':checks,'sourceFiles':files,'nodeSHA256':hashlib.sha256((node/'bin/node').read_bytes()).hexdigest(),'units':{k:hashlib.sha256(v.encode()).hexdigest() for k,v in units.items()},'artifacts':str(base)}
  (base/'proof.json').write_text(json.dumps(proof,indent=2)+'\n');target=repo/'.qualification/calendar-lifecycle-proof.json';target.write_text(json.dumps(proof,indent=2)+'\n');os.chown(target,repo.stat().st_uid,repo.stat().st_gid);print(json.dumps({'count':len(checks),'checks':checks,'proof':str(target)}))
 finally:
- for suffix in ['.socket','.service']:subprocess.run(['/usr/bin/systemctl','stop',prefix+suffix],env=clean,capture_output=True,timeout=15)
+ for suffix in ['.socket','.service','-backend.service']:subprocess.run(['/usr/bin/systemctl','stop',prefix+suffix],env=clean,capture_output=True,timeout=15)
  for p in installed:p.unlink()
  subprocess.run(['/usr/bin/systemctl','daemon-reload'],env=clean,capture_output=True,timeout=15)
