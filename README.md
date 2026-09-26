@@ -52,3 +52,7 @@ MEOS_TEST_URL=http://127.0.0.1:3181 node scripts/browser-anchor.mjs
 ```
 
 `browser.mjs` is journey A; B is resource editing, C planning/routines/period notes, D preferences/midnight/reset, E (`browser-shell`) mobile/desktop and floating/modal behavior. Anchor checks preserve the previously approved 48 mouse/touch/keyboard corner cases. Test-only static origin stays loopback on 3181; deployed preview stays loopback on 3180.
+
+## Agent operating skills
+
+Discover the tool-only MeOS planning and board procedures through [llms.txt](llms.txt). The canonical [shared contract](public/skills/contract.md) and seven skills live under `public/skills/`; Vite serves these files unchanged at `/skills/` and the public index at `/llms.txt`. Publishing these documents does not enable recurring prompts, notifications or Calendar sync.

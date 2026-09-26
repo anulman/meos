@@ -1,0 +1,14 @@
+# MeOS
+
+> Tool-only operating procedures for planning, acting and maintaining a trustworthy board. These documents do not enable schedules, Calendar sync or notifications.
+
+## Operating skills
+
+- [Shared operating contract](skills/contract.md): Required authority, tool discovery, progress, scheduling and delivery rules.
+- [Weekly review + 14-day look-ahead](skills/meos-weekly-review/SKILL.md): Review priorities and capacity across the next 14 days when the user requests weekly planning or a configured weekly review fires; composes board decisions and schedules only within existing authority.
+- [Morning launch](skills/meos-morning-launch/SKILL.md): Prepare today and the first concrete action when the user asks for a morning plan or a configured morning launch fires; reuses last evening’s decisions and highlights changes rather than the entire backlog.
+- [Evening close + tomorrow prep](skills/meos-evening-close/SKILL.md): Reconcile today and prepare tomorrow when the user requests shutdown or a configured evening close fires; captures actuals and gives unfinished work explicit dispositions without automatic rollover.
+- [Event companion — advance / start / end](skills/meos-event-companion/SKILL.md): Handle advance, start, end and adjacent-event transitions from verified platform events or a user request; prepares next steps, captures outcomes and deduplicates boundary prompts without inferring completion.
+- [Rescue the day](skills/meos-rescue-day/SKILL.md): Repair a disrupted day after lateness, an overrun, low energy or a new commitment; preserves fixed/protected time and moves the smallest authorized set of flexible blocks.
+- [Clean the board](skills/meos-clean-board/SKILL.md): Perform bounded task-board hygiene when captures, duplicates, stale entries or missing fields obstruct planning; reconciles evidenced state but does not silently reprioritize, delete or declare completion.
+- [Walk the board](skills/meos-walk-board/SKILL.md): Review active work, waiting-for items, commitments and backlog to make deliberate next-action and capacity decisions; used on demand or by weekly review, not as a status recital.
