@@ -11,7 +11,7 @@ function content(value){
  return {summary:value.summary.trim(),location:value.location??'',description:value.description??'',start:{dateTime:new Date(start.dateTime).toISOString()},end:{dateTime:new Date(end.dateTime).toISOString()}};
 }
 function equal(a,b){try{return JSON.stringify(content(a))===JSON.stringify(content(b))}catch{return false}}
-function publicEvent(event,role){return {id:event.id,role,etag:event.etag??'',summary:event.summary??'(Untitled)',location:event.location??'',description:event.description??'',start:event.start,end:event.end,recurring:!!event.recurringEventId||!!event.recurrence}}
+function publicEvent(event,role){return {id:event.id,role,etag:event.etag??'',summary:event.summary??'(Untitled)',location:event.location??'',description:event.description??'',start:event.start,end:event.end,linked:!!event.extendedProperties?.private?.meosEntity,recurring:!!event.recurringEventId||!!event.recurrence}}
 export function createCalendarEvents({store,connection,broker,accessToken,now=Date.now}){
  function snapshot(role){return store.get('snapshot:'+role)}
  function drafts(){return store.get('event-outbox')??{}}
@@ -28,6 +28,7 @@ export function createCalendarEvents({store,connection,broker,accessToken,now=Da
     if(outbox[id])throw Error('edit_pending');
     const managed=tx.get('snapshot:managed');const remote=managed?.events?.[id]??managed?.expanded?.find(e=>e.id===id);
     if(input.operation!=='create'&&(!remote||remote.status==='cancelled'||!remote.etag||remote.etag!==input.etag))throw Error('conflict');
+    if(remote?.extendedProperties?.private?.meosEntity)throw Error('edit_in_planner');
     if(remote?.recurrence)throw Error('edit_individual_occurrence');
     if(Object.keys(outbox).length>=1000)throw Error('queue_limit');
     outbox[id]={id,event,operation:input.operation,etag:remote?.etag,state:'pending',generation:c.generation,createdAt:now()};tx.set('event-outbox',outbox);return {id};

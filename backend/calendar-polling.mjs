@@ -27,7 +27,7 @@ export function createCalendarPolling({store,broker,connection,connectionKey,acc
        renew();const token=await accessToken();renew();
        const page=await broker.listEvents({calendarId,accessToken:token,syncToken,pageToken});
        if(!Array.isArray(page?.items)||page.items.length>2500)throw Error('invalid_page');
-       for(const event of page.items){if(!valid(event?.id)||!['confirmed','tentative','cancelled'].includes(event.status))throw Error('invalid_event');events.set(event.id,Object.fromEntries(['id','etag','status','summary','description','location','start','end','recurrence','recurringEventId','originalStartTime','updated'].filter(k=>event[k]!==undefined).map(k=>[k,event[k]])))}
+       for(const event of page.items){if(!valid(event?.id)||!['confirmed','tentative','cancelled'].includes(event.status))throw Error('invalid_event');events.set(event.id,Object.fromEntries(['id','etag','status','summary','description','location','start','end','recurrence','recurringEventId','originalStartTime','updated','extendedProperties'].filter(k=>event[k]!==undefined).map(k=>[k,event[k]])))}
        if(events.size>100000)throw Error('collection_limit');
        pageToken=page.nextPageToken;
        if(pageToken!==undefined){if(!valid(pageToken)||pages.has(pageToken)||pages.size>=10000||page.nextSyncToken!==undefined)throw Error('invalid_pagination');pages.add(pageToken)}

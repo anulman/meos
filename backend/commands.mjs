@@ -48,7 +48,7 @@ export function createCommands({begin,now=()=>Date.now()}) {
  function snapshot(db,kind,owner,value){
   if(kind!=='occurrences')return value
   const row=requireOwned(db,'routines',owner,value.routineId),r=JSON.parse(row[0])
-  return validateResource(kind,{title:r.title,notes:r.notes,...(r.durationMinutes?{durationMinutes:r.durationMinutes}:{}),...(r.preferredTime?{preferredTime:r.preferredTime}:{}),skipped:false,edited:false,...value,templateRevision:Number(row[1])})
+  return validateResource(kind,{title:r.title,notes:r.notes,...(r.durationMinutes?{durationMinutes:r.durationMinutes}:{}),...Object.fromEntries(['location','durationIntent'].filter(k=>r[k]!==undefined).map(k=>[k,r[k]])),...(r.preferredTime?{preferredTime:r.preferredTime}:{}),skipped:false,edited:false,...value,templateRevision:Number(row[1])})
  }
  function checkTombstone(db,kind,owner,id){if(db.query('SELECT 1 FROM deletion_tombstones WHERE owner_id=? AND kind=? AND entity_id=?',[blob(owner),kind,id]).length)throw new DomainError('conflict','Deleted identity cannot be reused')}
  const api={
@@ -103,7 +103,20 @@ export function createCommands({begin,now=()=>Date.now()}) {
    return tx(db=>{
     if(spec.write){const old=db.query('SELECT operation,payload,result FROM command_receipts WHERE owner_id=? AND command_key=?',[blob(owner),input.idempotencyKey])[0];if(old){if(old[0]!==name||old[1]!==canonical(input))throw new DomainError('conflict','Idempotency key payload mismatch');return JSON.parse(old[2])}}
     let result
-    if(name==='list_agenda'){
+    if(name==='calendar_inventory')result=api.list(owner,input.kind,{cursor:input.cursor,limit:250})
+    else if(name==='calendar_changes'){
+     const rows=db.query("SELECT sequence,kind,entity_id,revision,operation FROM sync_outbox WHERE owner_id=? AND sequence>? AND kind IN ('tasks','occurrences') ORDER BY sequence LIMIT 100",[blob(owner),input.cursor]);
+     result={items:rows.map(r=>({sequence:r[0],kind:r[1],id:r[2],revision:r[3],deleted:r[4]==='delete'})),cursor:rows.at(-1)?.[0]??input.cursor}
+    }else if(name==='calendar_current'){
+     const row=owned(db,input.kind,owner,input.id);const tombstone=db.query('SELECT revision FROM deletion_tombstones WHERE owner_id=? AND kind=? AND entity_id=?',[blob(owner),input.kind,input.id])[0];
+     if(!row&&!tombstone)throw new DomainError('not_found','Sync entity not found');result={record:row?envelope(row):null,deleted:!row,revision:row?Number(row[1]):Number(tombstone[0])}
+    }else if(name==='calendar_apply'){
+     const old=envelope(requireOwned(db,input.kind,owner,input.id));if(old.revision!==input.expectedRevision)throw new DomainError('conflict','Local event changed');
+     const value={...old.value};if(input.schedule===null)delete value.schedule;else value.schedule=input.schedule;
+     for(const k of ['title','location','notes','durationMinutes'])if(input[k]!==undefined)value[k]=input[k];
+     if(input.kind==='occurrences')value.edited=true;
+     result=api.update(owner,input.kind,value,input.expectedRevision);
+    }else if(name==='list_agenda'){
      date(input.date);timezone(input.timezone)
      const items=[]
      for(const kind of ['tasks','occurrences'])for(const row of db.query(`SELECT ${columns} FROM ${table(kind)} WHERE owner_id=? AND json_type(doc,'$.schedule')='object'`,[blob(owner)])){
@@ -115,10 +128,10 @@ export function createCommands({begin,now=()=>Date.now()}) {
     else if(name==='update_routine')result=api.update(owner,'routines',input.value,input.expectedRevision)
     else if(name==='move_occurrence'||name==='complete_occurrence'){
      const previous=envelope(requireOwned(db,'occurrences',owner,input.id)),value={...previous.value,edited:true}
-     if(name==='move_occurrence'){if(input.schedule===null)delete value.schedule;else value.schedule=input.schedule;for(const k of ['title','notes','durationMinutes','skipped'])if(input[k]!==undefined)value[k]=input[k]}
+     if(name==='move_occurrence'){if(input.schedule===null)delete value.schedule;else value.schedule=input.schedule;for(const k of ['title','notes','durationMinutes','location','durationIntent','actualDurationMinutes','skipped'])if(input[k]!==undefined)value[k]=input[k]}
      else value.completed=input.completed
      result=api.update(owner,'occurrences',value,input.expectedRevision)
-    }else if(name==='materialize_routine'){
+    }else if((name==='materialize_routine'||name==='calendar_materialize')){
      const row=envelope(requireOwned(db,'routines',owner,input.routineId)),r=row.value,today=localDay(now(),r.timezone)
      date(input.through);horizon(input.through,r.timezone,now());if(input.through<today)throw new DomainError('validation','Materialization starts at current local day')
      const items=[];if(!r.archived)for(let day=today;day<=input.through;day=addDays(day,1)){

@@ -41,16 +41,36 @@ only; no test contacts Google. `calendar-lifecycle-proof.py` renders temporary
 isolated units and proves UID/capability drop and SQLite restart persistence.
 Receipts in `.qualification/` are exact-source artifacts, not deployment claims.
 
-## Remaining objective, not implied by this candidate
+## Existing planner bridge candidate
 
-Existing planner tasks/occurrences are not automatically exported into managed
-Google events, and Google managed changes are not yet applied to those existing
-domain entities. Calendar events currently have a separate managed editing
-surface. The sidecar deliberately has no planner database/socket/password; a
-scoped durable planner bridge is still required before claiming full planner
-bidirectional integration. Location and free-text duration intent for existing
-planner entities are also outstanding. Agent notification runtime follows that
-Calendar completion serially, with a rolling7-day future horizon.
+The continuation adds dedicated native-agent `sync:read` / `sync:write` operations
+for owner-scoped inventory, committed outbox, current entity/tombstone, bounded
+routine materialization, and Calendar-only revision-checked apply. Browser APIs
+remain forbidden to this principal. Sidecar access uses a protected Unix socket
+and a separate agent credential, never the owner's browser password.
+
+Existing scheduled tasks and independent routine instances export their planned
+duration, location and notes. Unresolved duration is a visible conflict, never a
+fabricated end time. Google-only changes update the existing entity through CAS;
+local/remote concurrent edits remain conflicts. Local tombstones conditionally
+cancel Google; Google cancellation unschedules rather than destroys the task.
+Stable IDs and persisted baselines reconcile uncertain writes. Rich notes remain
+unchanged if their exported text has not changed. Duration intent and actual
+observed duration are retained independently. Fixed routine instances materialize
+through the established14-day planner horizon without an open browser; future
+agent notifications remain separately bounded to7 days.
+
+Planner display rereads on Calendar receipts and invalidates affected task and
+occurrence collections; mounted editors retain their old revision and draft for
+normal conflict detection. Full historical snapshots are chunked behind atomic
+SQLite commits, avoiding a single JSON-record size ceiling.
+
+150 isolated backend tests and isolated TypeScript/license/build checks pass.
+Actual new-WASM bridge/browser qualification is pending independent admission of
+`.qualification/release-1790450631810096659/candidate.json` into the fixed fresh
+`.qualification/release-calendar-acceptance/` namespace. Do not claim live bridge
+readiness from source/unit tests alone. `scripts/calendar-acceptance.py` is a
+synthetic-only launcher; it creates a separate sync-scoped synthetic principal.
 
 Varlock schema/launch documentation is provided, but the Varlock binary is not
 installed or qualified in this candidate. No dependency was silently introduced.
@@ -69,8 +89,8 @@ Real Google client/consent, live import, writes and polling remain unverified.
    retain existing Access enforcement. No Google notification ingress is needed.
 5. Browser Connect → Google consent → Settings shows actual completed pull state;
    verify primary read-only events and managed create/update/cancel roundtrip.
-   Do not label existing task/occurrence synchronization complete until its bridge
-   has independent and deployed-path evidence.
+   Do not label synchronization complete until the bridge has independent and
+   deployed-path evidence.
 
 Sources: https://developers.google.com/workspace/calendar/api/guides/sync and
 https://developers.google.com/workspace/calendar/api/v3/reference/events/update.

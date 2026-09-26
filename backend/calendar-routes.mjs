@@ -34,6 +34,8 @@ function publicStatus(value) {
     primary: { direction: 'import_only' },
     managed: { direction: 'bidirectional' },
     syncActive: value.syncActive === true,
+    plannerActive:value.plannerActive===true,
+    lastSyncAt:Number.isSafeInteger(value.lastSyncAt)?value.lastSyncAt:null,
   };
 }
 

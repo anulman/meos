@@ -37,7 +37,7 @@ test('calendar status is owner-authenticated and response excludes secrets', asy
   const { route, calls } = fixture();
   const response = await route(request('status', { headers: { authorization: 'Bearer forged', 'x-owner-id': 'forged' } }));
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { state: 'connected', primary: { direction: 'import_only' }, managed: { direction: 'bidirectional' }, syncActive: true });
+  assert.deepEqual(await response.json(), { state: 'connected', primary: { direction: 'import_only' }, managed: { direction: 'bidirectional' }, syncActive: true,plannerActive:false,lastSyncAt:null });
   assert.equal(calls[0][1].url, origin + '/api/meos/v1/session');
   assert.deepEqual([...calls[0][1].headers], [['cookie', 'synthetic=session']]);
   assert.deepEqual(calls[1], ['status', { ownerId }]);

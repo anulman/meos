@@ -7,7 +7,7 @@ import http from 'node:http'
 import {spawnSync} from 'node:child_process'
 import {createHash} from 'node:crypto'
 import {chromium} from 'playwright'
-export async function proveAccessBrowser({port,origin,access,owner,calendar=false}){
+export async function proveAccessBrowser({port,origin,access,owner,calendar=false,calendarControl}){
  const checks=[],errors=[]
  assert.equal(spawnSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-keyout','/tmp/access-key.pem','-out','/tmp/access-cert.pem','-days','1','-subj','/CN='+new URL(origin).hostname],{stdio:'ignore'}).status,0)
  let assertion=access.token
@@ -33,6 +33,13 @@ export async function proveAccessBrowser({port,origin,access,owner,calendar=fals
    await page.getByRole('heading',{name:'Calendar browser roundtrip',exact:true}).waitFor();calendarChecks.push('managed event creates through CSRF route, durable outbox, provider receipt and visible planner collection');
    await page.getByRole('button',{name:'Edit calendar event',exact:true}).click();await page.getByLabel('Event title',{exact:true}).fill('Calendar edited roundtrip');await page.getByRole('button',{name:'Save calendar event',exact:true}).click();await page.getByRole('heading',{name:'Calendar edited roundtrip',exact:true}).waitFor();
    await page.getByRole('button',{name:'Edit calendar event',exact:true}).click();page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Delete calendar event',exact:true}).click();await page.getByRole('heading',{name:'Calendar edited roundtrip',exact:true}).waitFor({state:'detached'});calendarChecks.push('managed update and deletion roundtrip through revision-checked outbox');
+   if(calendarControl){
+    await page.goto(origin+'/settings');await page.getByRole('button',{name:'New task',exact:true}).click();const sheet=page.getByRole('dialog');
+    await sheet.getByLabel('Task name',{exact:true}).fill('Planner bridge roundtrip');await sheet.getByLabel('Scheduled date',{exact:true}).fill(new Date().toISOString().slice(0,10));await sheet.getByLabel('Time (required when scheduled)',{exact:true}).fill('12:30');await sheet.getByLabel('Duration (minutes)',{exact:true}).fill('120');await sheet.getByLabel('Duration intent',{exact:true}).fill('At least two hours');await sheet.getByLabel('Actual duration (minutes)',{exact:true}).fill('95');await sheet.getByLabel('Location',{exact:true}).fill('Bridge studio');await sheet.locator('.ProseMirror').fill('Preserve these planner notes');await sheet.getByRole('button',{name:'Create task',exact:true}).click();await sheet.waitFor({state:'hidden'});
+    await calendarControl('export-check');calendarChecks.push('existing task exports through dedicated sync-only native principal and real WASM outbox, preserving planned versus actual duration');
+    await page.goto(origin+'/');await page.getByRole('button',{name:'Planner bridge roundtrip',exact:true}).waitFor();await calendarControl('remote-edit');await page.getByRole('button',{name:'Google edited planner task',exact:true}).waitFor({timeout:25000});
+    await page.getByRole('button',{name:'Google edited planner task',exact:true}).click();await sheet.getByLabel('Duration intent',{exact:true}).waitFor();assert.equal(await sheet.getByLabel('Duration intent',{exact:true}).inputValue(),'At least two hours');assert.equal(await sheet.getByLabel('Actual duration (minutes)',{exact:true}).inputValue(),'95');assert.match(await sheet.locator('.ProseMirror').innerText(),/Preserve these planner notes/);await sheet.getByRole('button',{name:'Close details',exact:true}).click();calendarChecks.push('Google edit updates existing task via revision CAS and mounted planner auto-refresh; rich notes and duration intent/actual preserved');
+   }
    await page.goto(origin+'/settings');
    await page.reload();await page.getByRole('button',{name:'Disconnect Calendar',exact:true}).waitFor();await page.getByRole('button',{name:'Disconnect Calendar',exact:true}).click();await page.getByRole('button',{name:'Connect Google Calendar',exact:true}).waitFor();calendarChecks.push('connection survives reload; disconnect clears grant and returns to Connect');
    await page.goto(origin+'/api/calendar/google/callback?state=invalid&code=synthetic-code');await page.getByRole('button',{name:'Connect Google Calendar',exact:true}).waitFor();assert.equal(new URL(page.url()).searchParams.get('calendar'),'failed');calendarChecks.push('unbound callback cannot connect and returns a fixed safe Settings result');

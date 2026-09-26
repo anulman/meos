@@ -5,8 +5,8 @@ assert os.geteuid()==0
 uid_lock=os.open('/run/lock/meos-test-61001.lock',os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600);fcntl.flock(uid_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
 assert '61001' not in subprocess.check_output(['/usr/bin/ps','-eo','uid='],env={'PATH':'/usr/bin:/bin'},text=True).split(),'Dedicated test UID already active'
 repo=pathlib.Path(__file__).resolve().parents[1]
-raw_mode=sys.argv[1] if len(sys.argv)==2 else 'probe';candidate=raw_mode.startswith('candidate-');mode=raw_mode.removeprefix('candidate-');assert mode in ['probe','build','browser','demo','checks','restart','production-smoke','native','proxy','mcp','release'];prefix='candidate-' if candidate else ''
-source=repo/'.qualification/release-hardened-acceptance' if candidate else repo.parent/'meos-backend'/'.qualification'
+raw_mode=sys.argv[1] if len(sys.argv)==2 else 'probe';calendar_candidate=raw_mode.startswith('calendar-');candidate=raw_mode.startswith('candidate-') or calendar_candidate;mode=raw_mode.removeprefix('candidate-').removeprefix('calendar-');assert mode in ['probe','build','browser','demo','checks','restart','production-smoke','native','proxy','mcp','release'];prefix='calendar-' if calendar_candidate else 'candidate-' if candidate else ''
+source=repo/('.qualification/release-calendar-acceptance' if calendar_candidate else '.qualification/release-hardened-acceptance') if candidate else repo.parent/'meos-backend'/'.qualification'
 r=json.loads((source/'runtime-launch.json').read_text());p=r['plan'];run=p['runId']
 assert len(run)==32 and all(c in '0123456789abcdef' for c in run)
 assert p['environment']=='acceptance' and p['network']=='none' and p['syntheticOnly'] is True

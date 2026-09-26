@@ -86,9 +86,9 @@ function cloneData(value) {
 const base=['id','title','notes']
 const fields={
  projects:[...base,'completed','archived','targetDate','references'],
- tasks:[...base,'completed','priority','projectId','schedule','durationMinutes','archived','references','preferredTime'],
- routines:[...base,'weekdays','time','timezone','durationMinutes','archived','preferredTime','recurrenceIntent'],
- occurrences:['id','routineId','date','completed','title','notes','durationMinutes','schedule','preferredTime','skipped','edited','templateRevision'],outcomes:['id','taskId','period','position'],periodNotes:['id','kind','period','notes']
+ tasks:[...base,'completed','priority','projectId','schedule','durationMinutes','location','durationIntent','actualDurationMinutes','archived','references','preferredTime'],
+ routines:[...base,'weekdays','time','timezone','durationMinutes','location','durationIntent','actualDurationMinutes','archived','preferredTime','recurrenceIntent'],
+ occurrences:['id','routineId','date','completed','title','notes','durationMinutes','location','durationIntent','actualDurationMinutes','schedule','preferredTime','skipped','edited','templateRevision'],outcomes:['id','taskId','period','position'],periodNotes:['id','kind','period','notes']
 }
 export function validateResource(kind,input) {
  if(!fields[kind])fail('resource','Unsupported resource')
@@ -98,6 +98,8 @@ export function validateResource(kind,input) {
  if(kind!=='occurrences'&&base.every(key=>fields[kind].includes(key))){value.title=text(value.title,'title');notes(value.notes)}
  for(const flag of ['completed','archived'])if(value[flag]!==undefined)boolean(value[flag],flag)
  if(value.durationMinutes!==undefined)integer(value.durationMinutes,'durationMinutes',1,1440)
+ for(const [k,max]of [['location',1000],['durationIntent',500]])if(value[k]!==undefined&&(typeof value[k]!=='string'||value[k].length>max))fail(k,'Invalid text')
+ if(value.actualDurationMinutes!==undefined)integer(value.actualDurationMinutes,'actualDurationMinutes',1,10080)
  if(value.references!==undefined) {
   if(!Array.isArray(value.references)||value.references.length>50)fail('references','Too many references')
   const ids=new Set()

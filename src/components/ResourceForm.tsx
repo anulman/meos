@@ -17,6 +17,7 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNo
   projectId:task.projectId??'',priority:task.priority??'none' as Priority,
   date:task.schedule?.date??'',time:task.schedule?.time??'',timezone:task.schedule?.timezone??clock.preferences.timezone,
   preferredTime:task.preferredTime?.text??'',offset:task.schedule?.offsetMinutes?.toString()??'',
+  location:task.location??'',durationIntent:task.durationIntent??'',actualDuration:task.actualDurationMinutes?.toString()??'',
   duration:task.durationMinutes?.toString()??'',targetDate:project.targetDate??'',
  },onSubmit:async({value})=>{
   setError('');setSaving(true)
@@ -24,7 +25,7 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNo
    if(kind==='task'&&value.time&&!value.date)throw new Error('Choose a scheduled date before adding a time.')
    if(kind==='task'&&value.date&&!value.time)throw new Error('Choose a time for this scheduled task.');
    const base={_revision:resource._revision,id:resource.id,title:value.title,completed:value.completed,notes:value.notes,references:value.references,archived:resource.archived??false}
-   const saved=kind==='task'?await saveTask({...base,preferredTime:value.preferredTime?{text:value.preferredTime}:undefined,priority:value.priority,projectId:value.projectId||undefined,schedule:value.date?{date:value.date,time:value.time,timezone:value.timezone,...(value.offset?{offsetMinutes:Number(value.offset)}:{})}:undefined,durationMinutes:value.duration?Number(value.duration):undefined},isNew):await saveProject({...base,targetDate:value.targetDate||undefined},isNew)
+   const saved=kind==='task'?await saveTask({...base,location:value.location,durationIntent:value.durationIntent,actualDurationMinutes:value.actualDuration?Number(value.actualDuration):undefined,preferredTime:value.preferredTime?{text:value.preferredTime}:undefined,priority:value.priority,projectId:value.projectId||undefined,schedule:value.date?{date:value.date,time:value.time,timezone:value.timezone,...(value.offset?{offsetMinutes:Number(value.offset)}:{})}:undefined,durationMinutes:value.duration?Number(value.duration):undefined},isNew):await saveProject({...base,targetDate:value.targetDate||undefined},isNew)
    onSaved(saved)
   }catch(cause){setError(cause instanceof Error?cause.message:'Could not save. Your draft is still here.')}
   finally{setSaving(false)}
@@ -53,7 +54,7 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNo
      <form.Field name="timezone">{field=><TimezoneSelect label="Timezone" value={field.state.value} onChange={field.handleChange}/>}</form.Field>
      <form.Field name="offset">{field=><label>UTC offset in minutes (required for repeated DST times)<input type="number" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
      <form.Field name="preferredTime">{field=><label>Preferred time<input value={field.state.value} placeholder="In the morning, before lunch…" onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
-     <p className="muted">Preferred times guide scheduling; they do not assign a time.{task.preferredTime?.status?` Interpretation: ${task.preferredTime.status}.`:null}</p><form.Field name="duration">{field=><label>Duration (minutes)<input type="number" min="1" max="1440" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
+     <p className="muted">Preferred times guide scheduling; they do not assign a time.{task.preferredTime?.status?` Interpretation: ${task.preferredTime.status}.`:null}</p><form.Field name="location">{field=><label>Location<input maxLength={1000} value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field><form.Field name="durationIntent">{field=><label>Duration intent<input maxLength={500} placeholder="About an hour…" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field><form.Field name="actualDuration">{field=><label>Actual duration (minutes)<input type="number" min="1" max="10080" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field><form.Field name="duration">{field=><label>Duration (minutes)<input type="number" min="1" max="1440" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
      <form.Field name="priority">{field=><label>Priority<select value={field.state.value} onChange={e=>field.handleChange(e.target.value as Priority)}>{(['none','low','medium','high'] as const).map(p=><option key={p}>{p}</option>)}</select></label>}</form.Field>
     </>:<form.Field name="targetDate">{field=><label>Target date (optional)<input type="date" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>}
    </div>

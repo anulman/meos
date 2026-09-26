@@ -26,6 +26,7 @@ IPAddressDeny=any
 InaccessiblePaths=/mnt /var/lib /root -/run/docker.sock -/var/run/docker.sock -/etc/ssh -/etc/ssl/private
 BindPaths=@STATE@:/data
 BindReadOnlyPaths=@RELEASE@:/app @NODE_DIR@:/opt/node @CONFIG@:/run/meos-calendar/config.json @OAUTH@:/run/meos-calendar/oauth.json
+@PLANNER_BIND@
 TemporaryFileSystem=/run
 MemoryMax=256M
 TasksMax=32
