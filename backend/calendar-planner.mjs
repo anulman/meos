@@ -41,20 +41,18 @@ export function createCalendarPlanner({store,planner,broker,connection,accessTok
     const k=kind+':'+id;const current=await invoke('calendar_current',{kind,id});
     let mapping=s.mappings[k],remote=mapping?await remoteRead(mapping.eventId):null;
     const local=plannerEvent(current.record),observed=remoteEvent(remote);
-    if(local===undefined){conflict(k,kind,current.record.value.title,'Set a planned duration to sync this scheduled item.');return}
-    if(mapping&&observed===undefined){conflict(k,kind,current.record?.value.title??id,'Google changed this event to an unsupported all-day or invalid time.');return}
+    if(mapping&&observed===undefined){conflict(k,kind,current.record?.value.title??id,'Google is authoritative; its all-day or invalid time cannot be applied to this planner item. No local change will be exported.');return}
     if(mapping&&mapping.blocked){return}
-    if(mapping&&!same(observed,mapping.baseline)&&!same(local,mapping.baseline)&&!same(observed,local)){
-     conflict(k,kind,current.record?.value.title??id,'Both MeOS and Google changed this event. Neither version was overwritten.');return;
-    }
-    // Local deletion tombstones always win over a remote stale update, but never
-    // erase a concurrently edited Google event without an explicit conflict.
-    if(mapping&&!same(observed,mapping.baseline)&&same(local,mapping.baseline)){
-     if(current.deleted){conflict(k,kind,id,'Deleted MeOS item has a changed Google event.');return}
-     let fields;try{fields=applyFields(observed,mapping.baseline)}catch{conflict(k,kind,current.record.value.title,'Google duration is unsupported.');return}
+    // A changed Google value wins even when MeOS also changed. Save the latest
+    // displaced intent before CAS so restart/retry cannot lose the audit record.
+    if(mapping&&!same(observed,mapping.baseline)&&!same(observed,local)){
+     if(!same(local,mapping.baseline)&&mapping.displacedLocal?.revision!==current.revision){mapping.displacedLocal={revision:current.revision,record:current.record,deleted:current.deleted,at:now()};save()}
+     if(current.deleted||current.record?.value.archived||current.record?.value.skipped){conflict(k,kind,current.record?.value.title??id,'Google version kept. This MeOS item is deleted, archived or skipped; no stale local deletion will be exported.');return}
+     let fields;try{fields=applyFields(observed,local)}catch{conflict(k,kind,current.record.value.title,'Google is authoritative, but its duration is unsupported. No local change will be exported.');return}
      const input={kind,id,expectedRevision:current.revision,...fields,idempotencyKey:hash('apply:'+k+':'+current.revision+':'+JSON.stringify(observed))};
-     try{const receipt=await invoke('calendar_apply',input);mapping={...mapping,localRevision:receipt.revision,baseline:observed,etag:remote?.etag??null};s.mappings[k]=mapping;delete s.conflicts[k];save();return}catch(e){if(['conflict','not_found','validation'].includes(e.code)){conflict(k,kind,current.record.value.title,'MeOS changed while importing Google. Neither version was overwritten.');return}throw e}
+     try{const receipt=await invoke('calendar_apply',input);mapping={...mapping,localRevision:receipt.revision,baseline:observed,etag:remote?.etag??null};s.mappings[k]=mapping;delete s.conflicts[k];save();return}catch(e){if(['conflict','not_found','validation'].includes(e.code)){conflict(k,kind,current.record.value.title,'Google version kept. Import will retry against the latest MeOS revision.');return}throw e}
     }
+    if(local===undefined){conflict(k,kind,current.record.value.title,'Set a planned duration to sync this scheduled item.');return}
     if(mapping&&same(observed,local)){mapping.localRevision=current.revision;mapping.etag=remote?.etag??null;mapping.baseline=local;delete s.conflicts[k];save();return}
     if(!mapping&&local===null)return;
     // Capture durable intent before any provider write. This enables reconciliation
@@ -71,7 +69,7 @@ export function createCalendarPlanner({store,planner,broker,connection,accessTok
       // identity conditionally; never silently allocate a second Google event.
       result=await broker.patchEvent({calendarId,eventId:mapping.eventId,event:{...local,status:'confirmed'},etag:remote.etag,accessToken:await token()})
      }else result=await broker.patchEvent({calendarId,eventId:mapping.eventId,event:local,etag:remote.etag,accessToken:await token()});
-    }catch(e){if([409,412].includes(e.status)){conflict(k,kind,current.record?.value.title??id,'Google changed during export. Retry after comparing both versions.');return}throw e}
+    }catch(e){if([409,412].includes(e.status)){conflict(k,kind,current.record?.value.title??id,'Google changed during export. Its latest version will be reconciled on the next poll.');return}throw e}
     renew();if(result&&(result.id!==mapping.eventId||!result.etag||remoteEvent(result)===undefined))throw Error('planner_receipt');
     mapping.baseline=local;mapping.localRevision=current.revision;mapping.etag=result?.etag??null;delete s.conflicts[k];save();
    }
