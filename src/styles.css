@@ -44,7 +44,7 @@
 .today-view .agenda-row{margin-bottom:8px}
 .today-view .agenda-row .task{min-height:0;padding:6px 8px;gap:6px;border-radius:12px}
 .today-view .task-title{font-size:15px;line-height:1.2}
-.today-view .task-meta{font-size:11px;margin:0 0 4px;line-height:1.2}
+.today-view .task-meta{font-size:11px;font-weight:400;margin:3px 0 0;line-height:1.2}
 .today-view .task-meta:empty{display:none}
 .today-view .routine-card{padding:8px;border-radius:12px}
 .today-view .routine-card h2{font-size:15px}

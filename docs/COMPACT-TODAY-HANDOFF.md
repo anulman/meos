@@ -20,3 +20,11 @@
 ## Publication boundary
 
 Existing reset-on-reload MSW static preview only. No backend data, credential, instance, or persistent production cutover. Local deployed-container browser checks and served asset verification are recorded in the owner state. Real iOS keyboard/IME and authenticated external Access path are not qualified here. Existing large main-chunk build advisory remains.
+
+## Choose herbs compact follow-up
+
+- Compact title and quiet metadata now share one 44px-minimum opening button, instead of stacking metadata below a separate 44px title target. Completion remains a separate 44px target. Priority color is preserved.
+- Choose herbs card is 58px tall at both 390px and 1280px viewport widths (previously approximately 80px). Same compact rendering covers Today task cards consistently; no scheduling or seed changes.
+- Existing browser density journey passes against deployed preview: detail opening/save, missing-time rejection, completion/reopen and failed-save rollback, no Anytime task fixtures, mobile/desktop overflow. Screenshots artifacts/compact-herbs-390.png and compact-herbs-1280.png visually inspected.
+- License gate (225 artifacts, zero blocked), production build, typecheck, manual diff review and whitespace check pass. Existing large-chunk advisory unchanged.
+- Published through pnpm preview:deploy; container healthy. Served index-DiC9wNtX.css and index-DOFtjJ8O.js bytes exactly match qualified local build. Image sha256:e102c0f79685411f2ceca28d982888f227109cdf122a96e2db2f2fe1445a2765. External authenticated Access/iOS path remains unverified.
