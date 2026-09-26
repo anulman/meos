@@ -6,7 +6,7 @@ provider. Creates/deletes one new synthetic task via existing fixture writer;
 """
 import argparse,fcntl,hashlib,json,os,pathlib,shutil,stat,subprocess,tempfile
 assert os.geteuid()==0
-p=argparse.ArgumentParser();p.add_argument('--fixture',required=True);p.add_argument('--admission',required=True);a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--fixture',required=True);p.add_argument('--admission',required=True);p.add_argument('--state',required=True);a=p.parse_args()
 repo=pathlib.Path(__file__).resolve().parents[1];fixture=pathlib.Path(a.fixture).absolute();clean={'PATH':'/usr/bin:/bin'}
 def secure(path):
  i=path.lstat();assert stat.S_ISREG(i.st_mode) and i.st_uid==0 and not i.st_mode&0o022 and i.st_nlink==1
@@ -14,7 +14,7 @@ def secure(path):
   i=parent.lstat();assert stat.S_ISDIR(i.st_mode) and i.st_uid==0 and not i.st_mode&0o022
 admission_path=pathlib.Path(a.admission).absolute();secure(admission_path);admission=json.loads(admission_path.read_text());assert admission['status']=='approved-calendar-preserved-bridge-synthetic' and admission['reviewer'] and admission['evidence']
 assert admission['scriptSHA256']==hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest()
-paths={'stateSHA256':fixture/'transition/runtime-state.json','principalSHA256':fixture/'principal/planner-credentials.json','runtimeManifestSHA256':fixture/'runtime/runtime-manifest.json'}
+paths={'stateSHA256':pathlib.Path(a.state).absolute(),'principalSHA256':fixture/'principal/planner-credentials.json','runtimeManifestSHA256':fixture/'runtime/runtime-manifest.json'}
 for key,path in paths.items():secure(path);assert hashlib.sha256(path.read_bytes()).hexdigest()==admission[key]
 state=json.loads(paths['stateSHA256'].read_text());principal=json.loads(paths['principalSHA256'].read_text());runtime=json.loads(paths['runtimeManifestSHA256'].read_text())
 assert state['environment']=='acceptance' and state['image']==runtime['image'] and state['origin']=='https://meos.aidans.computer'
