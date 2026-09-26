@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Admitted synthetic bridge proof on the actually upgraded retained depot.
 No Google/network access; real native scoped Calendar operations and synthetic
-provider. Restores tested existing task fields; revisions/receipts remain honest.
+provider. Creates/deletes one new synthetic task via existing fixture writer;
+ tombstone/receipts remain honest. Calendar principal itself stays sync-only.
 """
 import argparse,fcntl,hashlib,json,os,pathlib,shutil,stat,subprocess,tempfile
 assert os.geteuid()==0
@@ -18,6 +19,9 @@ for key,path in paths.items():secure(path);assert hashlib.sha256(path.read_bytes
 state=json.loads(paths['stateSHA256'].read_text());principal=json.loads(paths['principalSHA256'].read_text());runtime=json.loads(paths['runtimeManifestSHA256'].read_text())
 assert state['environment']=='acceptance' and state['image']==runtime['image'] and state['origin']=='https://meos.aidans.computer'
 assert principal['agentId']!=principal['ownerId'] and set(principal['scopes'])=={'sync:read','sync:write'} and 'password' not in principal
+writer_path=repo/'.qualification/release-hardened-acceptance/synthetic-credentials.json';assert hashlib.sha256(writer_path.read_bytes()).hexdigest()==admission['writerCredentialsSHA256']
+writer_fixture=json.loads(writer_path.read_text());assert writer_fixture['runId']==state['instanceId'] and all(u['email'].endswith('@example.invalid') for u in writer_fixture['users'])
+writers=[u for u in writer_fixture['users'] if u['email'].startswith('agent-')];assert len(writers)==1
 source={str(p.relative_to(repo)):hashlib.sha256(p.read_bytes()).hexdigest() for p in (repo/'backend').glob('*.mjs')};assert source==admission['sourceFiles']
 lock=os.open('/run/lock/meos-test-61001.lock',os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600);fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
 assert '61001' not in subprocess.check_output(['/usr/bin/ps','-eo','uid='],env=clean,text=True).split()
@@ -34,16 +38,21 @@ assert shutil.disk_usage(repo/'.qualification').free>=356*1024*1024
 q=pathlib.Path(tempfile.mkdtemp(prefix='preserved-bridge-',dir=repo/'.qualification'));(q/'backend').mkdir()
 for name in source:shutil.copyfile(repo/name,q/name)
 (q/'principal.json').write_text(json.dumps(principal));(q/'principal.json').chmod(0o600)
-probe="""import assert from 'node:assert/strict';import fs from 'node:fs';
+(q/'writer.json').write_text(json.dumps(writers[0]));(q/'writer.json').chmod(0o600)
+probe=r"""import assert from 'node:assert/strict';import fs from 'node:fs';
 import {createCalendarPlannerClient} from './backend/calendar-planner-client.mjs';
 import {createCalendarPlanner} from './backend/calendar-planner.mjs';
 import {unixUpstream} from './backend/node-web-server.mjs';
-assert.equal(process.getuid(),61001);
+assert.equal(process.getuid(),61001);for(const line of fs.readFileSync('/proc/self/status','utf8').split('\n').filter(x=>/^Cap(Eff|Prm|Bnd|Amb):/.test(x)))assert.equal(BigInt('0x'+line.trim().split(/\s+/)[1]),0n);
 assert(!fs.existsSync('/run/docker.sock')&&!fs.existsSync('/home/clawy/.openclaw'));
 const credentials=JSON.parse(fs.readFileSync('/work/principal.json'));credentials.authToken='force-native-refresh';let refreshed=false;
 const native=createCalendarPlannerClient({origin:'https://meos.aidans.computer',upstream:unixUpstream({origin:'https://meos.aidans.computer',socketPath:'/run/planner.sock'}),credentials,saveCredentials:value=>{fs.writeFileSync('/work/rotated.json',JSON.stringify(value),{mode:0o600});refreshed=true}});
-const page=await native.invoke('calendar_inventory',{kind:'tasks'});
-const original=page.items.find(row=>row.value.schedule&&row.value.durationMinutes&&typeof row.value.location==='string'&&!row.value.archived);assert(original,'Fixture requires an existing scheduled task');const id=original.value.id;
+const page=await native.invoke('calendar_inventory',{kind:'tasks'});assert(Array.isArray(page.items));
+const writer=JSON.parse(fs.readFileSync('/work/writer.json'));const upstream=unixUpstream({origin:'https://meos.aidans.computer',socketPath:'/run/planner.sock'});
+const login=await upstream(new Request('https://meos.aidans.computer/api/auth/v1/login',{method:'POST',headers:{Origin:'https://meos.aidans.computer','Content-Type':'application/json'},body:JSON.stringify({email:writer.email,password:writer.password})}));assert.equal(login.status,200);const tokens=await login.json();
+const writerInvoke=async(name,input)=>{const response=await upstream(new Request('https://meos.aidans.computer/api/meos/v1/mcp',{method:'POST',headers:{Authorization:'Bearer '+tokens.auth_token,'Content-Type':'application/json',Accept:'application/json, text/event-stream','MCP-Protocol-Version':'2025-03-26'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:input}})}));assert.equal(response.status,200);const body=await response.json();assert(!body.result?.isError);assert(body.result?.structuredContent);return body.result.structuredContent};
+const id=crypto.randomUUID(),value={id,title:'Synthetic preserved-depot task',notes:{type:'doc',content:[]},completed:false,priority:'none',schedule:{date:new Date().toISOString().slice(0,10),time:'12:00',timezone:'UTC'},durationMinutes:60,actualDurationMinutes:45,location:'Synthetic studio'};
+const intent={value,idempotencyKey:crypto.randomUUID()};fs.writeFileSync('/work/task-intent.json',JSON.stringify(intent),{mode:0o600});const original=await writerInvoke('create_task',intent);
 const planner={invoke:async(name,input)=>name==='calendar_inventory'?{items:input.kind==='tasks'?[await native.invoke('calendar_current',{kind:'tasks',id}).then(x=>x.record)]:[]}:name==='calendar_changes'?{items:[],cursor:0}:native.invoke(name,input)};
 const records=new Map(),remotes=new Map();const store={get:k=>structuredClone(records.get(k)),transaction:fn=>fn({get:k=>structuredClone(records.get(k)),set:(k,v)=>records.set(k,structuredClone(v))})};
 const broker={getEvent:async({eventId})=>{if(!remotes.has(eventId))throw Object.assign(Error(),{status:404});return structuredClone(remotes.get(eventId))},insertEvent:async({event})=>{const e={...event,status:'confirmed',etag:'exported'};remotes.set(e.id,e);return structuredClone(e)},patchEvent:async()=>{throw Error('Unexpected echo')},deleteEvent:async()=>{throw Error('Unexpected delete')}};
@@ -55,11 +64,9 @@ try{
  remotes.set(eventId,{...remote,summary:'Synthetic Google winner',etag:'google-winner'});await tick();
  const winner=await native.invoke('calendar_current',{kind:'tasks',id});assert.equal(winner.record.value.title,'Synthetic Google winner');assert.deepEqual(winner.record.value.notes,original.value.notes);assert.equal(winner.record.value.actualDurationMinutes,original.value.actualDurationMinutes);assert.equal(remotes.get(eventId).etag,'google-winner');assert(refreshed);passed=true;
 }finally{
- const latest=await native.invoke('calendar_current',{kind:'tasks',id});const value=original.value;
- await native.invoke('calendar_apply',{kind:'tasks',id,expectedRevision:latest.revision,schedule:value.schedule,title:value.title,location:value.location??'',notes:value.notes,durationMinutes:value.durationMinutes,idempotencyKey:crypto.randomUUID()});
- const restored=await native.invoke('calendar_current',{kind:'tasks',id});for(const key of ['title','schedule','notes','location','durationMinutes','actualDurationMinutes'])assert.deepEqual(restored.record.value[key],value[key]);
+ const latest=await native.invoke('calendar_current',{kind:'tasks',id});await writerInvoke('delete_task',{id,expectedRevision:latest.revision,idempotencyKey:crypto.randomUUID()});assert((await native.invoke('calendar_current',{kind:'tasks',id})).deleted);
 }
-assert(passed);fs.writeFileSync('/work/proof.json',JSON.stringify({nativeCalendarInventory:true,realEntityExport:true,realGoogleWinsCASImport:true,noProviderEcho:true,originalTaskFieldsRestored:true,nativeRefresh:true,syntheticProviderOnly:true}),{mode:0o600});
+assert(passed);fs.writeFileSync('/work/proof.json',JSON.stringify({nativeCalendarInventory:true,realEntityExport:true,realGoogleWinsCASImport:true,noProviderEcho:true,newSyntheticTaskDeleted:true,nativeRefresh:true,syntheticProviderOnly:true}),{mode:0o600});
 """
 (q/'probe.mjs').write_text(probe)
 for path in [q,*q.rglob('*')]:os.chown(path,61001,61001)
