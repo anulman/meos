@@ -3,6 +3,7 @@ import { useForm } from '@tanstack/react-form'
 import type { Notes, Project, Task, Priority, LinkedReference } from '../lib/contracts'
 import { usePlannerClock } from '../lib/planner-clock'
 import { saveProject, saveTask } from '../lib/store'
+import { TimezoneSelect } from './TimezoneSelect'
 import { NotesEditor } from './NotesEditor'
 
 export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNotesChange,children}:{kind:'task'|'project';resource:Task|Project;projects?:Project[];isNew?:boolean;onSaved:(resource:Task|Project)=>void;onNotesChange?:()=>void;children?:ReactNode}) {
@@ -48,7 +49,7 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNo
      <button type="button" className="quiet-action" onClick={()=>{form.setFieldValue('date','');form.setFieldValue('time','')}}>Clear schedule</button>
      <form.Field name="date">{field=><label>Scheduled date<input type="date" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
      <form.Field name="time">{field=><label>Time (required when scheduled)<input type="time" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
-     <form.Field name="timezone">{field=><label>Timezone<input value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
+     <form.Field name="timezone">{field=><TimezoneSelect label="Timezone" value={field.state.value} onChange={field.handleChange}/>}</form.Field>
      <form.Field name="duration">{field=><label>Duration (minutes)<input type="number" min="1" max="1440" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
      <form.Field name="priority">{field=><label>Priority<select value={field.state.value} onChange={e=>field.handleChange(e.target.value as Priority)}>{(['none','low','medium','high'] as const).map(p=><option key={p}>{p}</option>)}</select></label>}</form.Field>
     </>:<form.Field name="targetDate">{field=><label>Target date (optional)<input type="date" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>}

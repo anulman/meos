@@ -1,3 +1,4 @@
+import { validTimezone } from './timezones'
 import { http, HttpResponse } from 'msw'
 import { setupWorker } from 'msw/browser'
 import { getConfig } from './config'
@@ -20,7 +21,7 @@ function validate(value:Task|Project,kind:'tasks'|'projects') {
   if(task.durationMinutes!==undefined && (!Number.isInteger(task.durationMinutes)||task.durationMinutes<1||task.durationMinutes>1440)) return 'Duration must be between 1 and 1440 minutes.'
   if(task.schedule) {
    if(!validDate(task.schedule.date)||typeof task.schedule.time!=='string'|| !/^([01]\d|2[0-3]):[0-5]\d$/.test(task.schedule.time)) return 'Choose a valid scheduled date and time.'
-   try{new Intl.DateTimeFormat('en',{timeZone:task.schedule.timezone})}catch{return 'Choose a valid timezone.'}
+   if(!validTimezone(task.schedule.timezone))return 'Choose a valid IANA timezone.'
   }
  } else if((value as Project).targetDate && !validDate((value as Project).targetDate!)) return 'Choose a valid target date.'
  return null
@@ -65,7 +66,7 @@ function plannerError(kind:keyof typeof planner,value:any):string|null {
   if(kind==='routines') {
    if(typeof value.title!=='string'||!value.title.trim())return 'Give this routine a name.'
    if(!Array.isArray(value.weekdays)||!value.weekdays.length||value.weekdays.some((d:unknown)=>!Number.isInteger(d)||Number(d)<0||Number(d)>6))return 'Choose at least one valid weekday.'
-   new Intl.DateTimeFormat('en',{timeZone:value.timezone})
+   if(!validTimezone(value.timezone))return 'Choose a valid IANA timezone.'
    if(value.time!==undefined&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(value.time))return 'Choose a valid time.'
    if(value.durationMinutes!==undefined&&(!Number.isInteger(value.durationMinutes)||value.durationMinutes<1||value.durationMinutes>1440))return 'Duration must be 1–1440 minutes.'
   }
