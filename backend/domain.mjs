@@ -97,7 +97,7 @@ export function validateResource(kind,input) {
  if(kind==='tasks') {
   boolean(value.completed,'completed');if(!['none','low','medium','high'].includes(value.priority))fail('priority','Invalid priority')
   if(value.projectId!==undefined)uuid(value.projectId,'projectId')
-  if(value.schedule!==undefined){keys(value.schedule,['date','time','timezone'],'schedule');date(value.schedule.date);timezone(value.schedule.timezone);if(value.schedule.time!==undefined)time(value.schedule.time)}
+  if(value.schedule!==undefined){keys(value.schedule,['date','time','timezone'],'schedule');date(value.schedule.date);timezone(value.schedule.timezone);time(value.schedule.time,'schedule.time')}
  }
  if(kind==='routines') {
   if(!Array.isArray(value.weekdays)||!value.weekdays.length||value.weekdays.length>7||new Set(value.weekdays).size!==value.weekdays.length)fail('weekdays','Use distinct weekdays')

@@ -141,6 +141,8 @@ test('server validator rejects rolled dates, unsafe references/documents, bad ti
   task({schedule:{date:'2026-02-29',timezone:'UTC'}}),
   task({schedule:{date:'2026-03-08',timezone:'Not/AZone'}}),
   task({schedule:{date:'2026-03-08',timezone:'UTC',time:'24:00'}}),
+  task({schedule:{date:'2026-03-08',timezone:'UTC'}}),
+  task({schedule:{date:'2026-03-08',timezone:'UTC',time:'Anytime'}}),
   task({notes:{type:'doc',content:[{type:'text',text:'bad nesting'}]}}),
   task({notes:{type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'link',marks:[{type:'link',attrs:{href:'javascript:alert(1)'}}]}]}]}}),
   task({references:[{id:randomUUID(),label:'bad',url:'https://user:password@example.invalid'}]}),
@@ -148,4 +150,16 @@ test('server validator rejects rolled dates, unsafe references/documents, bad ti
  ])assert.throws(()=>validateResource('tasks',bad),{code:'validation'})
  assert.throws(()=>validatePreferences({timezone:'UTC',weekStartsOn:2,weather:{enabled:false,source:'latest',units:'celsius'}}),{code:'validation'})
  assert.deepEqual(coarseLocation({latitude:45.51234,longitude:-73.61234}),{latitude:45.51,longitude:-73.61})
+})
+
+test('scheduled tasks require a clock time and invalid updates preserve the stored schedule',()=>{
+ const f=fixture();try {
+  const t=task({schedule:{date:'2026-09-26',time:'00:00',timezone:'UTC'}})
+  const stored=f.commands.create(f.owner,'tasks',t)
+  assert.equal(stored.value.schedule.time,'00:00')
+  assert.throws(()=>f.commands.update(f.owner,'tasks',{...t,schedule:{date:'2026-09-26',timezone:'UTC'}},stored.revision),{code:'validation'})
+  const unchanged=f.commands.get(f.owner,'tasks',t.id)
+  assert.equal(unchanged.revision,stored.revision)
+  assert.equal(unchanged.value.schedule.time,'00:00')
+ }finally{f.close()}
 })

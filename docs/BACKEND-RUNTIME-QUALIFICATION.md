@@ -1,6 +1,6 @@
 # Runtime qualification — resumed checkpoint
 
-No artifact is admitted. No TrailBase, new compiler or componentizer has been executed. Production and the deployed frontend remain untouched.
+No artifact is admitted. Cargo/rustc version probes and dependency resolution ran after Telegram41818; no dependency build scripts, componentizer or TrailBase runtime ran. Production and the deployed frontend remain untouched. Earlier findings below are historical; the Telegram41818 continuation section records the current gate.
 
 ## Retained evidence
 
@@ -54,3 +54,32 @@ The pinned upstream JS SDK uses Jco 1.34.0. Its default componentization engine 
 4. Admit exact service image only after native/base inventory passes, then bootstrap and run real B1–B4 acceptance and separate synthetic restore. Current 30 focused tests are not a substitute for those gates.
 
 No new general backend is proposed or introduced. Persistent cutover remains B5's explicit user gate.
+
+## Telegram41818 continuation: selected closure now resolved
+
+The earlier Cargo/libgit2/LibXDiff and sharp/libvips proposal is approved **only at the exact versions/scopes recorded in `memory/meos/BUILD-TOOLS-DECISION.md`**. This section supersedes the earlier statements that no compiler executable has been run: Cargo/rustc version probes and Cargo metadata/tree resolution have now run from a private `.qualification/toolchain` prefix. No build script, componentizer or TrailBase runtime has run. No global compiler installation occurred.
+
+Full official Rust 1.95.0 source was retained and its published SHA-256 verified (`62b67230754da642a264ca0cb9fc08820c54e2ed7b3baba0289876d4cdb48c08`). The three exact TrailBase submodule commits were obtained from the pinned Git tree, their archives retained, and their paths populated without modifying upstream source. Their provenance and bounded inventory evidence hashes are committed in `backend/qualification-evidence.json`; full inventories/archives remain under `.qualification/`.
+
+Actual `cargo tree --locked -p trailbase-cli --no-default-features --features trailbase/wasm --target x86_64-unknown-linux-gnu -e normal,build` selects **611** packages. There is no GEOS and no mandatory GPL/MPL package in this selected Cargo metadata. This does **not** alone prove every linked native component/license. Exact source notice inventory was retained for all 611 packages. For example, AWS-LC explicitly elects BSD for its dual-licensed jitter RNG; zstd retains both its BSD license and unused GPL alternative; those notices are not evidence that a mandatory GPL component is selected. Compound selections and final binary inventory still require admission review.
+
+**Correction to earlier auth UI assumption:** `trailbase-auth-ui-component` is not selected in the native CLI build. Auth UI is separately downloadable WASM; it is not automatically built by this command. Thus the approved sharp/libvips bundle is not needed for this selected native build. Do not introduce it merely because permission exists. Any later optional auth UI artifact needs its own complete closure and retained corresponding sources before use.
+
+The **embedded admin UI** is selected. Its exact Linux/x64/glibc pnpm lock closure contains **702** package entries, including its build/dev dependencies and local client. Registry archives were retained and verified against lockfile SRI; exact package licenses and notice hashes were inventoried without installing/executing packages. The pinned Git dependency `@tiledb-inc/wkx` is MIT; source archive SHA-256 is `c7c7e98e7ac64cf8078c5306c449cf077fcb6cd334caf25003c9f8130a4f7d1e`. The data package caniuse-lite carries CC-BY-4.0 attribution; retain its notice. Full artifact admission remains false.
+
+### One newly confirmed exact build-only gate
+
+The actual admin Tailwind build selects `@tailwindcss/node@4.3.3`, which selects **lightningcss 1.32.0** and its Linux x64 native package, both **MPL-2.0**. This is not the separately approved 1.33.0 version. Source/build tracing confirms this is an active build dependency, not an overinclusive workspace-lock guess.
+
+- `lightningcss@1.32.0` archive SHA-256: `c83e81ea213c9e419c5877460a6788f0d0931d58a4aa9fea92fac1a99a1550e8`.
+- `lightningcss-linux-x64-gnu@1.32.0`: `9e6f466230dadda414b50614590dd158e26bf65d3a6db8dd1d321066203c310b`.
+- Matching source commit: `7f8a861bdee476fe90c89a8badeb3fd33a99c51a`; retained source archive SHA-256: `b9451f8a7bb1a9cf0cd905af3a23db2e963a6c3171a9272633e5fd03f2842198`.
+- Proposed exact scope: unchanged private build tool only; retain source/notices, no redistribution of build tools/images, prove compiler/native code absent from generated browser assets and final service image. **Not approved by this document.**
+
+The existing exception explicitly disallows version expansion. Building the unmodified pinned upstream admin UI therefore needs this exact extension or an independently qualified alternative; silently changing its pinned dependency or deleting its UI would change the approved unmodified-service scope. No build attempted across this gate.
+
+### Independent handler follow-through
+
+Backend validation now requires `HH:mm` whenever a task has a schedule. Missing time and `Anytime` are rejected; midnight is valid. Command-level regression proves a rejected update preserves both stored time and revision. Unscheduled Inbox tasks remain distinct from scheduled tasks.
+
+QuickJS componentizer 0.4.2 exact source was retained from npm gitHead `cea7b3e173356d89779e576f545bd1d1c0f03ad1`. Its `Context::full` supplies ECMAScript, not the Web API/Intl environment used by these handlers. A compiled WASI HTTP bridge plus qualified URL/UTF-8/stream/timezone support is still required; do not claim the existing Node tests prove this binding. Componentizer/native runtime closure and generated component remain unqualified and unexecuted. No alternate general-purpose backend has been introduced.
