@@ -35,13 +35,12 @@ export function createNotifications({begin,now=Date.now}){
    // Only explicitly timed planner records with an explicit duration emit signals.
    const rows=db.query("SELECT 'tasks',doc,revision FROM tasks WHERE owner_id=? AND json_type(doc,'$.schedule')='object' UNION ALL SELECT 'occurrences',doc,revision FROM occurrences WHERE owner_id=? AND json_type(doc,'$.schedule')='object' LIMIT 5001",[owner,owner])
    if(rows.length>5000)fail('unavailable','Notification snapshot capacity exceeded')
-   const missingDurations=rows.filter(([,raw])=>{const v=JSON.parse(raw);return !v.durationMinutes&&!v.archived&&!v.skipped&&!v.completed}).length
-   const routines=new Map(db.query('SELECT uuid,doc FROM routines WHERE owner_id=?',[owner]).map(r=>[r[0],JSON.parse(r[1])]))
+   const missingDurations=rows.filter(([,raw])=>{const v=JSON.parse(raw);return !v.durationMinutes&&!v.archived&&!v.skipped}).length
    for(const [kind,raw,revision]of rows){
-    const v=JSON.parse(raw),r=routines.get(v.routineId)
-    if(v.archived||v.skipped||v.completed||r?.archived||!v.durationMinutes)continue
+    const v=JSON.parse(raw)
+    if(v.archived||v.skipped||!v.durationMinutes)continue
     const start=scheduledInstant(v.schedule),end=start+v.durationMinutes*60000
-    const add=(at,type)=>{if(type==='pre'&&start<=time)return;if(at<time-retention||at>time+7*day)return;const key=String(at)+(type==='pre'?':pre':':boundary');let b=buckets.get(key);if(!b){b={at,type:type==='pre'?'pre':'boundary',starts:[],ends:[],upcoming:[]};buckets.set(key,b)}b[type==='pre'?'upcoming':type==='start'?'starts':'ends'].push({kind,id:v.id,revision,title:v.title,start,end})}
+    const add=(at,type)=>{if(type==='pre'&&start<=time)return;if(at<time-retention||at>time+7*day)return;const key=String(at)+(type==='pre'?':pre':':boundary');let b=buckets.get(key);if(!b){b={at,type:type==='pre'?'pre':'boundary',starts:[],ends:[],upcoming:[]};buckets.set(key,b)}b[type==='pre'?'upcoming':type==='start'?'starts':'ends'].push({kind,id:v.id,revision,title:v.title,completed:Boolean(v.completed),start,end})}
     add(start,'start');add(end,'end')
     const pre=preferences.instances?.[v.id]??preferences.routines?.[v.routineId]??preferences.preMinutes??[15]
     for(const m of pre)add(start-m*60000,'pre')

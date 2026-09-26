@@ -47,7 +47,10 @@ Each transaction replans a complete owner-authorized snapshot of explicitly
 scheduled tasks/occurrences. It coalesces starts and ends at the same instant,
 keeps pre-alert groups separate, includes source kind/id/revision, and reuses
 persisted stable IDs for the same complete bucket. Revisions/cancellation,
-archiving/completion and changed group membership invalidate old pending buckets.
+explicit block archiving/skipping and changed group membership invalidate old
+pending buckets. Completion alone does not cancel a scheduled block: it keeps
+mandatory boundaries and is included in member metadata. Archiving a routine
+template does not cancel already materialized independent scheduled instances.
 Routine/instance/agent pre-offset overrides are persisted per subscribing agent.
 `[]` remains explicit. Starts and ends are not configurable off.
 
