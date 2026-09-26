@@ -86,7 +86,7 @@ export interface ProjectedTask<T> { task: T; displayDate: string; instant?: numb
 export function projectScheduledTasks<T extends ScheduledTaskLike>(tasks: readonly T[], period: DatePeriod,
   displayTimezone: string): ProjectedTask<T>[] {
   return tasks.flatMap(task => {
-    if (task.archived || !task.schedule) return [];
+    if (task.archived || !task.schedule || !task.schedule.time) return [];
     const displayDate = scheduleDisplayDate(task.schedule, displayTimezone);
     if (!periodContains(period, displayDate)) return [];
     return [{ task, displayDate, instant: task.schedule.time === undefined ? undefined :

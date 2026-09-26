@@ -7,7 +7,7 @@ import { assertDate, weekPeriod, dateInZone } from './dates'
 const config=getConfig()
 const today=dateInZone(Date.now(),config.timezone)
 export let projects:Project[]=[{id:'a05a6d7e-83e0-4cba-ae9f-cb994b4fbabb',title:'A greener balcony',notes:{type:'doc'}}]
-let tasks:Task[]=['Choose herbs for the balcony','Take a quiet afternoon walk','Sketch a weekend breakfast'].map((title,i)=>({id:['0dd996fc-092d-4dbb-bac1-165e0d559c44','0dd996fc-092d-4dbb-bac1-165e0d559c45','0dd996fc-092d-4dbb-bac1-165e0d559c46'][i],title,completed:false,priority:i===0?'high':'none',schedule:{date:today,time:i===0?'10:00':undefined,timezone:config.timezone},projectId:i===0?projects[0].id:undefined,notes:{type:'doc'}}))
+let tasks:Task[]=['Choose herbs for the balcony','Take a quiet afternoon walk','Sketch a weekend breakfast'].map((title,i)=>({id:['0dd996fc-092d-4dbb-bac1-165e0d559c44','0dd996fc-092d-4dbb-bac1-165e0d559c45','0dd996fc-092d-4dbb-bac1-165e0d559c46'][i],title,completed:false,priority:i===0?'high':'none',schedule:{date:today,time:['10:00','14:00','16:30'][i],timezone:config.timezone},projectId:i===0?projects[0].id:undefined,notes:{type:'doc'}}))
 tasks.push({id:'0dd996fc-092d-4dbb-bac1-165e0d559c47',title:'Find a frame for the hallway',completed:false,priority:'low',notes:{type:'doc'}})
 function validate(value:Task|Project,kind:'tasks'|'projects') {
  if(!value || typeof value.id!=='string' || typeof value.title!=='string' || !value.title.trim()) return 'Give this resource a name.'
@@ -19,7 +19,7 @@ function validate(value:Task|Project,kind:'tasks'|'projects') {
   if(task.projectId && !projects.some(p=>p.id===task.projectId&&!p.archived)) return 'Choose an active project, or No project.'
   if(task.durationMinutes!==undefined && (!Number.isInteger(task.durationMinutes)||task.durationMinutes<1||task.durationMinutes>1440)) return 'Duration must be between 1 and 1440 minutes.'
   if(task.schedule) {
-   if(!validDate(task.schedule.date)||task.schedule.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(task.schedule.time)) return 'Choose a valid scheduled date and time.'
+   if(!validDate(task.schedule.date)||typeof task.schedule.time!=='string'|| !/^([01]\d|2[0-3]):[0-5]\d$/.test(task.schedule.time)) return 'Choose a valid scheduled date and time.'
    try{new Intl.DateTimeFormat('en',{timeZone:task.schedule.timezone})}catch{return 'Choose a valid timezone.'}
   }
  } else if((value as Project).targetDate && !validDate((value as Project).targetDate!)) return 'Choose a valid target date.'
@@ -57,7 +57,7 @@ const planner:{routines:Routine[];occurrences:Occurrence[];outcomes:WeeklyOutcom
  routines:[{id:'routine-morning',title:'Morning care',weekdays:[0,1,2,3,4,5,6],time:'08:00',timezone:config.timezone,durationMinutes:30,notes:{type:'doc'}},{id:'routine-evening',title:'Evening wind-down',weekdays:[0,1,2,3,4,5,6],time:'18:00',timezone:config.timezone,durationMinutes:20,notes:{type:'doc'}}],
  occurrences:[],outcomes:[{id:'seed-outcome',taskId:tasks[0].id,period:seedPeriod,position:0}], 'period-notes':[],
 }
-tasks.push({id:'seed-completed',title:'Water the kitchen plants',completed:true,priority:'none',schedule:{date:today,timezone:config.timezone},notes:{type:'doc'}})
+tasks.push({id:'seed-completed',title:'Water the kitchen plants',completed:true,priority:'none',schedule:{date:today,time:'09:00',timezone:config.timezone},notes:{type:'doc'}})
 tasks.push({id:'seed-archived',title:'Put away the summer blanket',completed:false,priority:'none',archived:true,notes:{type:'doc'}})
 function plannerError(kind:keyof typeof planner,value:any):string|null {
  if(!value||typeof value.id!=='string'||!value.id)return 'A resource identity is required.'

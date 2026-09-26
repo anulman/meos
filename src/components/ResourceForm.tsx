@@ -20,8 +20,9 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNo
   setError('');setSaving(true)
   try{
    if(kind==='task'&&value.time&&!value.date)throw new Error('Choose a scheduled date before adding a time.')
+   if(kind==='task'&&value.date&&!value.time)throw new Error('Choose a time for this scheduled task.');
    const base={id:resource.id,title:value.title,completed:value.completed,notes:value.notes,references:value.references,archived:resource.archived??false}
-   const saved=kind==='task'?await saveTask({...base,priority:value.priority,projectId:value.projectId||undefined,schedule:value.date?{date:value.date,time:value.time||undefined,timezone:value.timezone}:undefined,durationMinutes:value.duration?Number(value.duration):undefined},isNew):await saveProject({...base,targetDate:value.targetDate||undefined},isNew)
+   const saved=kind==='task'?await saveTask({...base,priority:value.priority,projectId:value.projectId||undefined,schedule:value.date?{date:value.date,time:value.time,timezone:value.timezone}:undefined,durationMinutes:value.duration?Number(value.duration):undefined},isNew):await saveProject({...base,targetDate:value.targetDate||undefined},isNew)
    onSaved(saved)
   }catch(cause){setError(cause instanceof Error?cause.message:'Could not save. Your draft is still here.')}
   finally{setSaving(false)}
@@ -44,7 +45,7 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNo
     {kind==='task'?<>
      <form.Field name="projectId">{field=><label>Project<select value={field.state.value} onChange={e=>field.handleChange(e.target.value)}><option value="">No project</option>{projects.filter(p=>!p.archived).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>}</form.Field>
      <form.Field name="date">{field=><label>Scheduled date<input type="date" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
-     <form.Field name="time">{field=><label>Time (optional)<input type="time" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
+     <form.Field name="time">{field=><label>Time (required when scheduled)<input type="time" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
      <form.Field name="timezone">{field=><label>Timezone<input value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
      <form.Field name="duration">{field=><label>Duration (minutes)<input type="number" min="1" max="1440" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
      <form.Field name="priority">{field=><label>Priority<select value={field.state.value} onChange={e=>field.handleChange(e.target.value as Priority)}>{(['none','low','medium','high'] as const).map(p=><option key={p}>{p}</option>)}</select></label>}</form.Field>
