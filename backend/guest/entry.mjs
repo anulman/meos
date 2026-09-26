@@ -7,6 +7,7 @@ import http from 'wasi:http/types@0.2.12'
 import outgoing from 'wasi:http/outgoing-handler@0.2.12'
 import {GuestHeaders,GuestResponse,Utf8Decoder,Utf8Encoder} from './platform.mjs'
 import {createDatabasePort,decodeHostContext,sessionResponse,quickJsTransactionClass} from '../trailbase-port.mjs'
+import {createNotifications,createNotificationGuestHandler} from '../notifications.mjs'
 import {createMcpHandler} from '../mcp.mjs'
 import {createCommands} from '../commands.mjs'
 import {createSynchronousHttpHandler} from '../http-handler.mjs'
@@ -49,6 +50,7 @@ const weather=createSynchronousWeather({storage:createWeatherStorage(database),f
  try{return readText(response,maxBytes)}finally{dispose(response.incoming)}
 }})
 const bridge=createBridge({database,weather})
+const notifications=createNotificationGuestHandler({notifications:createNotifications(database),origin,readText})
 const mcp=createMcpHandler({commands,origin,readText})
 const handle=createSynchronousHttpHandler({commands,weather,bridge,origin},{readText})
 export const initEndpoint={getManifest(){
@@ -86,7 +88,7 @@ export const incomingHandler={handle(incoming,out){
   const user=decodeHostContext(values.get('__context'))
   result=method==='GET'&&path==='/api/meos/v1/instance'
    ?new GuestResponse(JSON.stringify(instance),{headers:{'Content-Type':'application/json','Cache-Control':'no-store'}})
-   :path==='/api/meos/v1/mcp'?mcp(request,user):method==='GET'&&path==='/api/meos/v1/session'?sessionResponse(user):handle(request,user)
+   :path==='/api/meos/v1/notifications'?notifications(request,user):path==='/api/meos/v1/mcp'?mcp(request,user):method==='GET'&&path==='/api/meos/v1/session'?sessionResponse(user):handle(request,user)
  }catch(error){
   const unauthorized=error instanceof DomainError&&error.code==='unauthenticated'
   result=new GuestResponse(JSON.stringify({error:{code:unauthorized?'unauthenticated':'unavailable',message:unauthorized?'Sign in required':'Service unavailable'}}),{status:unauthorized?401:503,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}})

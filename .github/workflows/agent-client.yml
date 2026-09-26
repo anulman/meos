@@ -1,0 +1,41 @@
+name: Agent client
+on:
+  pull_request:
+    paths: ['clients/meos-agent/**', 'scripts/agent-client-*.py', '.github/workflows/agent-client.yml']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Candidate version (artifacts only; no automatic release publication)'
+        required: true
+        default: development
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download pinned Go compiler
+        run: |
+          curl --fail --location --proto '=https' --tlsv1.2 https://go.dev/dl/go1.27.1.linux-amd64.tar.gz -o /tmp/go.tar.gz
+          echo '63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445  /tmp/go.tar.gz' | sha256sum --check
+          mkdir /tmp/meos-go
+          tar -xzf /tmp/go.tar.gz -C /tmp/meos-go
+      - name: Test and package dependency-free client
+        env:
+          GOTOOLCHAIN: local
+          GOPROXY: 'off'
+          GOSUMDB: 'off'
+          CGO_ENABLED: '0'
+          MEOS_GO: /tmp/meos-go/go/bin/go
+          MEOS_VERSION: ${{ inputs.version || 'development' }}
+        run: |
+          cd clients/meos-agent
+          /tmp/meos-go/go/bin/go test -v ./...
+          cd ../..
+          python3 scripts/agent-client-release.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: meos-agent-candidates
+          path: dist/agent-client/
+          if-no-files-found: error

@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: Apache-2.0
+# Inert example. Exact runtime/files/socket/UID must be independently admitted.
+[Unit]
+Description=MeOS native agent long-poll endpoint
+Requires=meos-backend.service
+After=meos-backend.service
+[Service]
+ExecStart=@RELEASE@/runtime/node/bin/node @RELEASE@/scripts/serve-agent.mjs
+User=@AGENT_ENDPOINT_UID@
+Group=@AGENT_ENDPOINT_GID@
+UMask=0077
+NoNewPrivileges=yes
+PrivateNetwork=yes
+ProtectHome=yes
+ProtectSystem=strict
+ProtectProc=invisible
+ProcSubset=pid
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX
+ReadOnlyPaths=@RELEASE@
+BindReadOnlyPaths=@CONFIG@:/run/meos-agent/runtime.json @BACKEND_SOCKET@:/run/meos-agent/backend.sock
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+MemoryMax=192M
+TasksMax=32

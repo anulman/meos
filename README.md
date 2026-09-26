@@ -61,3 +61,11 @@ optional schedules, bounded materialization, OpenAPI/generated types, scoped MCP
 tools, transactional scheduling and deferred Calendar sync foundations.
 Run `pnpm contract:check` to check generated-contract drift.
 
+
+## Native agent notification client (source candidate)
+
+See [native client installation and durable dispatch contract](clients/meos-agent/README.md)
+and [authenticated long-poll architecture](docs/agent-notifications/ARCHITECTURE.md).
+The dependency-free Go client is distributed alongside agent operating guidance;
+agents should use it rather than recreate polling loops. This source does not
+claim the machine endpoint is deployed or any binary release is published.

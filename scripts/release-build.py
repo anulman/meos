@@ -84,9 +84,16 @@ if isolation_only:
 target=out/'runtime-root';shutil.copytree(rt,target)
 shutil.copyfile(work/'meos-guest.wasm',target/'data/wasm/meos.wasm')
 (target/'data/config.textproto').write_text('server { application_name: "MeOS" site_url: "https://meos.aidans.computer" }\nauth { disable_password_auth: true enable_otp_signin: false enable_anonymous_signin: false }\n')
+# Add the reviewed append-only notification migration; never silently rewrite old schema.
+notification_migration='data/migrations/main/U1790380806__notifications.sql'
+for migration in (repo/'backend/migrations').glob('*.sql'):
+ relative='data/migrations/main/'+migration.name
+ if relative in expected:assert sha(migration)==expected[relative], 'Existing migration changed'
+ else:assert relative==notification_migration, 'Unreviewed additive migration'
+ shutil.copyfile(migration,target/relative)
 new_files={str(p.relative_to(target)):sha(p) for p in target.rglob('*') if p.is_file()}
-changes={k:{'before':expected[k],'after':v} for k,v in new_files.items() if expected[k]!=v}
-assert set(changes)=={'data/wasm/meos.wasm','data/config.textproto'}
+changes={k:{'before':expected.get(k),'after':v} for k,v in new_files.items() if expected.get(k)!=v}
+assert set(changes)=={'data/wasm/meos.wasm','data/config.textproto',notification_migration}
 with tarfile.open(out/'runtime-root.tar','w') as t:
  def ownership(i):
   i.uid=i.gid=10001 if i.name=='data' or i.name.startswith('data/') else 0;i.uname=i.gname='';return i
