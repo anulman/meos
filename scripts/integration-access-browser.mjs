@@ -8,7 +8,7 @@ import {spawnSync} from 'node:child_process'
 import {createHash} from 'node:crypto'
 import {chromium} from 'playwright'
 export async function proveAccessBrowser({port,origin,access,owner,calendar=false,calendarControl}){
- const checks=[],errors=[]
+ const checks=[],errors=[];let phase='Access Settings';const mark=value=>{phase=value}
  assert.equal(spawnSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-keyout','/tmp/access-key.pem','-out','/tmp/access-cert.pem','-days','1','-subj','/CN='+new URL(origin).hostname],{stdio:'ignore'}).status,0)
  let assertion=access.token
  const server=https.createServer({key:fs.readFileSync('/tmp/access-key.pem'),cert:fs.readFileSync('/tmp/access-cert.pem')},(req,res)=>{
@@ -24,20 +24,20 @@ export async function proveAccessBrowser({port,origin,access,owner,calendar=fals
   const second=await context.newPage();await second.goto(origin+'/settings');await second.getByRole('button',{name:new RegExp(label)}).waitFor();await second.close();checks.push('second tab receives same single-owner persisted data without password')
   if(calendar){
    const calendarChecks=[];
-   await page.getByRole('button',{name:'Connect Google Calendar',exact:true}).waitFor();
+   mark('Calendar Connect');await page.getByRole('button',{name:'Connect Google Calendar',exact:true}).waitFor();
    await page.route('https://accounts.google.com/o/oauth2/v2/auth**',async route=>{const url=new URL(route.request().url());assert.equal(url.searchParams.get('redirect_uri'),origin+'/api/calendar/google/callback');const state=url.searchParams.get('state');assert.match(state,/^[A-Za-z0-9_-]{43}$/);await route.fulfill({status:302,headers:{location:origin+'/api/calendar/google/callback?state='+state+'&code=synthetic-code'}})});
    await page.getByRole('button',{name:'Connect Google Calendar',exact:true}).click();await page.getByText('Connected · checks for updates every minute.',{exact:true}).waitFor();calendarChecks.push('rendered Settings connects through real OAuth state, private RPC/store and exact callback with synthetic Google');
    assert.equal(await page.evaluate(()=>document.cookie.includes('meos-calendar-flow')),false);assert.equal((await context.cookies()).some(c=>c.name==='__Host-meos-calendar-flow'),false);calendarChecks.push('HttpOnly flow binding is not script-visible and is cleared on callback');
-   await page.goto(origin+'/');await page.getByRole('button',{name:'New calendar event',exact:true}).click();
+   mark('Calendar create');await page.goto(origin+'/');await page.getByRole('button',{name:'New calendar event',exact:true}).click();
    await page.getByLabel('Event title',{exact:true}).fill('Calendar browser roundtrip');await page.getByLabel('Location',{exact:true}).fill('Synthetic meeting room');await page.getByRole('button',{name:'Save calendar event',exact:true}).click();
    await page.getByRole('heading',{name:'Calendar browser roundtrip',exact:true}).waitFor();calendarChecks.push('managed event creates through CSRF route, durable outbox, provider receipt and visible planner collection');
    await page.getByRole('button',{name:'Edit calendar event',exact:true}).click();await page.getByLabel('Event title',{exact:true}).fill('Calendar edited roundtrip');await page.getByRole('button',{name:'Save calendar event',exact:true}).click();await page.getByRole('heading',{name:'Calendar edited roundtrip',exact:true}).waitFor();
    await page.getByRole('button',{name:'Edit calendar event',exact:true}).click();page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Delete calendar event',exact:true}).click();await page.getByRole('heading',{name:'Calendar edited roundtrip',exact:true}).waitFor({state:'detached'});calendarChecks.push('managed update and deletion roundtrip through revision-checked outbox');
-   if(calendarControl){
+   if(calendarControl){mark('Bridge task creation');
     await page.goto(origin+'/settings');await page.getByRole('button',{name:'New task',exact:true}).click();const sheet=page.getByRole('dialog');
     await sheet.getByLabel('Task name',{exact:true}).fill('Planner bridge roundtrip');await sheet.getByLabel('Scheduled date',{exact:true}).fill(new Date().toISOString().slice(0,10));await sheet.getByLabel('Time (required when scheduled)',{exact:true}).fill('12:30');await sheet.getByLabel('Duration (minutes)',{exact:true}).fill('120');await sheet.getByLabel('Duration intent',{exact:true}).fill('At least two hours');await sheet.getByLabel('Actual duration (minutes)',{exact:true}).fill('95');await sheet.getByLabel('Location',{exact:true}).fill('Bridge studio');await sheet.locator('.ProseMirror').fill('Preserve these planner notes');await sheet.getByRole('button',{name:'Create task',exact:true}).click();await sheet.waitFor({state:'hidden'});
-    await calendarControl('export-check');calendarChecks.push('existing task exports through dedicated sync-only native principal and real WASM outbox, preserving planned versus actual duration');
-    await page.goto(origin+'/');await page.getByRole('button',{name:'Planner bridge roundtrip',exact:true}).waitFor();await calendarControl('remote-edit');await page.getByRole('button',{name:'Google edited planner task',exact:true}).waitFor({timeout:25000});
+    mark('Bridge export');await calendarControl('export-check');calendarChecks.push('existing task exports through dedicated sync-only native principal and real WASM outbox, preserving planned versus actual duration');
+    mark('Bridge mounted import');await page.goto(origin+'/');await page.getByRole('button',{name:'Planner bridge roundtrip',exact:true}).waitFor();await calendarControl('remote-edit');await page.getByRole('button',{name:'Google edited planner task',exact:true}).waitFor({timeout:25000});
     await page.getByRole('button',{name:'Google edited planner task',exact:true}).click();await sheet.getByLabel('Duration intent',{exact:true}).waitFor();assert.equal(await sheet.getByLabel('Duration intent',{exact:true}).inputValue(),'At least two hours');assert.equal(await sheet.getByLabel('Actual duration (minutes)',{exact:true}).inputValue(),'95');assert.match(await sheet.locator('.ProseMirror').innerText(),/Preserve these planner notes/);await sheet.getByRole('button',{name:'Close details',exact:true}).click();calendarChecks.push('Google edit updates existing task via revision CAS and mounted planner auto-refresh; rich notes and duration intent/actual preserved');
    }
    await page.goto(origin+'/settings');
@@ -48,5 +48,5 @@ export async function proveAccessBrowser({port,origin,access,owner,calendar=fals
   assertion='spoofed';assert.equal(await page.evaluate(async()=> (await fetch('/api/meos/v1/session')).status),403);assert.equal((await page.goto(origin+'/settings')).status(),403);assert.equal(await page.locator('input[type=password]').count(),0);checks.push('invalid external assertion blocks native cookies and document access')
   assertion=access.token;fs.writeFileSync('private/access-public/keys.json',JSON.stringify({...access.keys,fetchedAt:1}));assert.equal(await page.evaluate(async()=> (await fetch('/api/meos/v1/session')).status),403);fs.writeFileSync('private/access-public/keys.json',JSON.stringify(access.keys));await page.goto(origin+'/settings');await page.getByRole('button',{name:new RegExp(label)}).waitFor();checks.push('stale signing-key bundle fails closed and refresh restores passwordless browser access')
   assert.deepEqual(errors,[]);fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:'artifacts/access-settings.png',fullPage:true});fs.writeFileSync('access-browser-evidence.json',JSON.stringify({runId:process.env.MEOS_ACCEPTANCE_RUN,count:checks.length,checks},null,2));console.log('PASS '+checks.length+' Access browser checks')
- }catch(error){console.error('Access browser proof failed ('+error.name+')');throw Error('Access browser proof failed; inspect isolated trace')}finally{await browser.close();await new Promise(resolve=>server.close(resolve))}
+ }catch(error){console.error('Access browser proof failed ('+error.name+') at '+phase);fs.writeFileSync('private/browser-failure.json',JSON.stringify({phase,message:error.message}),{mode:0o600});throw Error('Access browser proof failed; inspect isolated trace')}finally{await browser.close();await new Promise(resolve=>server.close(resolve))}
 }

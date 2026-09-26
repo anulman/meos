@@ -13,7 +13,7 @@ export function createGoogleBroker({clientId,clientSecret,redirectUri,fetcher=fe
   let response;try{response=await fetcher(url,{method,headers,body:body?(form?new URLSearchParams(body).toString():JSON.stringify(body)):undefined,redirect:'error',signal:AbortSignal.timeout(15000)})}catch{throw Error('google_unavailable')}
   let bytes=0,parts=[];const reader=response.body?.getReader();
   try{if(reader)for(;;){const {done,value}=await reader.read();if(done)break;bytes+=value.byteLength;if(bytes>4*1024*1024)throw Error('google_response_limit');parts.push(Buffer.from(value))}}finally{await reader?.cancel().catch(()=>{})}
-  if(!response.ok){const error=Error('google_rejected');error.status=response.status;throw error}
+  if(!response.ok){const error=Error('google_rejected');error.status=response.status;let reasons=[];try{reasons=JSON.parse(Buffer.concat(parts).toString('utf8')).error?.errors?.map(e=>e.reason)??[]}catch{}error.retryable=reasons.some(r=>['rateLimitExceeded','userRateLimitExceeded','quotaExceeded'].includes(r));throw error}
   try{return bytes?JSON.parse(Buffer.concat(parts).toString('utf8')):{}}catch{throw Error('google_invalid_response')}
  }
  const calendarPath=id=>'/calendars/'+encodeURIComponent(bounded(id,2048));

@@ -9,7 +9,7 @@ export function createCalendarPlannerClient({upstream,origin,credentials,now=Dat
   if(![200,303].includes(r.status))throw Error('planner_auth');
   const cookies=r.headers.getSetCookie(),raw=cookies.find(c=>c.startsWith('auth_token='));
   if(!raw)throw Error('planner_auth');token=raw.split(';')[0].slice(11);if(!/^[A-Za-z0-9._~-]+$/.test(token))throw Error('planner_auth');
-  const claims=JSON.parse(Buffer.from(token.split('.')[1],'base64url'));if(![credentials.agentId,Buffer.from(credentials.agentId.replaceAll('-',''),'hex').toString('base64url')].includes(claims.sub)||!Number.isFinite(claims.exp)||claims.exp*1000<=now())throw Error('planner_identity');expires=claims.exp*1000;
+  const claims=JSON.parse(Buffer.from(token.split('.')[1],'base64url'));if(![credentials.agentId,Buffer.from(credentials.agentId.replaceAll('-',''),'hex').toString('base64url'),Buffer.from(credentials.agentId.replaceAll('-',''),'hex').toString('base64url')+'=='].includes(claims.sub)||!Number.isFinite(claims.exp)||claims.exp*1000<=now())throw Error('planner_identity');expires=claims.exp*1000;
  }
  return {async invoke(name,input){
   if(!['calendar_inventory','calendar_changes','calendar_current','calendar_apply','calendar_materialize'].includes(name))throw Error('planner_operation');
