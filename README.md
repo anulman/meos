@@ -1,8 +1,8 @@
 # MeOS
 A small, mobile-first personal planner for days, weeks, projects, and routines.
 
-## Phase 1 foundation preview
-React/TypeScript, TanStack Start SPA + Router, TanStack DB Query collection + Query, Base UI and StyleX. Form and ProseMirror packages are pinned for the next phases; their interactive features are not implemented yet. Today, Week, and Settings routes share one page-memory task collection. Completing a seeded task writes through the collection mutation adapter to MSW and refetches the mock response.
+## Client-only planning preview
+React/TypeScript, TanStack Start SPA + Router, TanStack DB Query collections + Query, TanStack Form, Base UI, StyleX, ProseMirror and MSW. Today projects scheduled tasks and recurring routine occurrences into the display timezone. Week keeps explicit task-linked outcomes separate from task priority and schedule. Day/Week Notes capture inclusive calendar periods. Settings exposes project/unassigned cleanup, routine management, display timezone, week start, time format and floating-position reset.
 
 **Demo only:** all entity data lives in page memory. Route navigation preserves it; hard reload resets it. Browser tabs are independent. MSW's service worker intercepts requests; it is not a PWA and does not persist entity data. No localStorage, IndexedDB, SQLite, real API, accounts, notifications, or secrets.
 
@@ -37,4 +37,18 @@ A host reverse proxy can use `reverse_proxy 127.0.0.1:3180`; hostname and access
 ## Qualification / limits
 Dependency license gate is fail-closed. See `docs/LICENSE-REVIEW.md` for exact approved build-tool exceptions and retained notices. Apache-2.0 project license is preserved. GitHub checks perform license qualification, build and typecheck only; no automatic deployment.
 
-Phase 1 does not yet implement task creation/editing/deletion, notes editor, detailed week planning, routines, priority controls, project management, editable settings, search, or final accessibility review. The visible phase label deliberately distinguishes this skeleton from a finished planner.
+The client-only demo does not include persistence, search, external integrations, weather/location feeds, accounts, notifications or printing. Resources use archive/restore rather than destructive deletion. Paper is the fixed theme. No visible reload/reset banner is shown, per approved steering. See `docs/PHASE45-HANDOFF.md` for planning semantics and qualification evidence.
+
+## Planning acceptance
+
+```sh
+node scripts/test-dates.mjs
+node scripts/test-planner-clock.mjs
+PREVIEW_URL=http://127.0.0.1:3181 node scripts/browser-b.mjs
+PREVIEW_URL=http://127.0.0.1:3181 node scripts/browser-c.mjs
+PREVIEW_URL=http://127.0.0.1:3181 node scripts/browser-d.mjs
+PREVIEW_URL=http://127.0.0.1:3181 node scripts/browser-shell.mjs
+MEOS_TEST_URL=http://127.0.0.1:3181 node scripts/browser-anchor.mjs
+```
+
+`browser.mjs` is journey A; B is resource editing, C planning/routines/period notes, D preferences/midnight/reset, E (`browser-shell`) mobile/desktop and floating/modal behavior. Anchor checks preserve the previously approved 48 mouse/touch/keyboard corner cases. Test-only static origin stays loopback on 3181; deployed preview stays loopback on 3180.

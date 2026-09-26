@@ -4,6 +4,8 @@ import {useLiveQuery} from '@tanstack/react-db'
 import {Button} from '@base-ui/react/button'
 import {tasksCollection,projectsCollection,saveTask,saveProject} from './lib/store'
 import type {Task,Project} from './lib/contracts'
+import {usePlanning} from './components/Planning'
+import {usePlannerClock} from './lib/planner-clock'
 import {ResourceForm} from './components/ResourceForm'
 
 type Selection={kind:'task',resource:Task,isNew?:boolean}|{kind:'project',resource:Project,isNew?:boolean}
@@ -37,7 +39,7 @@ export function PreviewAction({children,label,className=''}:{children:React.Reac
 }
 export function TaskRows({tasks}:{tasks:Task[]}){
  const open=useContext(ResourceContext);const[error,setError]=useState('')
- return <>{!tasks.length&&<p className="empty-state">Nothing here yet.</p>}<ul className="tasks">{tasks.map(task=><li key={task.id} className={task.priority==='high'?'task priority':'task'}><Button aria-label={`${task.completed?'Reopen':'Complete'} ${task.title}`} aria-pressed={task.completed} className="check" onClick={async()=>{setError('');try{await tasksCollection.update(task.id,d=>{d.completed=!d.completed}).isPersisted.promise}catch{setError('Could not save the change. Please try again.')}}}>{task.completed?'✓':'○'}</Button><div className="task-body"><small className="task-kind">{task.archived?'Archived':task.priority==='high'?'Priority':'Task'}</small><Button className={task.completed?'done task-title resource-link':'task-title resource-link'} onClick={()=>open({kind:'task',resource:task})}>{task.title}</Button><small>{task.schedule?`${task.schedule.date} · ${task.schedule.time||'Anytime'}`:'Unscheduled'}</small></div></li>)}</ul>{error&&<p role="alert">{error}</p>}</>
+ return <>{!tasks.length&&<p className="empty-state">Nothing here yet.</p>}<ul className="tasks">{tasks.map(task=><li key={task.id} className={task.priority==='high'?'task priority':'task'}><Button aria-label={`${task.completed?'Reopen':'Complete'} ${task.title}`} aria-pressed={task.completed} className="check" onClick={async()=>{setError('');try{await tasksCollection.update(task.id,d=>{d.completed=!d.completed}).isPersisted.promise}catch{setError('Could not save the change. Please try again.')}}}>{task.completed?'✓':'○'}</Button><div className="task-body"><small className="task-kind">{task.archived?'Archived':task.priority==='high'?'Priority':'Task'}</small><Button className={task.completed?'done task-title resource-link':'task-title resource-link'} onClick={()=>open({kind:'task',resource:task})}>{task.title}</Button><small>{task.schedule?`${task.schedule.date} · ${task.schedule.time?`${task.schedule.time} ${task.schedule.timezone}`:'Anytime'}`:'Unscheduled'}</small></div></li>)}</ul>{error&&<p role="alert">{error}</p>}</>
 }
 export function Tasks(){
  const {data:tasks=[],isLoading,isError}=useLiveQuery(q=>q.from({task:tasksCollection}))
@@ -53,6 +55,6 @@ export function ResourceLists(){
  return <><section className="settings-card"><div className="section-heading"><h2>Projects</h2><CreateResource kind="project">New project</CreateResource></div><ul className="resource-list">{projects.filter(p=>!p.archived).map(p=><li key={p.id}><Button className="resource-link" onClick={()=>open({kind:'project',resource:p})}>{p.completed?'✓':'○'} {p.title} <span aria-hidden="true">↗</span></Button></li>)}</ul></section><section className="settings-card"><div className="section-heading"><h2>No project</h2><CreateResource kind="task">New task</CreateResource></div><p className="muted">Standalone tasks, including those not yet scheduled.</p><TaskRows tasks={tasks.filter(t=>!t.projectId&&!t.archived)}/></section><details className="settings-card"><summary>Archived resources</summary><p className="muted">Open an item to restore it.</p><ul className="resource-list">{projects.filter(p=>p.archived).map(p=><li key={p.id}><Button className="resource-link" onClick={()=>open({kind:'project',resource:p})}>{p.title}</Button></li>)}</ul><TaskRows tasks={tasks.filter(t=>t.archived)}/></details></>
 }
 export function FloatingAdd({kind}:{kind:'task'|'outcome'}) {
- const open=useContext(ResourceContext)
- return <FloatingControls kind={kind} onAdd={()=>open({kind:'task',resource:{...newTask(),priority:kind==='outcome'?'high':'none'},isNew:true})}/>
+ const open=useContext(ResourceContext);const planning=usePlanning();const clock=usePlannerClock()
+ return <FloatingControls kind={kind} onAdd={()=>kind==='outcome'?planning.openOutcome():open({kind:'task',resource:{...newTask(),schedule:{date:clock.today,timezone:clock.preferences.timezone}},isNew:true})}/>
 }

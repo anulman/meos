@@ -23,6 +23,12 @@ export function NotesEditor({value,onChange,label='Notes'}:{value:Notes;onChange
     if(transaction.docChanged)change.current(state.doc.toJSON() as Notes)
    },
    handleKeyDown(current,event){
+    // ProseMirror suppresses native Escape; delegate to the modal's existing
+    // cancel handler so dirty-draft confirmation and focus restoration still run.
+    if(event.key==='Escape') {
+     const dialog=current.dom.closest('dialog')
+     if(dialog){event.preventDefault();dialog.requestClose();return true}
+    }
     if(event.key==='Enter'&&!event.shiftKey){
      const {state}=current
      if(state.selection instanceof TextSelection){

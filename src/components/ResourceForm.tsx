@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react'
 import { useForm } from '@tanstack/react-form'
 import type { Notes, Project, Task, Priority, LinkedReference } from '../lib/contracts'
-import { getConfig } from '../lib/config'
+import { usePlannerClock } from '../lib/planner-clock'
 import { saveProject, saveTask } from '../lib/store'
 import { NotesEditor } from './NotesEditor'
 
 export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,children}:{kind:'task'|'project';resource:Task|Project;projects?:Project[];isNew?:boolean;onSaved:(resource:Task|Project)=>void;children?:ReactNode}) {
+ const clock=usePlannerClock()
  const [error,setError]=useState('')
  const [saving,setSaving]=useState(false)
  const task=resource as Task;const project=resource as Project
@@ -13,7 +14,7 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,chil
   title:resource.title,completed:resource.completed??false,notes:resource.notes,
   references:resource.references??[] as LinkedReference[],
   projectId:task.projectId??'',priority:task.priority??'none' as Priority,
-  date:task.schedule?.date??'',time:task.schedule?.time??'',timezone:task.schedule?.timezone??getConfig().timezone,
+  date:task.schedule?.date??'',time:task.schedule?.time??'',timezone:task.schedule?.timezone??clock.preferences.timezone,
   duration:task.durationMinutes?.toString()??'',targetDate:project.targetDate??'',
  },onSubmit:async({value})=>{
   setError('');setSaving(true)

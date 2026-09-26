@@ -9,6 +9,8 @@ const BUTTON_WIDTH=176, BUTTON_HEIGHT=56, CONTENT_WIDTH=716
 // Page-memory only: survives route changes, intentionally resets on reload.
 let rememberedPosition: Position | null = null
 let rememberedCorner: Corner | null = null
+/** Settings has no mounted floating control; the next mount uses the default. */
+export function resetFloatingPositions(){rememberedPosition=null;rememberedCorner=null}
 const constrain = (x:number, y:number):Position => ({
   x:Math.max(12, Math.min(x, window.innerWidth - BUTTON_WIDTH - 12)),
   y:Math.max(12, Math.min(y, window.innerHeight - BUTTON_HEIGHT - 12)),
