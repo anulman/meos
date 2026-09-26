@@ -5,7 +5,7 @@ The root-owned state comes from trusted bootstrap (production) or acceptance pro
 """
 import argparse,hashlib,json,os,pathlib,re,stat,subprocess
 assert os.geteuid()==0
-parser=argparse.ArgumentParser();parser.add_argument('--state',required=True);parser.add_argument('--release',required=True);parser.add_argument('--output',required=True);parser.add_argument('--access-config');parser.add_argument('--owner-file');parser.add_argument('--access-keys-dir');args=parser.parse_args()
+parser=argparse.ArgumentParser();parser.add_argument('--state',required=True);parser.add_argument('--release',required=True);parser.add_argument('--output',required=True);parser.add_argument('--access-config');parser.add_argument('--owner-file');parser.add_argument('--access-keys-dir');parser.add_argument('--calendar',action='store_true');args=parser.parse_args()
 repo=pathlib.Path(__file__).resolve().parents[1]
 state_path=pathlib.Path(args.state).absolute();release=pathlib.Path(args.release).absolute();output=pathlib.Path(args.output).absolute()
 def secure(path,directory=False):
@@ -16,7 +16,7 @@ def secure(path,directory=False):
 secure(state_path);secure(release,True)
 state=json.loads(state_path.read_text());assert set(state)=={'environment','instanceId','image','containerId','volume','origin'}
 run=state['instanceId'];assert re.fullmatch('[a-f0-9]{32}',run)
-assert state['image']=='sha256:70e887448c5458d9735835a47bb3f1d2586a16cab1560df8f899cc55702bc63d'
+assert re.fullmatch('sha256:[a-f0-9]{64}',state['image']) # Exact independently reviewed manifest below is authoritative.
 assert state['origin']=='https://meos.aidans.computer' and state['environment'] in ['production','acceptance']
 name='meos-'+state['environment']+'-'+run;assert state['volume']==name+'-data'
 assert re.fullmatch('[a-f0-9]{64}',state['containerId'])
@@ -66,8 +66,12 @@ assert len(mounts)==1 and mounts[0]['Type']=='volume' and mounts[0]['Name']==sta
 volume_root=pathlib.Path(volume['Mountpoint']);assert volume_root.is_absolute() and volume_root.is_dir() and not volume_root.is_symlink()
 socket_path=str(volume_root/'server.sock')
 node=str(release/'runtime/node')
-values={'PREFIX':prefix,'CONTAINER':state['containerId'],'RELEASE':str(release),'NODE':node,'SOCKET':socket_path,'IDENTITY':str(identity),'STATE':str(state_path),'OWNER':str(runtime_owner),'ACCESS_KEYS':str(keys_dir),'PORT':'3190' if state['environment']=='production' else '3191'}
-for value in values.values():assert re.fullmatch(r'[A-Za-z0-9_./:-]+',value), 'Unsafe systemd substitution'
+values={'PREFIX':prefix,'CONTAINER':state['containerId'],'RELEASE':str(release),'NODE':node,'SOCKET':socket_path,'IDENTITY':str(identity),'STATE':str(state_path),'OWNER':str(runtime_owner),'ACCESS_KEYS':str(keys_dir),'PORT':'3190' if state['environment']=='production' else '3191','CALENDAR_BIND':''}
+if args.calendar:
+ assert state['environment']=='production'
+ calendar_socket=pathlib.Path('/run/meos-calendar/control.sock');i=calendar_socket.lstat();assert stat.S_ISSOCK(i.st_mode) and i.st_uid==61002 and stat.S_IMODE(i.st_mode)==0o600
+ values['CALENDAR_BIND']='/run/meos-calendar:/run/meos/calendar'
+for value in values.values():assert value=='' or re.fullmatch(r'[A-Za-z0-9_./:-]+',value), 'Unsafe systemd substitution'
 rendered={}
 templates=[('meos-backend.service.in','-backend.service'),('meos-web.service.in','-web.service'),('meos-web.socket','-web.socket')]
 if state['environment']=='production':templates += [('meos-access-keys.service.in','-access-keys.service'),('meos-access-keys.timer','-access-keys.timer')]

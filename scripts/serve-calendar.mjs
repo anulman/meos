@@ -13,7 +13,10 @@ const secret=JSON.parse(fs.readFileSync('/run/meos-calendar/oauth.json','utf8'))
 if(process.getuid()===0||process.env.LISTEN_FDS!=='1'||process.env.LISTEN_PID!==String(process.pid))throw Error('calendar_runtime_identity');
 const broker=createGoogleBroker({...config,...secret,fetcher:createPinnedGoogleFetch(config.googlePins)});
 const store=openCalendarDurableStore({directory:'/data/private'});
-const planner=config.plannerEnabled?createCalendarPlannerClient({origin:config.origin,upstream:unixUpstream({origin:config.origin,socketPath:'/run/meos-planner/backend.sock'}),credentials:JSON.parse(fs.readFileSync('/run/meos-calendar/planner.json','utf8'))}):undefined;
+const initialPlanner=config.plannerEnabled?JSON.parse(fs.readFileSync('/run/meos-calendar/planner.json','utf8')):undefined;
+const savedPlanner=store.get('planner-credentials');
+if(savedPlanner&&savedPlanner.agentId!==initialPlanner?.agentId)throw Error('planner_principal_changed');
+const planner=config.plannerEnabled?createCalendarPlannerClient({origin:config.origin,upstream:unixUpstream({origin:config.origin,socketPath:'/run/meos-planner/backend.sock'}),credentials:savedPlanner??initialPlanner,saveCredentials:value=>store.transaction(tx=>tx.set('planner-credentials',value))}):undefined;
 const service=createCalendarService({config:{...config,clientId:secret.clientId},store,broker,planner});
 http.createServer(createCalendarRpcHandler({service,ownerId:config.ownerId})).listen({fd:3});
 let stopped=false,timer;

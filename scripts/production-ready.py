@@ -39,7 +39,7 @@ while True:
    client.request('GET','/api/meos/v1/instance');response=client.getresponse();body=response.read(8193)
    assert response.status==200 and len(body)<=8192 and json.loads(body)=={'instanceId':run,'environment':'production'}
   finally:client.close()
-  subprocess.run(['/usr/bin/setfacl','-m','u:61002:rw',str(sock)],env=clean,check=True)
+  subprocess.run(['/usr/bin/setfacl','-m','u:61002:rw,u:61004:rw',str(sock)],env=clean,check=True)
   break
  except (FileNotFoundError,ConnectionRefusedError,TimeoutError):
   if time.monotonic()>=deadline:raise RuntimeError('Backend readiness timeout')

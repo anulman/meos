@@ -18,7 +18,7 @@ for name in required:
  secure(release/name);assert hashlib.sha256((release/name).read_bytes()).hexdigest()==manifest['files'][name]
 access_path=pathlib.Path(a.access_config).absolute();secure(access_path);access=json.loads(access_path.read_text());assert re.fullmatch('[a-f0-9-]{36}',access['ownerId']) and re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',access['email'])
 planner_path=pathlib.Path(a.planner_credentials).absolute();secure(planner_path);assert stat.S_IMODE(planner_path.stat().st_mode)==0o600
-planner=json.loads(planner_path.read_text());assert planner['ownerId']==access['ownerId'] and planner['agentId']!=access['ownerId'] and set(planner['scopes'])=={'sync:read','sync:write'} and len(planner['password'])>=32
+planner=json.loads(planner_path.read_text());assert planner['ownerId']==access['ownerId'] and planner['agentId']!=access['ownerId'] and set(planner['scopes'])=={'sync:read','sync:write'} and isinstance(planner['authToken'],str) and isinstance(planner['refreshToken'],str) and 1<=len(planner['refreshToken'])<=4096 and 'password' not in planner
 planner_socket=pathlib.Path(a.planner_socket).absolute();assert stat.S_ISSOCK(planner_socket.lstat().st_mode)
 # Invoke under `varlock run --path <private-install-config>/ -- ...`.
 # Never load the operator's shell profile or another installation's defaults.
