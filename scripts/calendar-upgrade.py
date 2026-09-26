@@ -80,8 +80,11 @@ label='meos.'+('production.instance' if state['environment']=='production' else 
 new_id=docker('create','--name',name,'--network','none','--read-only','--user','10001:10001','--cap-drop','ALL','--security-opt','no-new-privileges','--memory','1200m','--pids-limit','128','--label','meos.environment='+state['environment'],'--label',label+'='+run,'--mount','type=volume,src='+state['volume']+',dst=/data','--tmpfs','/tmp:rw,noexec,nosuid,size=64m',manifest['image'],*old['Config']['Cmd']).decode().strip()
 new_state={**state,'image':manifest['image'],'containerId':new_id};save('runtime-state.json',new_state);verify(inspect(new_id),manifest['image'],new_id,False)
 docker('start',new_id)
+# Docker's attached-volume mountpoint may exceed AF_UNIX's 108-byte limit.
+# Pin the verified directory and use its short proc-fd alias, not a moved socket.
+root_fd=os.open(root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
 class UDS(http.client.HTTPConnection):
- def connect(self):self.sock=socket.socket(socket.AF_UNIX);self.sock.settimeout(3);self.sock.connect(str(root/'server.sock'))
+ def connect(self):self.sock=socket.socket(socket.AF_UNIX);self.sock.settimeout(3);self.sock.connect('/proc/self/fd/'+str(root_fd)+'/server.sock')
 deadline=time.monotonic()+60
 while True:
  verify(inspect(new_id),manifest['image'],new_id,True)
@@ -94,6 +97,7 @@ while True:
  except (FileNotFoundError,ConnectionRefusedError,TimeoutError):
   if time.monotonic()>deadline:raise RuntimeError('New backend readiness failed; rollback artifacts retained')
   time.sleep(.2)
+os.close(root_fd)
 assert invariants()==before,'Persisted owner/domain rows changed during upgrade; hold web, reconcile cold copy'
 save('receipt.json',{'status':'backend-upgraded-web-held','environment':state['environment'],'instanceId':run,'oldContainer':state['containerId'],'newContainer':new_id,'image':manifest['image'],'volume':state['volume'],'oldContainerPreserved':True,'coldCopyRetained':True,'ownerAndDomainRowsUnchanged':True,'state':str(out/'runtime-state.json')})
 print(json.dumps({'status':'backend-upgraded-web-held','receipt':str(out/'receipt.json')}))
