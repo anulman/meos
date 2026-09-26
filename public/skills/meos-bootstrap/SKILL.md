@@ -151,6 +151,14 @@ Use supported host configuration tools within the user's existing authority. Com
 
 Create an installation ledger in durable host storage containing the pinned MeOS release and installation-manifest reference, artifact verification, host/deployment path, service IDs, persistent-storage references, non-secret access endpoints, workspace/account identity, skill versions, job IDs, triggers, timezone, execution settings, authority, status, verification receipts, and remaining blockers. Never store tokens or secret values in it. A job created successfully is **configured**, not proof of a successful execution.
 
+### Learning capability and skill-only maintenance
+
+Read the [learning-loop reference](../learning-loop.md) and discover supported history, evidence, review-state and revision-safe write capabilities. Record which learning steps are supported or limited; do not invent fields or require the future code-mode facade. Ordinary tools can perform supported rituals now. Enabling this method does not authorize an eval service, database migration, sandbox, direct SQL access or automatic skill rewriting.
+
+Treat reruns as install/enable/doctor reconciliation, including **between application releases**. Compare pinned skill/reference versions and capability requirements; update only the requested owned configuration and verify the affected path. Preserve per-user observations, lessons, answers, decisions, grants, cursors and receipts. A skill update is not a reason to reinstall the application or recreate jobs.
+
+Planning rituals can continue independently of a skill-only update. Use supported revision/claim controls and an execution-time pinned skill/reference set so an in-flight run does not mix incompatible instructions. If the host cannot provide safe concurrent updates, stage the update without resetting or overwriting progress. Activation requires a supported, verified quiescent/claimed window that prevents new affected runs, or another mechanism guaranteeing coherent version pinning. Completion of one observed run alone is insufficient; leave activation blocked when no safe switch exists. Record the applied version and readback receipt separately from successful ritual execution. Doctor reports unsupported learning capabilities without blocking unrelated healthy features or asserting that the ideal query interface exists.
+
 ## Configure the event long-poller
 
 First discover and verify an actual authenticated event API and its protocol. MCP access alone does not prove such an API exists. Obtain its documented endpoint/tool, authentication mechanism, event types, cursor and acknowledgment semantics, retention/replay limits, and supported wait duration. Do not invent endpoints, MCP operations, cursor formats, or delivery guarantees.

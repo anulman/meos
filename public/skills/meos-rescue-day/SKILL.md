@@ -16,4 +16,24 @@ Use on a meaningful disruption or an explicit “help me recover today” reques
 5. Preview, apply and verify authorized revision-checked changes. Preserve estimates versus actuals and occurrence history. Reconcile uncertain writes before retrying.
 6. Save the revised first action and dispositions so the next boundary, evening close and morning launch reuse them.
 
+## Diagnose before resizing
+
+Use the [learning-loop reference](../learning-loop.md) to distinguish original-scope effort, added scope, interruption, dependency and priority changes. More elapsed time does not identify the cause. Reuse prior answers, retrieve available context first, and ask only what changes the repair. Resizing a block changes today's budget/capacity allocation, not the original completion forecast. Record the reason and preserved scope; do not teach a global estimate multiplier from a disrupted day.
+
+**Ideal query — design only; use discovered ordinary tools today:**
+
+```ts
+const context = await meos.learning.context({
+  taskIds: affectedTaskIds, knownAt: decisionAt,
+  include: ["request", "scope", "forecast", "budget", "answers", "evidence"], limit: 10
+});
+const lessons = await meos.learning.lessons({
+  taskIds: affectedTaskIds, knownAt: decisionAt, states: ["trial", "retained"], limit: 2
+});
+return { context, lessons,
+  questions: learning.questions(context, { decision: "choose-next-action", max: 1 }) };
+```
+
+Use the evidence to choose the smallest repair through actual scheduling tools. Learning history does not expand authority or make imported commitments writable.
+
 **Result:** a workable next action plus a concise change summary and explicit deferrals. No promise of new notifications without verified platform support/receipts.
