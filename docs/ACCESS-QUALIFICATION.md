@@ -51,3 +51,36 @@ never rebuild while staging/deploying. Helpers have separately reviewed pinned h
 - Key-refresh omission in rendered production units found by review: fixed so both
   service and timer are included in exact rendering receipt; actual installed first
   refresh/timer-next-fire proof is required before public cutover.
+
+## Executed production checkpoint
+
+Actual rendered lifecycle13 passed, source/staged-byte reconciliation recorded at
+`.qualification/access-lifecycle-proof/`. Production cutover then completed:
+
+- Final application commit: `d174b434b59bc634e9432e2dd28ccbfc8db7438c`.
+- Production instance: `f0ac5cdce1d306cf62528e5b3e8e4e12`.
+- Immutable manifest: `c34871a45d84614d603e1dd64dd9e13511371e1a5e1b1bbecdce3d042221ca54`.
+- Origin routes to127.0.0.1:3190; previous demo remains at3180 for routing rollback.
+- Production owner uses the authorized email, generated internal secret, fresh
+  production-labelled storage; no acceptance data/credentials promoted.
+- First live public-key refresh succeeded; receipt-bound6h timer enabled and next
+  firing verified. Installed units/artifact hashes match reviewed receipts.
+- Non-destructive smoke: private ordinary-owner native session/preferences passed;
+  external TLS Access302 preserved; unsigned direct-origin and forged-email
+  admin/MCP/bridge requests403. WebUID61002/zero capabilities/private network verified.
+- **Unverified:** actual owner-authenticated external browser walkthrough; no owner
+  Access assertion was available to this worker. Isolated same-artifact browser6
+  proves the flow with synthetic signed identity, not the real user's external session.
+
+Sanitized executed receipts: `.qualification/production-cutover/`. Exact root
+routing backup: `/var/lib/meos-production/Caddyfile.before`. Restoring routing must
+preserve the new production volume and all subsequent user writes.
+
+Additional smoke-controller errors were assessed: the long relocated production
+Unix socket exceeded AF_UNIX path length in an ad-hoc direct connection. Reused the
+already-qualified dirfd socket technique from production-ready/bootstrap; no app
+change required and existing dirfd qualification covers the failure class. Native
+JSON login returns tokens rather than browser cookies; the ordinary-cookie smoke
+was corrected to the qualified form-login contract. Browser-cookie behavior already
+has entrypoint, browser and lifecycle regression proofs; no redundant test added.
+No raw password/token value was printed by production smoke.

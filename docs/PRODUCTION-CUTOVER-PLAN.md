@@ -1,3 +1,10 @@
+# Executed production cutover
+
+The Access-qualified release is now deployed at https://meos.aidans.computer.
+See ACCESS-QUALIFICATION.md and .qualification/production-cutover for executed
+receipts, exact artifact/instance identities and live-smoke limits. Historical
+planning and pre-Access artifact details below are retained, not current blockers.
+
 # Access-gated single-owner cutover — current authority
 
 The user approved Node across same-license versions and explicitly superseded the
