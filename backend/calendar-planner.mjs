@@ -45,7 +45,7 @@ export function createCalendarPlanner({store,planner,broker,connection,accessTok
     if(mapping&&mapping.blocked){return}
     // A changed Google value wins even when MeOS also changed. Save the latest
     // displaced intent before CAS so restart/retry cannot lose the audit record.
-    if(mapping&&!same(observed,mapping.baseline)&&!same(observed,local)){
+    if(mapping&&(!same(observed,mapping.baseline)||(remote?.etag??null)!==mapping.etag)&&!same(observed,local)){
      if(!same(local,mapping.baseline)&&mapping.displacedLocal?.revision!==current.revision){mapping.displacedLocal={revision:current.revision,record:current.record,deleted:current.deleted,at:now()};save()}
      if(current.deleted||current.record?.value.archived||current.record?.value.skipped){conflict(k,kind,current.record?.value.title??id,'Google version kept. This MeOS item is deleted, archived or skipped; no stale local deletion will be exported.');return}
      let fields;try{fields=applyFields(observed,local)}catch{conflict(k,kind,current.record.value.title,'Google is authoritative, but its duration is unsupported. No local change will be exported.');return}
