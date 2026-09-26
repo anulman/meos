@@ -61,7 +61,7 @@ docker compose --project-name "$MEOS_COMPOSE_PROJECT" --env-file "$MEOS_PRIVATE_
 
 For an authorized controlled restart, use the same project/file/env selection with `restart` and the verified service name; do not restart every data service casually. For upgrades, verify the new release, preserve the prior bundle and private configuration securely, take the release-required recovery checkpoint, review migration compatibility, then repeat validation and the documented upgrade procedure. A prior image is not necessarily compatible with a migrated database: rollback only through the supported recovery path. Pause with the same selection and `stop` when requested. Uninstall only after identifying owned resources and retention requirements; never include `down --volumes`, volume pruning, or data deletion by default.
 
-### Helm — existing Kubernetes cluster
+### Helm — later or existing Kubernetes deployment
 
 Verify the selected cluster and namespace, Kubernetes/Helm compatibility, identity/RBAC, available resources, storage class and volume retention, ingress/private-network route, and TLS/certificate mechanism. Confirm the current context before any mutation; a familiar namespace name is not proof of cluster identity. Do not install cluster-wide controllers or broaden RBAC without authority.
 
@@ -86,6 +86,18 @@ helm status "$MEOS_HELM_RELEASE" --kube-context "$MEOS_KUBE_CONTEXT" --namespace
 Chart repository registration or OCI authentication, if needed, must follow the actual release instructions with credentials entered through supported private tooling. Validate the private values against the chart schema and its documented checks before installation. Avoid sharing rendered manifests or dry-run output containing Secrets. Do not use automatic rollback flags blindly when migrations may be irreversible. `--wait` confirms Helm's supported readiness checks, not persistence, successful login, or every application dependency; run Stage 3 and any release-defined migration-job checks separately.
 
 Inspect only actual release-owned resources using the manifest's resource names/labels; avoid broad secret/configuration dumps. An authorized restart can use `kubectl rollout restart` and `kubectl rollout status` for the actual supported workload type/name, never an invented deployment name or indiscriminate data-service restart. Record release revision and previous artifact/version. Before upgrading, verify storage recovery and migration compatibility; review the new chart/schema and apply the validated values with the pinned new chart. `helm rollback` does not undo database migrations or restore external data: use it only when the release's compatibility rules permit it. Before uninstalling, inspect PVC retention, chart deletion hooks and external resource ownership; preserve data by default and do not delete the namespace as a shortcut.
+
+## Recovery planning and verification
+
+This guide does **not** enable backups or recovery. Before installation/upgrade approval, explain the selected release's recovery path, expected data-loss window and restoration limits using evidence, not promises. Reuse existing approvals; otherwise obtain the actual backup destination, retention/deletion policy, access authority and any costs before provisioning. Do not assume a vendor, retention period or cloud spending grant. Compose is the first single-host path; keep the maintained Helm example for a later cluster installation, not a prerequisite.
+
+- Use the release/database-supported **consistent snapshot or export** mechanism, not a live database-file copy. Cover persistent application data plus the private configuration and secret material needed to restore; protect and restore secrets safely without putting them in receipts or chat.
+- Verify an authorized **off-host copy** by its actual upload/integrity receipts; a local snapshot alone does not cover host loss. Document what is excluded and how encryption keys/configuration are recoverable by the owner.
+- Restore into an **isolated** disposable target with verified test data/service identities and blocked real-provider egress (including Calendar sync, messaging and notifications). Verify restored data identities, intended login and supported migration behavior without touching production or exercising real providers. Record the restore result and remaining gaps.
+- Verify scheduler startup at boot, durable/persistent missed-run handling, bounded retry behavior, health and last-success evidence. Verify an authorized **external stale-backup alert** that can detect host/scheduler failure, not only an alert running on the backed-up host.
+- Record timer/job identity and next run, successful backup/run and off-host upload receipts, isolated restore receipt, and alert verification separately in the installation ledger. Do not claim recovery is enabled/verified from this text, an enabled timer or a configured destination alone. Report missing receipts or unsupported components explicitly.
+
+This section is a planning/verification requirement, not a backup implementation or permission to create services or spend money.
 
 ## Stage 3 — Prove persistent MeOS works
 
@@ -126,6 +138,12 @@ Do not create seven independent cron jobs. Avoid duplicate walk/clean execution 
 Discover the host's supported models and reasoning controls. Honor configured preferences, use effort proportional to the work, and record any fallback explicitly. Do not hard-code vendor model IDs or pretend an unsupported reasoning setting was applied. Separate inexpensive waiting from agent reasoning.
 
 Record authority separately for each job: permitted reads, planner/calendar mutations, schedule changes, external communications, protected-time constraints, and actions that require user input. A grant to install jobs is not permission for those jobs to perform every available tool action. Carry these limits into the job instructions; use technical host restrictions where supported and disclose instruction-only limits.
+
+### Configure per-install planning authority
+
+Offer the choice explicitly and record the answer: proposal-only planning, or standing autonomy over MeOS-owned blocks on the dedicated MeOS calendar (create, move, resize, unschedule/remove planning blocks, revise and commit, constrained by user intent). Reuse an existing grant without asking again; never copy another user's grant into a new installation. Example opt-in policy: “Manage my MeOS blocks autonomously within my constraints; keep imported primary-calendar events read-only and ask before changing other commitments.” Guided/adaptive/quiet delivery modes are independent of this authority choice. Offer a **sample/proposal-only mode** to show a rough week/day plan without calendar writes; do not mistake sample success for installed scheduling.
+
+Capture natural-language routine intent, frequency targets, soft time preferences and hard constraints separately. Explain future tentative defaults and target-day automatic commitment in prior-night preparation, with morning catch-up and current-revision/capacity checks. Verify actual schema support before enabling this behavior; record unsupported transitions as blockers. Record the Google-wins synchronization policy and protection of MeOS-only notes/estimates/history. Configure evidence-aware actuals and weekly estimation reflection; do not enable media capture or assume a tentative-notification suppression policy.
 
 ## Install idempotently
 
