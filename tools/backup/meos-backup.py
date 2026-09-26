@@ -6,7 +6,6 @@ from pathlib import Path
 import re, resource, shutil, signal, sqlite3, stat, subprocess, sys, tarfile, tempfile
 import urllib.parse, urllib.request, uuid
 
-AGE_SHA256 = 'eb7dd1b518f0a307c99cd97782623c5321da049154b04acd2d98d21aa7bc9b2c'
 UNITS = ['meos-web.socket', 'meos-web.service', 'meos-calendar.socket', 'meos-calendar.service', 'meos-backend.service']
 REQUIRED = {'native', 'calendar', 'configuration', 'release', 'units'}
 
@@ -58,8 +57,9 @@ def config(path):
     require(re.fullmatch(r'[a-z0-9-]+', c['region']), 'invalid region')
     require(re.fullmatch(r'[a-f0-9]{32}', c['instanceId']), 'invalid instance identity')
     require(set(c['sources']) == REQUIRED, 'all five named source roots required')
-    for path in [*c['sources'].values(), c['workDirectory'], c['age'], c['credentialsFile'], c['identityFile'], c['runtimeStateFile']]:
+    for path in [*c['sources'].values(), c['workDirectory'], c['age'], c['ageAdmissionFile'], c['credentialsFile'], c['identityFile'], c['runtimeStateFile']]:
         require(isinstance(path, str) and Path(path).is_absolute() and '..' not in Path(path).parts, 'absolute normalized paths required')
+    require(re.fullmatch(r'[a-f0-9]{64}', c.get('ageAdmissionSHA256', '')), 'age admission hash required')
     require(Path(c['runtimeStateFile']).is_relative_to(Path(c['sources']['configuration'])), 'runtime state must be included in configuration')
     roles = {'webIdentity','owner','accessKeys','calendarConfig','calendarOAuth','calendarPlanner'}
     require(set(c.get('requiredConfiguration', {})) == roles, 'all installed configuration roles required')
@@ -238,8 +238,20 @@ def stage(c, target):
     atomic(target/'manifest.json',m)
     return json.loads((target/'manifest.json').read_text())
 
+def verify_age(c):
+    receipt = Path(c['ageAdmissionFile'])
+    ancestors(receipt); ancestors(c['age'])
+    for path in [receipt, Path(c['age'])]:
+        info = path.lstat()
+        require(stat.S_ISREG(info.st_mode) and info.st_uid == os.geteuid() and not info.st_mode & 0o022, 'unsafe age admission file')
+    require(digest(receipt) == c['ageAdmissionSHA256'], 'age admission changed')
+    data = json.loads(receipt.read_text())
+    require(data['schema'] == 1 and data['platform'] == 'linux-amd64', 'unsupported age admission')
+    require(digest(c['age']) == data['files']['age'], 'unadmitted age executable')
+
+
 def age(c, source, target, decrypt=False):
-    require(digest(c['age']) == AGE_SHA256, 'unadmitted age executable')
+    verify_age(c)
     args = [c['age']]
     if decrypt:
         private(c['identityFile']); args += ['--decrypt','--identity',c['identityFile']]
@@ -320,7 +332,7 @@ def backup(c,root,reason):
     run_id = dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid.uuid4().hex
     key = c['prefix'].rstrip('/')+'/'+run_id+'.tar.age'
     source_preflight(c) # Admission before secrets, copying or stopping writers.
-    require(digest(c['age']) == AGE_SHA256,'unadmitted age executable'); private(c['identityFile']); remote = S3(c)
+    verify_age(c); private(c['identityFile']); remote = S3(c)
     with tempfile.TemporaryDirectory(prefix='run-',dir=root) as directory:
         temp = Path(directory); tree = temp/'tree'; tree.mkdir(mode=0o700)
         source_preflight(c) # Recheck immediately before quiescence/allocation.
@@ -402,6 +414,7 @@ def main(argv=None):
         if a.action in ['status','config-check']: print(json.dumps({'enabled':False,'reason':disabled}))
         return 0
     if a.action in ['status','config-check']:
+        if a.action == 'config-check': verify_age(c)
         result = {'enabled':True,'paused':c.get('paused',False),'requiredPreupgrade':c.get('requiredPreupgrade',True),'cadenceSeconds':c.get('cadenceSeconds',86400),'keepLast':c.get('keepLast',0)}
         if a.action == 'status':
             for name in ['last-backup','last-restore']:

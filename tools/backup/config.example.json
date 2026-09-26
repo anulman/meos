@@ -32,5 +32,7 @@
     "calendarPlanner": "calendar/planner.json"
   },
   "maxArchiveBytes": 268435456,
-  "reserveBytes": 5368709120
+  "reserveBytes": 5368709120,
+  "ageAdmissionFile": "/opt/meos-backup/runtime/age-admission.json",
+  "ageAdmissionSHA256": "REPLACE_WITH_INDEPENDENTLY_REVIEWED_INSTALL_RECEIPT_SHA256"
 }

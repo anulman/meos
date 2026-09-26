@@ -16,12 +16,12 @@ class BackupTests(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory(prefix='meos-backup-test-')
         self.root=Path(self.temp.name);self.addCleanup(self.temp.cleanup)
         self.c={'schema':1,'bucket':'synthetic-bucket','enabled':True,'endpoint':'https://invalid.example','prefix':'tests/meos','region':'us-east-1',
-                'instanceId':'a'*32,'sources':{},'workDirectory':str(self.root/'work'),'age':AGE,
+                'ageAdmissionFile':str(Path(AGE).with_name('age-admission.json')),'ageAdmissionSHA256':b.digest(Path(AGE).with_name('age-admission.json')),'instanceId':'a'*32,'sources':{},'workDirectory':str(self.root/'work'),'age':AGE,
                 'credentialsFile':str(self.root/'credentials'),'identityFile':str(self.root/'identity'),'recipient':'age1placeholder'}
         for label in b.REQUIRED:
             p=self.root/label;p.mkdir();self.c['sources'][label]=str(p)
         self.c['runtimeStateFile']=str(self.root/'configuration/runtime-state.json')
-        Path(self.c['runtimeStateFile']).write_text(json.dumps({'instanceId':'a'*32,'volume':'synthetic'}))
+        Path(self.c['runtimeStateFile']).write_text(json.dumps({'ageAdmissionFile':str(Path(AGE).with_name('age-admission.json')),'ageAdmissionSHA256':b.digest(Path(AGE).with_name('age-admission.json')),'instanceId':'a'*32,'volume':'synthetic'}))
         Path(self.c['runtimeStateFile']).chmod(0o600)
         (self.root/'native/data').mkdir();(self.root/'calendar/private').mkdir()
         self.live=sqlite3.connect(self.root/'native/data/main.db');self.addCleanup(self.live.close)
@@ -40,6 +40,18 @@ class BackupTests(unittest.TestCase):
         require=Path(AGE).is_file();self.assertTrue(require,'MEOS_TEST_AGE must point to admitted binary')
         subprocess.run([str(Path(AGE).with_name('age-keygen')),'-o',str(self.root/'identity')],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
         self.c['recipient']=subprocess.check_output([str(Path(AGE).with_name('age-keygen')),'-y',str(self.root/'identity')],text=True).strip()
+    def test_binary_and_receipt_tamper_fail_before_quiesce(self):
+        runtime=self.root/'runtime';runtime.mkdir()
+        for name in ['age','age-keygen','age-admission.json']:shutil.copyfile(Path(AGE).with_name(name),runtime/name)
+        self.c['age']=str(runtime/'age');self.c['ageAdmissionFile']=str(runtime/'age-admission.json')
+        (runtime/'age').write_bytes(b'changed')
+        with patch.object(b,'ancestors'),patch.object(b,'quiesce') as stop,patch.object(b,'S3') as remote:
+            with self.assertRaisesRegex(RuntimeError,'unadmitted'):b.backup(self.c,self.root,'test')
+            stop.assert_not_called();remote.assert_not_called()
+        shutil.copyfile(Path(AGE),runtime/'age')
+        (runtime/'age-admission.json').write_text('{}')
+        with patch.object(b,'ancestors'):
+            with self.assertRaisesRegex(RuntimeError,'admission changed'):b.verify_age(self.c)
     def test_capacity_denial_before_quiesce_or_copy(self):
         self.space.stop()
         with patch.object(b.shutil,'disk_usage',return_value=shutil._ntuple_diskusage(1024,0,1024)), patch.object(b,'ancestors'), patch.object(b,'quiesce') as stop, patch.object(b,'stage') as copy:
@@ -181,7 +193,8 @@ class BackupTests(unittest.TestCase):
             self.assertFalse((self.root/'work/last-restore.json').exists())
     def test_real_age_rejects_changed_ciphertext(self):
         self.key();source=self.root/'clear';source.write_text('synthetic')
-        encrypted=self.root/'encrypted';b.age(self.c,source,encrypted)
+        encrypted=self.root/'encrypted'
+        with patch.object(b,'ancestors'):b.age(self.c,source,encrypted)
         data=encrypted.read_bytes();encrypted.write_bytes(data[:-1]+bytes([data[-1]^1]))
         with self.assertRaises(RuntimeError):b.age(self.c,encrypted,self.root/'decrypted',decrypt=True)
     def test_retention_only_explicit_and_policy_limited(self):

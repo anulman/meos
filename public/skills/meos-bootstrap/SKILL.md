@@ -106,7 +106,7 @@ that contract, leave this optional component uninstalled and record the mismatch
    backup cadence, maximum data-loss interval, preupgrade requirement, pause state,
    retention/deletion policy and an optional external freshness-alert destination.
    No cloud account, paid resource, deletion policy or schedule is implicit.
-2. Verify the release's offline bundle and license/hash gate. Identify all five
+2. Use the source-first age installation procedure below. Identify all five
    live source roots and the actual writer closure: native depot, Calendar state,
    installed configuration, immutable release and five MeOS units. Prove no other
    host process writes these roots; a Docker volume check alone is insufficient.
@@ -134,6 +134,51 @@ that contract, leave this optional component uninstalled and record the mismatch
    readiness and restart with the exact release. Production replacement requires
    its own explicit approval and preserved rollback state; this tool never
    overwrites a live target or starts restored services.
+
+### Install or maintain backup encryption from source
+
+The default backup package ships MeOS source, `install-age.py` and
+`source-lock.json`, not an age executable. Use the pinned release's
+`docs/BACKUP-RECOVERY.md` commands and admission contract. Python manages backups;
+age supplies age-format encryption/decryption. Go is needed only for a new source
+build, not for running backups or reusing an admitted installation.
+
+- **Discover:** inspect the current backup config, runtime path, admission receipt
+  and ledger digest before changing anything. With no bucket, skip this entire
+  optional installation. Do not install Go just for an unselected feature.
+- **Build:** on the supported Linux amd64 host, install a Go launcher through
+  supported host tools if needed and authorized. Run `install-age.py --output`
+  with a new trusted directory. It fetches pinned Go/module source, checks source
+  checksums and license hashes, verifies linked build metadata, and atomically
+  publishes age plus age-keygen and a hash receipt. Check the documented 1200 MiB
+  allocation plus 5 GiB reserve first. Do not substitute `go install ...@latest`.
+- **Reuse:** pass `--reuse-from` plus `--admission-sha256` from a previously trusted
+  installation ledger. This is offline and needs no Go. A PATH executable or its
+  self-reported version alone is not admission. Without a trusted receipt, build
+  the pinned source instead; never bless unknown binaries by hashing them.
+- **Configure:** record the reviewed receipt digest in the ledger and the backup
+  fields `ageAdmissionFile`/`ageAdmissionSHA256`, with `age` pointing at the admitted
+  executable. Keep these files owned by the runtime user under trusted paths.
+  Retain local dependency notices with built binaries. Generate a recovery key
+  only for a genuinely new setup; preserve and escrow an existing key.
+- **Inspect/repeat:** `install-age.py --output PATH --check --admission-sha256 HASH`
+  is read-only, including for missing paths. An unchanged ordinary rerun also
+  leaves files, services and schedules untouched. `config-check` verifies runtime
+  admission without executing age or contacting the bucket; `status` only reports
+  config/receipts. Neither proves current provider availability or a fresh restore.
+- **Repair/recover:** changed or partial installed files fail closed. Build a new
+  runtime, verify it, then switch only backup config within repair authority;
+  preserve keys, objects, receipts, schedules, planning state and client cursors.
+  An interrupted build never selects its staging directory. If the final path
+  exists, verify it before retrying. Otherwise retry installation without replaying
+  key generation, uploads or scheduler activation. Coordinate only shared backup
+  resource mutations; unrelated planning can continue.
+
+Environment-specific tooling may implement the same workflow, but the current
+installer does not automatically admit alternate encryption implementations or
+platforms. Require age-format compatibility, authenticated restore/tamper proofs,
+source provenance and license review before claiming equivalent support. Do not
+invent cryptography to avoid installing Go or carrying redistribution notices.
 
 ### Inspect, pause, update and remove optional backups
 

@@ -13,18 +13,88 @@ policy, credentials, upload, integrity or restore errors are failures, never ski
 The native guest has no network and must not receive S3 credentials. Calendar is
 host-side. Consequently backups run on the **host**, alongside existing Python
 release helpers, not inside the nginx demo container or the networkless guest.
-No compose deployment is invented. Runtime: Linux amd64, Python 3.11+ stdlib,
-existing systemd/Docker CLI, and the pinned age executable in the standalone host
-bundle. No npm, Go compiler, AWS CLI or developer checkout is needed at runtime.
+No compose deployment is invented. The qualified runtime is Linux amd64, Python
+3.11+ stdlib, systemd/Docker CLI and age. Go is a **build prerequisite**, not a
+runtime dependency. age encrypts archives before upload and authenticates/decrypts
+them during restore; Python owns snapshotting, storage and recovery orchestration.
 
-`tools/backup/package.py --age-archive FILE --output NEW_DIRECTORY` assembles an
-offline bundle. Obtain the exact age v1.3.2 Linux amd64 archive identified in
-`tools/backup/licenses.json` through your approved artifact acquisition process.
-The packager fails closed on archive/binary/notice hashes. It retains BSD-3-Clause
-notices for every module in the actual Go binary build information, including the
-Go runtime. It does not install anything. Review and install the bundle using your
-existing deployment admission procedure, e.g. `/opt/meos-backup`; host Python is
-already an existing deployment prerequisite. This is not production admission.
+### Install from source
+
+The default distribution contains MeOS source and an installer, not an age binary:
+
+```sh
+python3 tools/backup/package.py --output /trusted/new-source-package
+python3 /trusted/new-source-package/install-age.py --output /trusted/new-age-runtime
+```
+
+These are staging commands, not service activation. Use a new absolute destination
+under an existing trusted parent (no symlinks or group/world-writable ancestors).
+The installer supports Linux amd64 only. It requires Python 3.11+, a Go launcher
+on PATH, HTTPS access to `proxy.golang.org` and `sum.golang.org`, and 1200 MiB of
+build space **in addition to** a 5 GiB free-space reserve. If Go is absent, the
+agent may install it through supported host tools within existing authority;
+the installer never invokes a package manager or changes global Go configuration.
+
+`source-lock.json` pins age v1.3.2, every linked module's version/checksum/license
+hash, and Go 1.27.0. Go's checksum database verifies downloads. The installer uses
+isolated temporary caches and a clean environment, checks the actual module and
+compiler licenses, builds both executables, and rejects unexpected linked modules,
+versions or replacements. It checks Go build metadata rather than trusting
+`age --version`. The resulting `age-admission.json` records provenance and SHA-256
+hashes of both executables and retained notices. The source package contains no
+third-party executable or copied notices; the local build retains those notices
+for subsequent redistribution. Changing the language does not remove obligations
+for binaries you choose to redistribute.
+
+Review the installed receipt against the pinned release and record its digest in
+the installation ledger. Configure `age`, `ageAdmissionFile` and
+`ageAdmissionSHA256` from this admitted result. Keep the executables and receipt
+under a trusted, runtime-owner-owned directory; neither can be group/world
+writable. The backup runner compares the receipt with the independently pinned
+configuration digest and checks the executable hash before stopping writers and
+before every encryption/decryption. **Do not accept a changed executable by merely
+recalculating its hash.** The receipt is a local admission record, not a vendor
+signature; the reviewed installer, source lock and trusted host form its trust root.
+
+### Reuse, inspect and repair
+
+An existing installation from this source policy can be reused offline, without Go:
+
+```sh
+python3 install-age.py --output /trusted/new-age-runtime \
+  --reuse-from /trusted/admitted-runtime \
+  --admission-sha256 REPLACE_WITH_INDEPENDENTLY_TRUSTED_RECEIPT_SHA256
+python3 install-age.py --output /trusted/new-age-runtime --check \
+  --admission-sha256 REPLACE_WITH_INDEPENDENTLY_TRUSTED_RECEIPT_SHA256
+```
+
+The reuse digest must come from the prior installation ledger or reviewed artifact
+admission, not from an untrusted binary's adjacent receipt. Arbitrary PATH binaries,
+old bundled-archive binaries without a source receipt, and `--version` alone are
+not supported admission mechanisms. Build the pinned source if provenance is absent.
+An environment-specific implementation is possible, but is not automatically
+admitted: preserve the age format and qualify encryption, tamper rejection,
+restores, provenance and licensing before adding it to the supported policy.
+
+An unchanged normal rerun validates the existing directory without writing,
+downloading, rebuilding or changing services. `--check` is read-only even when the
+directory is absent; it reports failure and does not create a lock or cache. Use
+the ledger digest for anchored inspection. Missing or changed installed files fail
+closed. Repair explicitly by building into a **new** directory, validating it, and
+switching only the backup configuration under installation authority. Never
+regenerate an existing recovery key or overwrite unrelated planning/client state.
+
+A destination-specific lock rejects concurrent installers. Construction occurs in
+a separate temporary directory, and the complete verified runtime is published
+with one rename. A failed build leaves the destination unselected. After a hard
+interruption, inspect the destination: verify it if present; otherwise rerun.
+Abandoned `.NAME.build-*` directories are not installed state; remove only confirmed
+inactive build staging within cleanup authority. Do not replay backup execution,
+key creation, uploads or scheduler activation merely because installation retried.
+
+The source packager and age installer do not change `/etc/meos`, recovery keys,
+credentials, service units, schedules, application data, or operating skills. They
+do not grant production deployment or backup execution authority.
 
 The release stager now requires the exact backup helper hash in `helperFiles`.
 `calendar-upgrade.py` additionally requires `backupToolSHA256` in its exact upgrade
@@ -61,7 +131,7 @@ preserves existing objects. Do not disable to conceal a known error.
    units are selected, explicitly excluding unrelated host units/symlinks. All
    five must be real files.
    Keep installation changes mutually exclusive with backups.
-3. Generate an age identity using the bundled `runtime/age-keygen`; pass only its
+3. Generate an age identity using the admitted runtime’s `age-keygen` after anchored `--check`; pass only its
    public recipient in configuration. Keep the private identity in a root-owned
    mode-0600 file outside all backed-up roots. Escrow a second copy offline, outside
    this host and bucket. **Losing this key loses every backup.** This runner needs

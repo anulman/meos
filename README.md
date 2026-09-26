@@ -64,7 +64,7 @@ Run `pnpm contract:check` to check generated-contract drift.
 
 ## Optional recovery tooling
 
-The native/Calendar deployment has a host-side [backup and recovery guide](docs/BACKUP-RECOVERY.md). No bucket means silent no-op; no service, cloud resource, or policy is enabled by this repository.
+The native/Calendar deployment has a host-side [backup and recovery guide](docs/BACKUP-RECOVERY.md). The source-only package builds pinned age encryption locally or reuses an admitted runtime; Go is a build dependency, not a runtime dependency. Bootstrap covers repeat installation, inspection and scoped repair. No bucket means silent no-op; no service, cloud resource, or policy is enabled by this repository.
 
 ## Native agent notification client (source candidate)
 

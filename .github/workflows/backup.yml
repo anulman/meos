@@ -1,0 +1,33 @@
+name: Backup source qualification
+on:
+  pull_request:
+    paths: ['tools/backup/**', 'scripts/calendar-upgrade.py', 'public/skills/meos-bootstrap/**', '.github/workflows/backup.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.0'
+          cache: false
+      - name: Prepare isolated qualification storage
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y bubblewrap
+          sudo install -d -m 755 -o "$(id -u)" -g "$(id -g)" /opt/meos-backup-proof
+      - name: Build pinned source with checksum and license gates
+        run: python3 tools/backup/install-age.py --output /opt/meos-backup-proof/runtime
+      - name: Qualify offline lifecycle and encrypted recovery
+        env:
+          MEOS_TEST_STAGE_PARENT: /opt/meos-backup-proof
+        run: sh tools/backup/test-isolated.sh /opt/meos-backup-proof/runtime
+      - name: Verify source-only package
+        run: |
+          python3 tools/backup/package.py --output /opt/meos-backup-proof/package
+          test ! -e /opt/meos-backup-proof/package/runtime
+          python3 /opt/meos-backup-proof/package/meos-backup.py --config /nonexistent backup
