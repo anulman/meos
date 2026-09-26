@@ -19,15 +19,15 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y bubblewrap
-          sudo install -d -m 755 -o "$(id -u)" -g "$(id -g)" /opt/meos-backup-proof
+          sudo install -d -m 755 -o "$(id -u)" -g "$(id -g)" /meos-backup-proof
       - name: Build pinned source with checksum and license gates
-        run: python3 tools/backup/install-age.py --output /opt/meos-backup-proof/runtime
+        run: python3 tools/backup/install-age.py --output /meos-backup-proof/runtime
       - name: Qualify offline lifecycle and encrypted recovery
         env:
-          MEOS_TEST_STAGE_PARENT: /opt/meos-backup-proof
-        run: sh tools/backup/test-isolated.sh /opt/meos-backup-proof/runtime
+          MEOS_TEST_STAGE_PARENT: /meos-backup-proof
+        run: sh tools/backup/test-isolated.sh /meos-backup-proof/runtime
       - name: Verify source-only package
         run: |
-          python3 tools/backup/package.py --output /opt/meos-backup-proof/package
-          test ! -e /opt/meos-backup-proof/package/runtime
-          python3 /opt/meos-backup-proof/package/meos-backup.py --config /nonexistent backup
+          python3 tools/backup/package.py --output /meos-backup-proof/package
+          test ! -e /meos-backup-proof/package/runtime
+          python3 /meos-backup-proof/package/meos-backup.py --config /nonexistent backup
