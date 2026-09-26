@@ -9,7 +9,6 @@ import { createNodeWebHandler } from '../backend/node-web-server.mjs';
 const origin = 'https://meos.example.test';
 const ownerId = 'synthetic-owner';
 const prefix = '/api/meos/v1/calendar/';
-const webhook = '/api/calendar/google/notifications';
 const session = { user: { id: ownerId }, csrf: 'synthetic-csrf' };
 function fixture(options = {}) {
   const calls = [];
@@ -18,14 +17,12 @@ function fixture(options = {}) {
     return Response.json(options.session ?? session, { status: options.sessionStatus ?? 200 });
   };
   const service = {
-    status: async context => { calls.push(['status', context]); return { state: 'connected', subscriptionsActive: true, accessToken: 'never-return' }; },
+    status: async context => { calls.push(['status', context]); return { state: 'connected', syncActive: true, accessToken: 'never-return' }; },
     connect: async context => { calls.push(['connect', context]); return { authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?state=opaque', refreshToken: 'never-return' }; },
     disconnect: async context => { calls.push(['disconnect', context]); },
-    enqueueNotification: async value => { calls.push(['enqueue', value]); },
     ...options.service,
   };
-  const route = createCalendarRoutes({ origin, ownerId, upstream, service: options.unconfigured ? undefined : service,
-    verifyWebhook: options.verifyWebhook ?? (async request => request.headers.get('x-goog-channel-token') === 'synthetic-secret' ? { channel: 'verified' } : null) });
+  const route = createCalendarRoutes({ origin, ownerId, upstream, service: options.unconfigured ? undefined : service });
   return { route, calls, upstream };
 }
 function request(action, options = {}) {
@@ -40,7 +37,7 @@ test('calendar status is owner-authenticated and response excludes secrets', asy
   const { route, calls } = fixture();
   const response = await route(request('status', { headers: { authorization: 'Bearer forged', 'x-owner-id': 'forged' } }));
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { state: 'connected', primary: { direction: 'import_only' }, managed: { direction: 'bidirectional' }, subscriptionsActive: true });
+  assert.deepEqual(await response.json(), { state: 'connected', primary: { direction: 'import_only' }, managed: { direction: 'bidirectional' }, syncActive: true });
   assert.equal(calls[0][1].url, origin + '/api/meos/v1/session');
   assert.deepEqual([...calls[0][1].headers], [['cookie', 'synthetic=session']]);
   assert.deepEqual(calls[1], ['status', { ownerId }]);
@@ -101,27 +98,6 @@ test('calendar service errors never disclose provider secrets', async () => {
   assert.equal(response.status, 503);
   assert.deepEqual(await response.json(), { error: 'calendar_unavailable' });
 });
-test('calendar webhook requires independent validation without a native session', async () => {
-  const { route, calls } = fixture();
-  assert.equal((await route(request(webhook))).status, 403);
-  assert.equal(calls.length, 0);
-  assert.equal((await route(request(webhook, { headers: { 'x-goog-channel-token': 'synthetic-secret' } }))).status, 204);
-  assert.deepEqual(calls, [['enqueue', { channel: 'verified' }]]);
-});
-test('calendar webhook rejects wrong methods and body before verification', async () => {
-  let verified = 0;
-  const { route } = fixture({ verifyWebhook: async () => { verified++; return {}; } });
-  assert.equal((await route(request(webhook, { method: 'GET' }))).status, 405);
-  assert.equal((await route(request(webhook, { body: 'unexpected' }))).status, 503);
-  assert.equal(verified, 0);
-});
-test('calendar webhook does not acknowledge failed durable enqueue', async () => {
-  const { route } = fixture({ service: { enqueueNotification: async () => { throw new Error('secret'); } } });
-  const result = await route(request(webhook, { headers: { 'x-goog-channel-token': 'synthetic-secret' } }));
-  assert.equal(result.status, 503);
-  assert.deepEqual(await result.json(), { error: 'notification_unavailable' });
-});
-
 // Host integration invokes the real Node adapter without listening on a network.
 async function hostCall(handler, pathname, method = 'GET', headers = {}) {
   const req = Readable.from([]);
@@ -135,18 +111,6 @@ async function hostCall(handler, pathname, method = 'GET', headers = {}) {
   await handler(req, res);
   return res;
 }
-test('host allows only exact verified POST webhook before Access', async () => {
-  const { route, upstream } = fixture();
-  let checked = 0;
-  const handler = createNodeWebHandler({ origin, root: '/tmp', upstream, calendarRoutes: route,
-    accessOwner: { check() { checked++; return new Response(null, { status: 401 }); } } });
-  assert.equal((await hostCall(handler, webhook, 'POST', { 'x-goog-channel-token': 'synthetic-secret' })).status, 204);
-  assert.equal(checked, 0);
-  assert.equal((await hostCall(handler, webhook, 'GET')).status, 405);
-  assert.equal((await hostCall(handler, webhook + '/extra', 'POST')).status, 401);
-  assert.equal((await hostCall(handler, prefix + 'connect', 'POST')).status, 401);
-  assert.equal(checked, 2);
-});
 test('host owner checks precede calendar service and native CSRF still required', async () => {
   const { route, upstream } = fixture();
   const handler = createNodeWebHandler({ origin, root: '/tmp', upstream, calendarRoutes: route,
@@ -170,3 +134,4 @@ test('Google callback never bypasses external Access',async()=>{
  const req=Readable.from([]);req.url='/api/calendar/google/callback?state=synthetic&code=synthetic';req.method='GET';req.headers={host:new URL(origin).host};const res={headersSent:false,writeHead(status){this.status=status},end(){}};
  await handler(req,res);assert.equal(res.status,403);assert.equal(reached,false);
 });
+test('removed Google notification URL has no route and never bypasses Access',async()=>{const f=fixture();assert.equal(await f.route(request('/api/calendar/google/notifications')),undefined);let reached=false;const handler=createNodeWebHandler({origin,root:'/tmp',upstream:f.upstream,accessOwner:{check:()=>new Response(null,{status:403})},calendarRoutes:async()=>{reached=true}});assert.equal((await hostCall(handler,'/api/calendar/google/notifications','POST')).status,403);assert.equal(reached,false)});

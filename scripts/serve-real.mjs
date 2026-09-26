@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Socket-activated, network-isolated production proxy. Configuration contains no credentials.
 import {createCalendarRoutes} from '../backend/calendar-routes.mjs'
-import {createCalendarRpcClient,calendarNotificationHeaders} from '../backend/calendar-rpc.mjs'
+import {createCalendarRpcClient} from '../backend/calendar-rpc.mjs'
 import fs from 'node:fs'
 import http from 'node:http'
 import {createAccessOwner} from '../backend/access-owner.mjs'
@@ -13,5 +13,5 @@ const upstream=unixUpstream({origin:config.origin,socketPath:'/run/meos/backend.
 const probe=await upstream(new Request(config.origin+'/api/meos/v1/instance'));const identity=await probe.json();if(!probe.ok||identity.environment!=='production'||identity.instanceId!==config.instanceId)throw Error('Production instance identity mismatch')
 const accessOwner=createAccessOwner({origin:config.origin,policy:config.access,owner:JSON.parse(fs.readFileSync('/run/meos/owner.json','utf8')),readKeys:()=>JSON.parse(fs.readFileSync('/run/meos/access-public/keys.json','utf8')),upstream})
 const calendarService=fs.existsSync('/run/meos/calendar/control.sock')?createCalendarRpcClient({socketPath:'/run/meos/calendar/control.sock',ownerId:config.access.ownerId}):undefined
-const calendarRoutes=createCalendarRoutes({origin:config.origin,upstream,ownerId:config.access.ownerId,service:calendarService,verifyWebhook:calendarNotificationHeaders})
+const calendarRoutes=createCalendarRoutes({origin:config.origin,upstream,ownerId:config.access.ownerId,service:calendarService})
 http.createServer(createNodeWebHandler({origin:config.origin,root:'/app/client',upstream,accessOwner,calendarRoutes})).listen({fd:3})

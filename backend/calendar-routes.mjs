@@ -4,7 +4,6 @@ import {randomBytes} from 'node:crypto';
 const FLOW_COOKIE='__Host-meos-calendar-flow';
 const flowCookie=(value,age=600)=>`${FLOW_COOKIE}=${value}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${age}`;
 const PREFIX = '/api/meos/v1/calendar/';
-const WEBHOOK = '/api/calendar/google/notifications';
 const GOOGLE_AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
 const STATES = new Set(['unconfigured', 'disconnected', 'connecting', 'connected', 'needs_consent', 'error']);
 const json = (status, body, extra = {}) => new Response(JSON.stringify(body), {
@@ -34,22 +33,20 @@ function publicStatus(value) {
     state: value.state,
     primary: { direction: 'import_only' },
     managed: { direction: 'bidirectional' },
-    subscriptionsActive: value.subscriptionsActive === true,
+    syncActive: value.syncActive === true,
   };
 }
 
 /**
  * Ports:
  * upstream(Request) -> native Response (session requests forward only Cookie).
- * service.status({ownerId}) -> {state, subscriptionsActive};
+ * service.status({ownerId}) -> {state, syncActive};
  * service.connect({ownerId}) -> {authorizationUrl};
  * service.disconnect({ownerId, retainData:true}) -> void;
- * service.enqueueNotification(validated) -> void, resolves only after durable enqueue.
- * verifyWebhook(Request) -> trusted opaque notification, or null on rejection.
  * Callback is intentionally not handled: host must bind it to verified Access identity
  * and the one-use OAuth state transaction, including when the native session expires.
  */
-export function createCalendarRoutes({ origin, upstream, service, verifyWebhook, ownerId }) {
+export function createCalendarRoutes({ origin, upstream, service, ownerId }) {
   if (new URL(origin).origin !== origin || typeof upstream !== 'function' || !ownerId) {
     throw new Error('invalid_calendar_route_configuration');
   }
@@ -71,20 +68,9 @@ export function createCalendarRoutes({ origin, upstream, service, verifyWebhook,
       } catch {}
       return new Response(null,{status:303,headers:{location:'/settings?calendar='+result,'cache-control':'no-store','set-cookie':flowCookie('',0),'referrer-policy':'no-referrer'}});
     }
-    if (url.pathname === WEBHOOK) {
-      if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' }, { allow: 'POST' });
-      if (!verifyWebhook || !service?.enqueueNotification) return failure(503, 'calendar_unconfigured');
-      try {
-        await emptyBody(request);
-        const notification = await verifyWebhook(request);
-        if (!notification) return failure(403, 'invalid_notification');
-        await service.enqueueNotification(notification);
-        return new Response(null, { status: 204, headers: { 'cache-control': 'no-store' } });
-      } catch { return failure(503, 'notification_unavailable'); }
-    }
     const action = url.pathname.startsWith(PREFIX) ? url.pathname.slice(PREFIX.length) : '';
-    if (!['status', 'connect', 'disconnect'].includes(action)) return undefined;
-    const method = action === 'status' ? 'GET' : 'POST';
+    if (!['status', 'connect', 'disconnect','events','editEvent'].includes(action)) return undefined;
+    const method = ['status','events'].includes(action) ? 'GET' : 'POST';
     if (request.method !== method) return json(405, { error: 'method_not_allowed' }, { allow: method });
     try {
       const headers = new Headers();
@@ -100,11 +86,13 @@ export function createCalendarRoutes({ origin, upstream, service, verifyWebhook,
             typeof session.csrf !== 'string' || !session.csrf || request.headers.get('x-csrf-token') !== session.csrf) {
           return failure(403, 'csrf_rejected');
         }
-        try { await emptyBody(request); } catch { return failure(400, 'invalid_body'); }
+        try { if(action!=='editEvent')await emptyBody(request); } catch { return failure(400, 'invalid_body'); }
       }
       const context = Object.freeze({ ownerId });
       if (action === 'status') return json(200, publicStatus(service ? await service.status(context) : { state: 'unconfigured' }));
       if (!service) return failure(503, 'calendar_unconfigured');
+      if(action==='events')return json(200,await service.events(context));
+      if(action==='editEvent'){let input;try{const raw=await request.text();if(raw.length>20000)throw Error('too_large');input=JSON.parse(raw);if(!input||typeof input!=='object'||Array.isArray(input))throw Error('invalid')}catch{return failure(400,'invalid_event')}return json(200,await service.editEvent({...input,...context}))}
       if (action === 'connect') {
         const session=randomBytes(32).toString('base64url');
         const result = await service.connect({...context,session});

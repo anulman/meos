@@ -1,66 +1,76 @@
-# Calendar connection increment — qualification, not deployment
+# Calendar polling candidate — not deployed
 
-This increment adds the production-host Calendar route seam, Settings connection
-card, cookie-bound OAuth callback, private SQLite service, fixed-target Google
-broker, private Unix RPC, and separately sandboxed sidecar templates.
+Telegram41897 replaces Google watch notifications with 60-second incremental
+polling (±5 seconds jitter; exponential failure backoff capped near 15 minutes).
+There is no notification route, Access exception, watch registration, renewal,
+channel stop, or alternate Google update transport. Agent notification long
+polling is unrelated and preserved.
 
-The frozen OAuth callback is `/api/calendar/google/callback`; Google's independent
-notification endpoint is `/api/calendar/google/notifications`. Callback requests
-remain Access-gated. Only the exact notification POST bypasses Access, and it
-must pass channel/token/resource validation before durable acknowledgement.
+## Implemented
 
-## Evidence
+- Browser OAuth callback `/api/calendar/google/callback`, private durable tokens,
+  one-use session binding, refresh fencing and protected Unix RPC.
+- App-created MeOS calendar; primary import is read-only. Both collections use
+  persisted incremental tokens. Complete pages and token commit atomically;
+  failed pages retain the preceding snapshot. HTTP410 performs a full resync.
+- Durable poll ownership prevents overlap across processes; every page and commit
+  checks lease and connection generation. Disconnect fences in-flight commits.
+- Recurrence instances for current/next-week planner views use Google's expansion
+  endpoint in a moving -32/+64-day window. Full collection sync remains unbounded
+  by that window. Cancelled events do not render.
+- Calendar events appear in the planner. Managed event create/edit/delete uses a
+  durable outbox, generated insert IDs, conditional ETags and baseline reads.
+  Uncertain writes reconcile before retry; remote change/cancellation retains a
+  local conflict draft instead of overwriting or resurrecting the remote event.
+- UI rereads Calendar every15 seconds; provider polling remains every60 seconds.
+- Renderer accepts a configurable canonical HTTPS origin and install-specific
+  credentials from Varlock's environment, never a shell-profile fallback.
+  Copy `deployment/calendar.env.schema` to the private install directory as
+  `.env.schema`; provision the three named values privately; invoke the reviewed
+  renderer under `varlock run --path <private-install-directory>/ -- python3 ...`.
+  No installation shares Aidan's OAuth client implicitly. Callback registration
+  must exactly match that installation's origin plus callback path.
 
-- Trusted no-network backend test launcher: all Calendar and existing tests.
-- `.qualification/run-evidence-candidate-release.json`: built client, 26 existing
-  browser checks, 6 Access checks, 4 production-entrypoint checks.
-- `.qualification/candidate-calendar-browser-evidence.json`: 4 additional checks
-  exercise the real entrypoint, Settings, RPC, durable OAuth service, callback,
-  reload/disconnect and rejected unbound callback with a synthetic Google provider.
-- `.qualification/calendar-isolation-proof.json`: systemd allow/default-deny
-  enforcement, with an independently reachable synthetic denied-peer positive
-  control and permitted peer. No production endpoint or credential used.
-- `.qualification/calendar-lifecycle-proof.json`: actual rendered temporary
-  sidecar units, UID 61004/capability drop, SQLite persistence across restart,
-  owner rejection, disconnect and journal credential-denial check.
+## Qualification
 
-## Qualification findings resolved
+Use `sudo python3 scripts/backend-test-runner.py` for credential-free, no-network
+backend tests. `sudo python3 scripts/integration-runner.py candidate-release`
+asserts the disposable acceptance identity/network/storage before license gate,
+TypeScript, build and real browser entrypoint checks. Synthetic Calendar provider
+only; no test contacts Google. `calendar-lifecycle-proof.py` renders temporary
+isolated units and proves UID/capability drop and SQLite restart persistence.
+Receipts in `.qualification/` are exact-source artifacts, not deployment claims.
 
-The VPS cannot resolve unregistered numeric identities in systemd `User` or
-`SocketUser`. Service privilege drop uses the established trusted `setpriv`
-pattern; the root-owned socket is chowned to the reserved web UID after creation.
-The service exposes only its private state at `/data`, since binding a child below
-an inaccessible `/var/lib` still denies traversal. These were found using
-synthetic lifecycle runs, before any production change.
+## Remaining objective, not implied by this candidate
 
-Browser tests must wait for the specific application response or rendered state,
-not global network idleness. The routine-race test now awaits the occurrences
-response following release of its deliberately blocked request; its bounded
-instance-count and persistence assertions are preserved.
+Existing planner tasks/occurrences are not automatically exported into managed
+Google events, and Google managed changes are not yet applied to those existing
+domain entities. Calendar events currently have a separate managed editing
+surface. The sidecar deliberately has no planner database/socket/password; a
+scoped durable planner bridge is still required before claiming full planner
+bidirectional integration. Location and free-text duration intent for existing
+planner entities are also outstanding. Agent notification runtime follows that
+Calendar completion serially, with a rolling7-day future horizon.
 
-## Remaining release boundary
+Varlock schema/launch documentation is provided, but the Varlock binary is not
+installed or qualified in this candidate. No dependency was silently introduced.
+Real Google client/consent, live import, writes and polling remain unverified.
 
-Nothing here is installed or deployed. Preserve the existing production database,
-volume, Access policy, rollback release and owner. Independently review the exact
-source and staging helper changes, admit the release, render runtime config from
-the protected dedicated-client handoff without printing credentials, and qualify
-its exact staged closure before installing the sidecar/web socket binding.
+## Review and preserved-data staging
 
-`calendar-render.py` only renders a new private bundle; it never installs units.
-Its production hostname reflects the existing approved deployment; configurable
-public/Tailscale origins and Varlock belong to the authorized serial followup.
+1. Independently review the exact candidate; rerun isolated candidate-release
+   checks after accepted changes. Freeze the source digest and git commit.
+2. Use existing `production-stage.py` admission flow; preserve the current release,
+   planner database, owner policy, rollback artifact and all volumes.
+3. Render a new private Calendar bundle using the reviewed release, existing
+   owner policy, and install-owned Varlock configuration. Do not install from an
+   unreviewed or qualification-only manifest.
+4. Install only the qualified Calendar sidecar/socket and reviewed web closure;
+   retain existing Access enforcement. No Google notification ingress is needed.
+5. Browser Connect → Google consent → Settings shows actual completed pull state;
+   verify primary read-only events and managed create/update/cancel roundtrip.
+   Do not label existing task/occurrence synchronization complete until its bridge
+   has independent and deployed-path evidence.
 
-## Not yet implemented / not implied by connection success
-
-Full primary collection ingestion and visible-window expansion; durable
-incremental page/sync-token consumption and acknowledgement; managed calendar
-outbox/baseline reads, bidirectional merge/conflicts/deletion semantics; automatic
-planner UI updates; full sync deployed-path qualification. Watch signals are
-queued durably but no production pull consumer exists yet. `subscriptionsActive`
-means both watch registrations exist, not that import or bidirectional sync has
-completed. Real Google client/consent and public webhook reachability remain
-unverified until the qualified deployed connection flow is exercised.
-
-The standalone agent-notification core remains separate and undeployed. Integrate
-INSTALL-AGENT-NOTIFICATIONS-41878 only after Calendar lands, preserving complete
-recipient/boundary-bucket rebuild on changed events.
+Sources: https://developers.google.com/workspace/calendar/api/guides/sync and
+https://developers.google.com/workspace/calendar/api/v3/reference/events/update.

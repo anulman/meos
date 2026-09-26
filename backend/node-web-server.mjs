@@ -14,12 +14,7 @@ export function createNodeWebHandler({origin,root,upstream,demo=false,accessOwne
   if(req.headers.host!==url.host||!req.url?.startsWith('/')||req.url.startsWith('//')){res.writeHead(400);res.end('Invalid request target');return}
   let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>150000){res.writeHead(413);res.end('Request too large');return}chunks.push(chunk)}
   const request=new Request(origin+req.url,{method:req.method,headers:req.headers,body:chunks.length?Buffer.concat(chunks):undefined});
-  const isCalendarWebhook=new URL(request.url).pathname==='/api/calendar/google/notifications';
-  // Only this exact POST route bypasses Access: its independent channel/token
-  // verification and durable queue acknowledgement belong to calendarRoutes.
-  const response=isCalendarWebhook&&calendarRoutes
-   ? (request.method==='POST'?(await calendarRoutes(request))??new Response(null,{status:503}):new Response(null,{status:405,headers:{Allow:'POST'}}))
-   : (accessOwner?.check(request))??(await accessOwner?.session(request))??(await calendarRoutes?.(request))??(await proxy(request))
+  const response=(accessOwner?.check(request))??(await accessOwner?.session(request))??(await calendarRoutes?.(request))??(await proxy(request))
   if(response){const headers=Object.fromEntries(response.headers);delete headers['set-cookie'];const cookies=response.headers.getSetCookie();if(cookies.length)headers['set-cookie']=cookies;res.writeHead(response.status,headers);res.end(Buffer.from(await response.arrayBuffer()));return}
   if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);res.end();return}
   const pathname=new URL(request.url).pathname;res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store')

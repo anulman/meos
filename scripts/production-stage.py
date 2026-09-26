@@ -35,7 +35,7 @@ def copy(source,relative,digest):
  assert source.is_file() and not source.is_symlink();data=source.read_bytes();assert hashlib.sha256(data).hexdigest()==digest
  target=out/relative;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data);os.chmod(target,0o555 if relative=='runtime/node/bin/node' else 0o444);files[relative]=digest
 for relative,digest in qualification['clientFiles'].items():copy(source/'dist/client'/relative,'client/'+relative,digest)
-closure=['access-owner','node-web-server','protected-proxy','body','domain','contract','timezones','scheduling','timezone-rules','calendar-routes','calendar-rpc','calendar-service','calendar-oauth','calendar-watch','calendar-durable-store','calendar-google-broker','calendar-pinned-fetch']
+closure=['access-owner','node-web-server','protected-proxy','body','domain','contract','timezones','scheduling','timezone-rules','calendar-routes','calendar-rpc','calendar-service','calendar-oauth','calendar-polling','calendar-events','calendar-durable-store','calendar-google-broker','calendar-pinned-fetch']
 for relative in ['backend/'+name+'.mjs' for name in closure]+['scripts/serve-real.mjs','scripts/serve-calendar.mjs']:
  copy(source/relative,relative,qualification['sourceFiles'][relative])
 helpers=['production-ready.py','production-web-exec.py','production-uid-check.py','production-access-keys.py','calendar-uid-check.py']

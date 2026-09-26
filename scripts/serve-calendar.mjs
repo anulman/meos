@@ -12,8 +12,8 @@ if(process.getuid()===0||process.env.LISTEN_FDS!=='1'||process.env.LISTEN_PID!==
 const broker=createGoogleBroker({...config,...secret,fetcher:createPinnedGoogleFetch(config.googlePins)});
 const store=openCalendarDurableStore({directory:'/data/private'});
 const service=createCalendarService({config:{...config,clientId:secret.clientId},store,broker});
-let running=false;
-async function tick(){if(running)return;running=true;try{const status=await service.status({ownerId:config.ownerId});if(status.state==='connected'){await service.initializeManagedCalendar();await service.maintainChannels()}}catch{/* Private errors are never logged. Public status stays explicit about subscriptions. */}finally{running=false}}
 http.createServer(createCalendarRpcHandler({service,ownerId:config.ownerId})).listen({fd:3});
-const timer=setInterval(()=>void tick(),30000);void tick();
-process.on('SIGTERM',()=>{clearInterval(timer);process.exit(0)});
+let stopped=false,timer;
+async function tick(){try{await service.poll()}catch{/* No credentials or raw provider errors in logs. */}finally{if(!stopped)timer=setTimeout(tick,1000)}}
+void tick();
+process.on('SIGTERM',()=>{stopped=true;clearTimeout(timer);process.exit(0)});

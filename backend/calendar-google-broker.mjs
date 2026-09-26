@@ -3,10 +3,11 @@
 // never caller URLs; deployment must also prove network-level isolation.
 import {createPublicKey,verify} from 'node:crypto';
 const bounded = (v,max=16384) => {if(typeof v!=='string'||!v||v.length>max||/[\u0000-\u001f\u007f]/.test(v))throw Error('invalid_input');return v};
-export function createGoogleBroker({clientId,clientSecret,redirectUri,notificationUrl,fetcher=fetch}) {
- bounded(clientId);bounded(clientSecret);bounded(redirectUri);bounded(notificationUrl);
- async function request(url,{method='GET',body,accessToken,form=false}={}) {
+export function createGoogleBroker({clientId,clientSecret,redirectUri,fetcher=fetch}) {
+ bounded(clientId);bounded(clientSecret);bounded(redirectUri);
+ async function request(url,{method='GET',body,accessToken,form=false,etag}={}) {
   const headers={Accept:'application/json'};
+  if(etag)headers['If-Match']=bounded(etag);
   if(accessToken)headers.Authorization='Bearer '+bounded(accessToken);
   if(body)headers['Content-Type']=form?'application/x-www-form-urlencoded':'application/json';
   let response;try{response=await fetcher(url,{method,headers,body:body?(form?new URLSearchParams(body).toString():JSON.stringify(body)):undefined,redirect:'error',signal:AbortSignal.timeout(15000)})}catch{throw Error('google_unavailable')}
@@ -28,7 +29,11 @@ export function createGoogleBroker({clientId,clientSecret,redirectUri,notificati
    return {email:claims.email,emailVerified:true};
   },
   createCalendar:({accessToken,summary})=>{if(summary!=='MeOS')throw Error('invalid_calendar');return api('/calendars',{method:'POST',accessToken,body:{summary}})},
-  watch:({calendarId,id,type,address,token,expiration,accessToken})=>{if(address!==notificationUrl||type!=='web_hook'||!/^\d+$/.test(expiration))throw Error('invalid_watch');return api(calendarPath(calendarId)+'/events/watch',{method:'POST',accessToken,body:{id:bounded(id,64),type,address,token:bounded(token,128),expiration}})},
-  stop:({id,resourceId,accessToken})=>api('/channels/stop',{method:'POST',accessToken,body:{id:bounded(id,64),resourceId:bounded(resourceId,2048)}}),
+  getEvent:({calendarId,eventId,accessToken})=>api(calendarPath(calendarId)+'/events/'+encodeURIComponent(bounded(eventId)),{accessToken}),
+  insertEvent:({calendarId,event,accessToken})=>{if(calendarId==='primary')throw Error('primary_read_only');return api(calendarPath(calendarId)+'/events',{method:'POST',accessToken,body:event})},
+  patchEvent:({calendarId,eventId,event,etag,accessToken})=>{if(calendarId==='primary'||!etag)throw Error('invalid_write');return api(calendarPath(calendarId)+'/events/'+encodeURIComponent(bounded(eventId)),{method:'PATCH',accessToken,etag,body:event})},
+  deleteEvent:({calendarId,eventId,etag,accessToken})=>{if(calendarId==='primary'||!etag)throw Error('invalid_write');return api(calendarPath(calendarId)+'/events/'+encodeURIComponent(bounded(eventId)),{method:'DELETE',accessToken,etag})},
+  listWindow:({calendarId,accessToken,timeMin,timeMax,pageToken})=>{const q=new URLSearchParams({singleEvents:'true',showDeleted:'false',maxResults:'2500',timeMin:bounded(timeMin),timeMax:bounded(timeMax)});if(pageToken)q.set('pageToken',bounded(pageToken));return api(calendarPath(calendarId)+'/events?'+q,{accessToken})},
+  listEvents:({calendarId,accessToken,syncToken,pageToken})=>{const q=new URLSearchParams({showDeleted:'true',singleEvents:'false',maxResults:'2500'});if(syncToken)q.set('syncToken',bounded(syncToken));if(pageToken)q.set('pageToken',bounded(pageToken));return api(calendarPath(calendarId)+'/events?'+q,{accessToken})},
  };
 }
