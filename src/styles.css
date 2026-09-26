@@ -27,28 +27,32 @@
 
 .notes-toolbar button[aria-pressed="true"]{background:var(--olive);color:white}.notes-toolbar button:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 
-/* Today is a compact agenda; Week and detail sheets retain their spacing. */
-.today-view .agenda-row{margin-bottom:10px}
-.today-view .agenda-row .task{min-height:76px;padding:10px 12px;gap:8px}
-.today-view .task-title{line-height:1.2}
-.today-view .task small{margin-top:4px;line-height:1.25}
-.today-view .task-kind{margin-bottom:3px!important}
-.today-view .routine-card{padding:10px 12px}
-.today-view .routine-card h2{line-height:1.2}
-.today-view .routine-card p{margin-top:4px;line-height:1.25}
-.today-view .routine-live{gap:8px}
-.today-view .check{width:44px;flex-basis:44px}
-.today-view .agenda-row>.time{padding-top:15px}
+/* Today, Week and Settings share compact cards; detail sheets retain their spacing. */
+:is(.today-view,.week-view,.settings-view) .agenda-row{margin-bottom:10px}
+:is(.today-view,.week-view,.settings-view) .task{min-height:76px;padding:10px 12px;gap:8px}
+:is(.today-view,.week-view,.settings-view) .task-title{line-height:1.2}
+:is(.today-view,.week-view,.settings-view) .task small{margin-top:4px;line-height:1.25}
+:is(.today-view,.week-view,.settings-view) .task-kind{margin-bottom:3px!important}
+:is(.today-view,.week-view,.settings-view) .routine-card{padding:10px 12px}
+:is(.today-view,.week-view,.settings-view) .routine-card h2{line-height:1.2}
+:is(.today-view,.week-view,.settings-view) .routine-card p{margin-top:4px;line-height:1.25}
+:is(.today-view,.week-view,.settings-view) .routine-live{gap:8px}
+:is(.today-view,.week-view,.settings-view) .check{width:44px;flex-basis:44px}
+:is(.today-view,.week-view,.settings-view) .agenda-row>.time{padding-top:15px}
 
 /* A single compact title/metadata block; actions remain 44px targets. */
-.today-view .agenda-row{margin-bottom:8px}
-.today-view .agenda-row .task{min-height:0;padding:6px 8px;gap:6px;border-radius:12px}
-.today-view .task-title{font-size:15px;line-height:1.2}
-.today-view .task-meta{font-size:11px;font-weight:400;margin:3px 0 0;line-height:1.2}
-.today-view .task-meta:empty{display:none}
-.today-view .routine-card{padding:8px;border-radius:12px}
-.today-view .routine-card h2{font-size:15px}
-.today-view .routine-card p{font-size:11px;margin-top:3px}
+:is(.today-view,.week-view,.settings-view) .agenda-row{margin-bottom:8px}
+:is(.today-view,.week-view,.settings-view) .task{min-height:0;padding:6px 8px;gap:6px;border-radius:12px}
+:is(.today-view,.week-view,.settings-view) .task-title{font-size:15px;line-height:1.2}
+:is(.today-view,.week-view,.settings-view) .task-meta{font-size:11px;font-weight:400;margin:3px 0 0;line-height:1.2}
+:is(.today-view,.week-view,.settings-view) .task-meta:empty{display:none}
+:is(.today-view,.week-view,.settings-view) .routine-card{padding:8px;border-radius:12px}
+:is(.today-view,.week-view,.settings-view) .routine-card h2{font-size:15px}
+:is(.today-view,.week-view,.settings-view) .routine-card p{font-size:11px;margin-top:3px}
 .agenda-progress{color:var(--muted);font-size:12px;margin:0 0 14px}
 .completed-tasks{margin-top:16px;border-top:1px solid var(--line)}
 .completed-tasks summary{cursor:pointer;color:var(--muted);font-size:13px;min-height:44px;display:list-item;padding:14px 0}
+
+:is(.week-view,.settings-view) .routine-edit{min-height:56px;padding:10px 12px}
+:is(.week-view,.settings-view) .routine-edit span{font-size:11px;margin-top:3px}
+.week-view .outcome-row{margin:8px 0}
