@@ -7,10 +7,28 @@ Linux and macOS, amd64 and arm64. Delivery is **at least once**, not exactly onc
 
 ## Installation
 
-Release archives contain a binary, Apache-2.0 project license, retained Go
-notices and service examples. Verify the pinned release's `SHA256SUMS` before
-installing its binary to `~/.local/bin/meos-agent`. Do not pipe a download into
-a shell. Source includes a release workflow; **no published release is implied**.
+The supported distribution is source-only. Install from a reviewed, pinned commit
+or version with Go (replace `REVIEWED_COMMIT_OR_VERSION` before execution):
+
+```sh
+go install github.com/anulman/meos/clients/meos-agent@REVIEWED_COMMIT_OR_VERSION
+```
+
+Before this branch is merged, select its reviewed commit explicitly, not `latest`.
+The binary is installed in `GOBIN`, or `$(go env GOPATH)/bin` when `GOBIN` is unset.
+Alternatively, from a verified checkout, run `go install .` in
+`clients/meos-agent`. Use a supported Go compiler satisfying `go.mod`; qualification
+uses the exact compiler in `toolchain.json`. No precompiled consumer archives are
+published by this workflow.
+
+For another host/runtime, read `main.go` and the durable dispatch contract below
+and implement an equivalent client. Preserve authentication/refresh, bounded
+long polling and backoff, leases, stable event IDs, durable deduplication and
+handoff-before-ack, cancellation, retention-gap reconciliation, and restart
+recovery. Qualify that implementation before enabling it; reading the source is
+not compatibility evidence. Prefer installing this client when it fits the host.
+Bootstrap agents should choose one of these paths after discovering the host,
+then configure and supervise both the client and its durable dispatcher.
 
 Create a mode-0700 configuration directory and mode-0600 JSON files using a local
 editor or your secret manager. Never send tokens in chat or put them in argv.
@@ -44,7 +62,8 @@ meos-agent status /absolute/config.json
 
 `install` validates configuration and initializes private durable state; it does
 not silently modify your service manager. Copy/edit the included systemd user
-unit or launchd plist, then explicitly enable it using your platform's normal
+unit or launchd plist, replacing its executable path with the installed binary
+(`GOBIN` or `$(go env GOPATH)/bin`), then explicitly enable it using your platform's normal
 service-management commands. Only one process may own a state directory. Use a
 single installation per agent identity; the server additionally enforces a lease.
 Stop the daemon before `doctor`, `configure` or `ack-gap`; local `status` works
@@ -101,15 +120,18 @@ empty responses wait at least1s after the server's bounded long poll.
 
 ## Building and qualification
 
-`toolchain.json` pins the exact Go1.27.1 Linux build archive and its SHA256, plus
-reviewed permissive notice hashes. The client has no external modules. In an
-isolated environment with the pinned compiler, run `go test ./...`, then
-`python3 scripts/agent-client-release.py` from the repo root. The executable gate
-rejects unexpected toolchain notice hashes or non-stdlib dependencies. Builds
-use CGO=0, trimpath, no VCS injection and deterministic archives/checksums.
+`toolchain.json` pins the exact qualification compiler archive and reviewed
+permissive license hashes. The client has no external modules. CI runs Go tests
+and the fail-closed dependency/toolchain-license gate, without uploading binaries.
+The private qualification builder remains available for native transport proofs;
+its temporary archives are test inputs, not consumer release artifacts. It copies
+required notices from the verified local Go toolchain at build time rather than
+vendoring them in this source tree. Keep notices with any binary you redistribute.
 
 Host qualification uses `sudo python3 scripts/agent-client-test-runner.py`:
 private network namespace, synthetic loopback TLS only, protected host paths,
-exclusive test UID, empty environment. Never execute tests with production
+exclusive test UID, empty environment. Add `--check-only` for the license/dependency
+gate without building archives, or `--release` only for private qualification
+fixtures. Never execute tests with production
 credentials or access. Deployment and actual release publication are separate
 gates. Cross-compilation is not evidence of execution on macOS/arm64.

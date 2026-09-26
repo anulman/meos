@@ -22,7 +22,9 @@ def verify():
  return pathlib.Path(v['Mountpoint'])
 root=verify();credentials=json.loads((q/'synthetic-credentials.json').read_text());assert credentials['runId']==run
 users={u['email'].split('-')[0]:u for u in credentials['users']};agent=users['notification'];import uuid
-manifest_path=repo/'.qualification/hosted-client-36274636244/manifest.json';manifest=json.loads(manifest_path.read_text());archive_name=next(n for n in manifest['archives'] if n.endswith('-linux-amd64.tar.gz'));archive=manifest_path.parent/archive_name
+manifest_path=pathlib.Path(admission['clientManifestPath']).resolve();assert manifest_path.is_relative_to(repo/'.qualification') and manifest_path.name=='manifest.json'
+assert digest(manifest_path)==admission['clientManifestSHA256']
+manifest=json.loads(manifest_path.read_text());archive_name=next(n for n in manifest['archives'] if n.endswith('-linux-amd64.tar.gz'));assert pathlib.Path(archive_name).name==archive_name;archive=manifest_path.parent/archive_name
 assert digest(archive)==manifest['archives'][archive_name]==admission['clientArchiveSHA256']
 for relative,sha in manifest['sourceFiles'].items():assert digest(repo/relative)==sha
 out=q/('client-live-'+str(time.time_ns()));out.mkdir(mode=0o700);private=out/'private';private.mkdir(mode=0o700);result=out/'result';result.mkdir(mode=0o700);os.chown(result,61005,61005)

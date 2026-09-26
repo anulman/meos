@@ -66,6 +66,7 @@ Run `pnpm contract:check` to check generated-contract drift.
 
 See [native client installation and durable dispatch contract](clients/meos-agent/README.md)
 and [authenticated long-poll architecture](docs/agent-notifications/ARCHITECTURE.md).
-The dependency-free Go client is distributed alongside agent operating guidance;
-agents should use it rather than recreate polling loops. This source does not
-claim the machine endpoint is deployed or any binary release is published.
+The dependency-free Go client is distributed as source. Install a reviewed commit
+with Go, or use its source and documented durable dispatch contract to build and
+qualify a client for another environment. See the client guide for bootstrap
+selection and supervision. This source does not claim the endpoint is deployed.
