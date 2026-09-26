@@ -86,7 +86,7 @@ shutil.copyfile(work/'meos-guest.wasm',target/'data/wasm/meos.wasm')
 (target/'data/config.textproto').write_text('server { application_name: "MeOS" site_url: "https://meos.aidans.computer" }\nauth { disable_password_auth: true enable_otp_signin: false enable_anonymous_signin: false }\n')
 # Add the reviewed append-only notification migration; never silently rewrite old schema.
 notification_migration='data/migrations/main/U1790380806__notifications.sql'
-for migration in (repo/'backend/migrations').glob('*.sql'):
+for migration in (work/'backend/migrations').glob('*.sql'):
  relative='data/migrations/main/'+migration.name
  if relative in expected:assert sha(migration)==expected[relative], 'Existing migration changed'
  else:assert relative==notification_migration, 'Unreviewed additive migration'
