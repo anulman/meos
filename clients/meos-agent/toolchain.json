@@ -1,0 +1,30 @@
+{
+  "version": "go1.27.1",
+  "download": "https://go.dev/dl/go1.27.1.linux-amd64.tar.gz",
+  "sha256": "63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445",
+  "license": "BSD-3-Clause; permissive bundled notices retained",
+  "licenses": {
+    "LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "src/cmd/compile/internal/ssa/_gen/vendor/golang.org/x/tools/LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "src/cmd/vendor/github.com/google/pprof/LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "src/cmd/vendor/github.com/google/pprof/third_party/svgpan/LICENSE": "154c946c17de61ca71d28e13673d76a5798e6e25995a7397fbae157afc8f62b4",
+    "src/cmd/vendor/github.com/ianlancetaylor/demangle/LICENSE": "b73277f7730993ef8e7f80aed83e5309762fed4d77eced982abb2c00657c074d",
+    "src/cmd/vendor/golang.org/x/arch/LICENSE": "8cda009bd927676a95ee7ce2dae921442ac4d9584d041b56ecfcba6839032f0b",
+    "src/cmd/vendor/golang.org/x/build/LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "src/cmd/vendor/golang.org/x/mod/LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "src/cmd/vendor/golang.org/x/sync/LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "src/cmd/vendor/golang.org/x/sys/LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "src/cmd/vendor/golang.org/x/telemetry/LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "src/cmd/vendor/golang.org/x/term/LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "src/cmd/vendor/golang.org/x/text/LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "src/cmd/vendor/golang.org/x/tools/LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "src/cmd/vendor/rsc.io/markdown/LICENSE": "2d36597f7117c38b006835ae7f537487207d8ec407aa9d9980794b2030cbc067",
+    "src/crypto/internal/boring/LICENSE": "56210f826b8f0fbac3160dfe55c97f4019eb6cdda3963b5a0eab8a8bdb62360e",
+    "src/runtime/testdata/testgoroutineleakprofile/goker/LICENSE": "f99df8ae6da6de047ed002d9dbe8682d9a19c88e9a7473abdadf3ac206621a85",
+    "src/vendor/golang.org/x/crypto/LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "src/vendor/golang.org/x/net/LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "src/vendor/golang.org/x/sys/LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "src/vendor/golang.org/x/text/LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+  },
+  "source": "https://go.googlesource.com/go/+/refs/tags/go1.27.1/"
+}

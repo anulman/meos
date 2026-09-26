@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0; replace /Users/USER, never place credentials here. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>Label</key><string>com.meos.agent</string>
+<key>ProgramArguments</key><array><string>/Users/USER/.local/bin/meos-agent</string><string>run</string><string>/Users/USER/.config/meos-agent/config.json</string></array>
+<key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
+<key>RunAtLoad</key><true/><key>ThrottleInterval</key><integer>30</integer>
+<key>Umask</key><integer>63</integer>
+</dict></plist>
