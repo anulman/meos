@@ -18,8 +18,8 @@ try {
 } finally {
   await rm(output, { recursive: true, force: true });
 }
-for (const module of ['react', 'react/jsx-runtime', './dates']) {
-  const resolved = module === './dates' ? new URL('../src/lib/dates.ts', import.meta.url).href : import.meta.resolve(module);
+for (const module of ['react', 'react/jsx-runtime', './dates', './config', '../../backend/scheduling.mjs']) {
+  const resolved = module === './dates' ? new URL('../src/lib/dates.ts', import.meta.url).href : module==='./config'?new URL('../src/lib/config.ts',import.meta.url).href:module==='../../backend/scheduling.mjs'?new URL('../backend/scheduling.mjs',import.meta.url).href:import.meta.resolve(module);
   compiled = compiled.replaceAll(`from '${module}'`, `from '${resolved}'`).replaceAll(`from "${module}"`, `from "${resolved}"`);
 }
 const { selectedWeekPeriod, projectScheduledTasks, projectRoutineOccurrences } =

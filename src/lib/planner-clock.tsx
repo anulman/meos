@@ -1,3 +1,5 @@
+import {getConfig} from './config'
+import {scheduledInstant} from '../../backend/scheduling.mjs'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { addDays, dateInZone, dayPeriod, millisecondsUntilNextDay, periodContains,
   routineDatesInPeriod, scheduleDisplayDate, weekPeriod, zonedInstant,
@@ -91,7 +93,7 @@ export function projectScheduledTasks<T extends ScheduledTaskLike>(tasks: readon
     let instant: number;
     try {
       if (typeof task.schedule.timezone !== 'string' || !task.schedule.timezone) return [];
-      instant = zonedInstant(task.schedule.date, task.schedule.time, task.schedule.timezone);
+      instant = getConfig().demo?zonedInstant(task.schedule.date, task.schedule.time, task.schedule.timezone):scheduledInstant({...task.schedule,time:task.schedule.time});
     } catch { return []; }
     const displayDate = dateInZone(instant, displayTimezone);
     if (!periodContains(period, displayDate)) return [];
