@@ -5,7 +5,7 @@ import { usePlannerClock } from '../lib/planner-clock'
 import { saveProject, saveTask } from '../lib/store'
 import { NotesEditor } from './NotesEditor'
 
-export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,children}:{kind:'task'|'project';resource:Task|Project;projects?:Project[];isNew?:boolean;onSaved:(resource:Task|Project)=>void;children?:ReactNode}) {
+export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNotesChange,children}:{kind:'task'|'project';resource:Task|Project;projects?:Project[];isNew?:boolean;onSaved:(resource:Task|Project)=>void;onNotesChange?:()=>void;children?:ReactNode}) {
  const clock=usePlannerClock()
  const [error,setError]=useState('')
  const [saving,setSaving]=useState(false)
@@ -51,7 +51,7 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,chil
     </>:<form.Field name="targetDate">{field=><label>Target date (optional)<input type="date" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>}
    </div>
   </details>
-  <section className="resource-section"><h2>Notes</h2><form.Field name="notes">{field=><NotesEditor value={field.state.value} onChange={(notes:Notes)=>field.handleChange(notes)}/>}</form.Field></section>
+  <section className="resource-section"><h2>Notes</h2><form.Field name="notes">{field=><NotesEditor value={field.state.value} onChange={(notes:Notes)=>{field.handleChange(notes);onNotesChange?.()}}/>}</form.Field></section>
   <section className="resource-section"><h2>Linked references</h2>
    <form.Field name="references">{field=><>
     {field.state.value.map((reference,index)=><div className="reference-row" key={reference.id}>
