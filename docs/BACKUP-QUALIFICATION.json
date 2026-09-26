@@ -1,10 +1,10 @@
 {
   "schema": 1,
-  "checkedAt": "2026-09-26T22:18:14.777339+00:00",
+  "checkedAt": "2026-09-26T22:19:15.626563+00:00",
   "baseline": "dcbf296",
   "status": "source-qualified-not-deployed",
   "checks": {
-    "isolatedSyntheticTests": 21,
+    "isolatedSyntheticTests": 23,
     "actualAge": "v1.3.2",
     "fakeS3Only": true,
     "networkNamespaceEgressDenied": true,
@@ -17,7 +17,8 @@
     "boundedGrowthAndNativeWrites": true,
     "restoreCapacityAdmission": true,
     "sharedFilesystemAggregation": true,
-    "ordinaryFixtureCapacityMocked": true
+    "ordinaryFixtureCapacityMocked": true,
+    "restoreDirectoryAndCompressionBounds": true
   },
   "notProven": [
     "real S3 provider compatibility",
@@ -26,9 +27,9 @@
     "production deployment"
   ],
   "files": {
-    "tools/backup/meos-backup.py": "e74a46a2e7d1b9b7beab131c18ce6282909a359c7f883ee373a1edbc707a0536",
+    "tools/backup/meos-backup.py": "98d15372dc7bb9152847f7c53ae31c2e4291aa5d48b3eea97dc3d85f0fba2b7e",
     "tools/backup/package.py": "0b577da57e1e8cca48362c31af00d8fc8bdc889868712c6b3445f90cae7705b1",
-    "tools/backup/test_backup.py": "c9c982df9bfa2afdf1b8f8d03249d050364b594117740b6dcb8be249454c5a3b",
+    "tools/backup/test_backup.py": "c5999310759bcb64d4f624760d5c7bf2845e75170c8e2d0a77f99a53f5e50d11",
     "tools/backup/test-isolated.sh": "acbe1a4bb3ac8ce8d78f75a6bd556af59221da8fc58c11d8d8ca51773ab9d994",
     "scripts/calendar-upgrade.py": "ae0a85998ffa83925955a71725b9416b11bf0d517fa205cfa2388d004afc1e5b",
     "scripts/production-stage.py": "fcad140f33769b3a776aab91ff61aec70fa1e475d5864b22169728dd5c5e1e38",

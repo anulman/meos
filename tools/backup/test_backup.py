@@ -71,6 +71,22 @@ class BackupTests(unittest.TestCase):
         with patch.object(b,'ancestors'), patch.object(b.shutil,'disk_usage',return_value=shutil._ntuple_diskusage(1,0,1)),patch.object(b,'S3') as remote:
             with self.assertRaisesRegex(RuntimeError,'reserve'):b.restore(self.c,'tests/meos/no',self.root/'restore-denied')
             remote.assert_not_called();self.assertFalse((self.root/'restore-denied').exists())
+    def test_restore_accounts_for_implicit_directories(self):
+        self.c['maxArchiveBytes']=65536
+        archive=self.root/'malicious.tar'
+        with b.tarfile.open(archive,'w') as tar:
+            member=b.tarfile.TarInfo('/'.join(['nested']*40)+'/empty');member.size=0;tar.addfile(member,io.BytesIO())
+        def decrypt(c,source,target,decrypt=False):shutil.copyfile(source,target)
+        with patch.object(b,'age',side_effect=decrypt):
+            with self.assertRaisesRegex(RuntimeError,'restore allocation'):b.unpack(self.c,archive,self.root/'nested-target',self.root)
+        self.assertEqual(list((self.root/'nested-target').iterdir()),[])
+    def test_restore_rejects_compressed_tar_expansion(self):
+        archive=self.root/'compressed.tar'
+        with b.tarfile.open(archive,'w:gz') as tar:
+            member=b.tarfile.TarInfo('large');member.size=100000;tar.addfile(member,io.BytesIO(b'x'*100000))
+        def decrypt(c,source,target,decrypt=False):shutil.copyfile(source,target)
+        with patch.object(b,'age',side_effect=decrypt):
+            with self.assertRaises(b.tarfile.ReadError):b.unpack(self.c,archive,self.root/'compressed-target',self.root)
     def test_reserve_cannot_be_lowered(self):
         self.c['reserveBytes']=5*1024**3-1;self.write_config()
         with self.assertRaisesRegex(RuntimeError,'at least 5 GiB'):b.config(self.config)

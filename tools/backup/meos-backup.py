@@ -298,9 +298,11 @@ def unpack(c, archive, target, temp):
     require(clear.stat().st_size <= limit(c), 'decrypted archive exceeds limit')
     capacity(c, [(target, limit(c))]); target.mkdir(mode=0o700)
     budget = Budget(c)
-    with tarfile.open(clear) as tar:
+    with tarfile.open(clear, 'r:') as tar:
         members = tar.getmembers(); names = [m.name for m in members]
-        require(sum(m.size + 4096 for m in members) <= limit(c), 'restore allocation exceeds limit')
+        directories = {str(parent) for m in members for parent in Path(m.name).parents if str(parent) != '.'}
+        directories.update(m.name for m in members if m.isdir())
+        require(sum(m.size + 4096 for m in members) + 4096 * len(directories) <= limit(c), 'restore allocation exceeds limit')
         require(len(names) == len(set(names)), 'duplicate archive paths')
         for m in members:
             require(not Path(m.name).is_absolute() and '..' not in Path(m.name).parts and (m.isfile() or m.isdir()),'unsafe archive member')
