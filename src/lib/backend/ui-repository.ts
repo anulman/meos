@@ -4,9 +4,9 @@ import {RepositoryError} from '../backend-contracts'
 import {addDays,dateInZone} from '../dates'
 import type {Occurrence,Routine,Preferences} from './generated'
 type Row={id:string;_revision?:number;[key:string]:any}
-const revisions=new Map<string,number>(),pending=new Map<string,string>()
-export function clearRepository(){revisions.clear();pending.clear()}
-const unwrap=(envelope:any)=>{revisions.set(envelope.value.id??'preferences',envelope.revision);return {...envelope.value,_revision:envelope.revision}}
+const archivedProjects=new Map<string,boolean>();const revisions=new Map<string,number>(),pending=new Map<string,string>()
+export function clearRepository(){revisions.clear();pending.clear();archivedProjects.clear()}
+const unwrap=(envelope:any)=>{if(envelope.value.id)archivedProjects.set(envelope.value.id,!!envelope.value.archived);revisions.set(envelope.value.id??'preferences',envelope.revision);return {...envelope.value,_revision:envelope.revision}}
 function value(row:Row){const {_revision,$synced,$origin,$key,$collectionId,...clean}=row;return JSON.parse(JSON.stringify(clean))}
 async function operation(name:any,input:any){const intent=JSON.stringify([name,input]);let key=pending.get(intent);if(!key){key=crypto.randomUUID();pending.set(intent,key)}try{const result=await application.call(name,{...input,idempotencyKey:key});pending.delete(intent);return result}catch(error){if(error instanceof RepositoryError&&error.code!=='unavailable'&&error.code!=='aborted'&&error.code!=='invalid_response')pending.delete(intent);throw error}}
 async function list(kind:string){const items:Row[]=[];let cursor:string|undefined;do{const page:any=await transport.request('/resources/'+kind+'?limit=250'+(cursor?'&cursor='+cursor:''),x=>x);items.push(...page.items.map(unwrap));cursor=page.nextCursor}while(cursor);return items}
@@ -23,7 +23,7 @@ export async function realRequest(path:string,init?:RequestInit):Promise<any>{
   if(!expectedRevision)throw Error('Reload to fetch this routine instance before editing.')
   result=await operation('complete_occurrence',{id:row.id,completed:row.completed,expectedRevision})
  }else if(kind==='periodNotes')result=await transport.request('/commands/period-note',x=>x,{method:'POST',body:{value:clean,expectedRevision}})
- else if(kind==='projects'&&clean.archived&&expectedRevision){const response:any=await transport.request('/commands/archive-project/'+id,x=>x,{method:'POST',body:{expectedRevision}});result=response.project}
+ else if(kind==='projects'&&clean.archived&&expectedRevision&&!archivedProjects.get(row.id)){const response:any=await transport.request('/commands/archive-project/'+id,x=>x,{method:'POST',body:{expectedRevision}});result=response.project}
  else result=await transport.request('/resources/'+kind+(expectedRevision?'/'+row.id:''),x=>x,{method:expectedRevision?'PUT':'POST',body:{value:clean,...(expectedRevision?{expectedRevision}:{})}})
  return unwrap(result)
  }catch(error){if(error instanceof RepositoryError&&error.code==='conflict'){const {queryClient}=await import('../store');await queryClient.invalidateQueries({queryKey:[name]});throw Error('This item changed elsewhere. Your draft is preserved; close and reopen it to compare the latest version before saving.')}throw error}

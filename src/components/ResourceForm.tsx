@@ -53,7 +53,7 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNo
      <form.Field name="timezone">{field=><TimezoneSelect label="Timezone" value={field.state.value} onChange={field.handleChange}/>}</form.Field>
      <form.Field name="offset">{field=><label>UTC offset in minutes (required for repeated DST times)<input type="number" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
      <form.Field name="preferredTime">{field=><label>Preferred time<input value={field.state.value} placeholder="In the morning, before lunch…" onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
-     <form.Field name="duration">{field=><label>Duration (minutes)<input type="number" min="1" max="1440" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
+     <p className="muted">Preferred times guide scheduling; they do not assign a time.{task.preferredTime?.status?` Interpretation: ${task.preferredTime.status}.`:null}</p><form.Field name="duration">{field=><label>Duration (minutes)<input type="number" min="1" max="1440" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
      <form.Field name="priority">{field=><label>Priority<select value={field.state.value} onChange={e=>field.handleChange(e.target.value as Priority)}>{(['none','low','medium','high'] as const).map(p=><option key={p}>{p}</option>)}</select></label>}</form.Field>
     </>:<form.Field name="targetDate">{field=><label>Target date (optional)<input type="date" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>}
    </div>

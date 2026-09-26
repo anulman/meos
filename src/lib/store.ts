@@ -42,7 +42,7 @@ export const outcomesCollection=plannerCollection<WeeklyOutcome>('outcomes')
 export const periodNotesCollection=plannerCollection<PeriodNote>('period-notes')
 export async function savePlanner<T extends {id:string}>(name:'routines'|'occurrences'|'outcomes'|'period-notes',value:T) {
  const saved=await request(`/${name}/${encodeURIComponent(value.id)}`,json('PUT',value)) as T
- await queryClient.invalidateQueries({queryKey:[name]});if(name==='routines')await queryClient.invalidateQueries({queryKey:['occurrences']});return saved
+ await queryClient.invalidateQueries({queryKey:[name]});if(name==='routines'){await queryClient.cancelQueries({queryKey:['occurrences']});await queryClient.invalidateQueries({queryKey:['occurrences']})}return saved
 }
 export async function removeOutcome(id:string) {
  await request(`/outcomes/${encodeURIComponent(id)}`,{method:'DELETE'})

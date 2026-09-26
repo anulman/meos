@@ -132,3 +132,10 @@ test('actual launcher denies unreviewed artifact before Docker or service creati
  assert.notEqual(result.status,0);assert.match(result.stderr,/image absent from reviewed registry/)
  assert.doesNotMatch(result.stderr,/Docker operation failed/)
 })
+test('cross-tab identity epoch fences late success even before queued storage event',async()=>{
+ let epoch='owner-a',release
+ const transport=new JsonTransport('/api',()=>undefined,async()=>({ok:true,status:200,json:()=>new Promise(resolve=>{release=resolve})}),()=>epoch)
+ const pending=transport.request('/tasks',x=>x)
+ await new Promise(resolve=>setImmediate(resolve));epoch='owner-b';release({private:'previous owner'})
+ await assert.rejects(pending,{code:'aborted'})
+})
