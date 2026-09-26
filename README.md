@@ -70,3 +70,6 @@ The dependency-free Go client is distributed as source. Install a reviewed commi
 with Go, or use its source and documented durable dispatch contract to build and
 qualify a client for another environment. See the client guide for bootstrap
 selection and supervision. This source does not claim the endpoint is deployed.
+## Agent operating skills
+
+Discover the tool-only MeOS planning and board procedures through [llms.txt](llms.txt). The canonical [shared contract](public/skills/contract.md), seven core operating skills and [install/bootstrap skill](public/skills/meos-bootstrap/SKILL.md) live under `public/skills/`; Vite serves these files unchanged at `/skills/` and the public index at `/llms.txt`. Bootstrap targets a post-cutover production release with Docker Compose and Helm installation paths, persistent-data/login verification, then MCP access, host schedules, execution settings, authority and event long-polling. Its command templates resolve release-supplied artifacts rather than assume chart/image names; a maintainer note distinguishes that target from this branch's demo-only Compose file. Publishing these documents does not install services or enable recurring prompts, notifications or Calendar sync.

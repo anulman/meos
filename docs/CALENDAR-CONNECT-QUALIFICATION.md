@@ -51,8 +51,10 @@ and a separate agent credential, never the owner's browser password.
 
 Existing scheduled tasks and independent routine instances export their planned
 duration, location and notes. Unresolved duration is a visible conflict, never a
-fabricated end time. Google-only changes update the existing entity through CAS;
-local/remote concurrent edits remain conflicts. Local tombstones conditionally
+fabricated end time. Google changes update the existing entity through CAS and win concurrent edits.
+The bridge retains displaced local intent before applying Google. A local CAS
+race retries on a later poll; unsupported Google shapes and deleted, archived or
+skipped local entities block export rather than overwrite the Google winner. Local tombstones conditionally
 cancel Google; Google cancellation unschedules rather than destroys the task.
 Stable IDs and persisted baselines reconcile uncertain writes. Rich notes remain
 unchanged if their exported text has not changed. Duration intent and actual
@@ -65,16 +67,36 @@ occurrence collections; mounted editors retain their old revision and draft for
 normal conflict detection. Full historical snapshots are chunked behind atomic
 SQLite commits, avoiding a single JSON-record size ceiling.
 
-150 isolated backend tests and isolated TypeScript/license/build checks pass.
-Actual new-WASM bridge/browser qualification is pending independent admission of
-`.qualification/release-1790450631810096659/candidate.json` into the fixed fresh
-`.qualification/release-calendar-acceptance/` namespace. Do not claim live bridge
-readiness from source/unit tests alone. `scripts/calendar-acceptance.py` is a
-synthetic-only launcher; it creates a separate sync-scoped synthetic principal.
+## Source qualification checkpoint
 
-Varlock schema/launch documentation is provided, but the Varlock binary is not
-installed or qualified in this candidate. No dependency was silently introduced.
-Real Google client/consent, live import, writes and polling remain unverified.
+The source candidate passed 167 isolated backend tests, license qualification,
+TypeScript/build checks, and 44 mounted browser checks (8 Calendar, 6 Access,
+4 actual entrypoint and 26 baseline planner checks). Historical source and
+artifact receipts remain in `.qualification/`; a final handoff must bind its
+current commit to fresh affected-check evidence rather than reuse these counts
+as an exact-tree claim.
+
+The admitted Calendar candidate uses image
+`sha256:6f7651d44cae5a840a41508305f30fcf12eed869116734eafe0b7cfa6f051e9c`.
+The isolated retained-depot proof verified the mounted guest, not only the image:
+`649ccf1b734a21257c70953cc47fb65b22dadf17a751c29e1e67ee8a449f9bfe`.
+All eight runtime files were checked after replacement; owner/domain rows were
+preserved, and the old runtime and cold database copy were retained. A separate
+native proof exercised sync-only export, Google-wins CAS import, token refresh
+and no provider echo using one disposable task, then deleted that task.
+Independent closure of those deployment-tool proofs remains a separate gate.
+
+Use `sudo python3 scripts/integration-runner.py calendar-release` for the admitted
+Calendar fixture. The older `candidate-release` fixture does not establish the
+new guest's planner bridge. These launchers admit only disposable, no-network
+acceptance containers; no qualification run uses production credentials.
+
+Calendar is not live. Narrow protected OAuth configuration and sync-only principal
+preparation have occurred; backend services have not been switched. Exact inert
+staging, manifest-bound runtime rendering, retained-depot upgrade, and service
+activation require their separate admissions. Real Google consent, import, writes
+and polling remain unverified. Source review readiness does not authorize merge
+or production activation.
 
 ## Review and preserved-data staging
 
