@@ -44,6 +44,8 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNo
    <div className="plan-fields">
     {kind==='task'?<>
      <form.Field name="projectId">{field=><label>Project<select value={field.state.value} onChange={e=>field.handleChange(e.target.value)}><option value="">No project</option>{projects.filter(p=>!p.archived).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>}</form.Field>
+     <p className="muted">Scheduling is optional. Tasks without a date and time stay in the task lists in Settings, outside daily views.</p>
+     <button type="button" className="quiet-action" onClick={()=>{form.setFieldValue('date','');form.setFieldValue('time','')}}>Clear schedule</button>
      <form.Field name="date">{field=><label>Scheduled date<input type="date" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
      <form.Field name="time">{field=><label>Time (required when scheduled)<input type="time" value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>
      <form.Field name="timezone">{field=><label>Timezone<input value={field.state.value} onChange={e=>field.handleChange(e.target.value)}/></label>}</form.Field>

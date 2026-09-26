@@ -81,16 +81,21 @@ export function usePlannerClock(): PlannerClock {
 }
 
 export interface ScheduledTaskLike { id: string; archived?: boolean; schedule?: ZonedSchedule }
-export interface ProjectedTask<T> { task: T; displayDate: string; instant?: number }
-/** Unscheduled and archived tasks do not appear in calendar periods. */
+export interface ProjectedTask<T> { task: T; displayDate: string; instant: number }
+/** Only tasks with a valid datetime appear in calendar periods; legacy drafts stay in resource lists. */
 export function projectScheduledTasks<T extends ScheduledTaskLike>(tasks: readonly T[], period: DatePeriod,
   displayTimezone: string): ProjectedTask<T>[] {
   return tasks.flatMap(task => {
     if (task.archived || !task.schedule || !task.schedule.time) return [];
-    const displayDate = scheduleDisplayDate(task.schedule, displayTimezone);
+    // Malformed imported/legacy schedules must neither crash nor leak into daily views.
+    let instant: number;
+    try {
+      if (typeof task.schedule.timezone !== 'string' || !task.schedule.timezone) return [];
+      instant = zonedInstant(task.schedule.date, task.schedule.time, task.schedule.timezone);
+    } catch { return []; }
+    const displayDate = dateInZone(instant, displayTimezone);
     if (!periodContains(period, displayDate)) return [];
-    return [{ task, displayDate, instant: task.schedule.time === undefined ? undefined :
-      zonedInstant(task.schedule.date, task.schedule.time, task.schedule.timezone) }];
+    return [{ task, displayDate, instant }];
   });
 }
 export interface RoutineLike extends RoutineSchedule { id: string; archived?: boolean }

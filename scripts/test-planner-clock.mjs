@@ -31,6 +31,13 @@ const period = Object.freeze({ start: '2023-12-31', end: '2023-12-31' });
 const task = { id: 'timed', schedule: { date: '2024-01-01', time: '00:30', timezone: 'Asia/Tokyo' } };
 const tasks = [task, { id: 'floating', schedule: { date: '2023-12-31', timezone: 'Asia/Tokyo' } },
   { id: 'archived', archived: true, schedule: { date: '2023-12-31', timezone: 'UTC' } }, { id: 'unscheduled' }];
+for (const schedule of [
+  { date: '2023-12-31', time: '', timezone: 'UTC' },
+  { date: '2023-12-31', time: '25:00', timezone: 'UTC' },
+  { date: '2023-02-30', time: '12:00', timezone: 'UTC' },
+  { date: '2023-12-31', time: '12:00', timezone: 'invalid/zone' },
+  { date: '2023-12-31', time: '12:00' },
+]) tasks.push({ id: 'invalid', completed: true, priority: 'high', schedule });
 const before = JSON.stringify(tasks);
 const result = projectScheduledTasks(tasks, period, 'America/Los_Angeles');
 assert.deepEqual(result.map(item => item.task.id), ['timed']);
