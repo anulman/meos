@@ -3,12 +3,21 @@ import {createPortal} from 'react-dom'
 import {autoUpdate, flip, offset, shift, useFloating} from '@floating-ui/react-dom'
 
 type Position = {x:number; y:number}
+type Corner = 'top left'|'top right'|'bottom left'|'bottom right'
+const corners:Corner[] = ['top left','top right','bottom left','bottom right']
+const BUTTON_WIDTH=176, BUTTON_HEIGHT=56, CONTENT_WIDTH=716
 // Page-memory only: survives route changes, intentionally resets on reload.
 let rememberedPosition: Position | null = null
+let rememberedCorner: Corner | null = null
 const constrain = (x:number, y:number):Position => ({
-  x:Math.max(12, Math.min(x, window.innerWidth - 188)),
-  y:Math.max(12, Math.min(y, window.innerHeight - 68)),
+  x:Math.max(12, Math.min(x, window.innerWidth - BUTTON_WIDTH - 12)),
+  y:Math.max(12, Math.min(y, window.innerHeight - BUTTON_HEIGHT - 12)),
 })
+const cornerPosition = (corner:Corner):Position => {
+  const inset=Math.max(18,(window.innerWidth-CONTENT_WIDTH)/2)
+  const bottom=Math.max(12,window.innerHeight-BUTTON_HEIGHT-98)
+  return constrain(corner.includes('left')?inset:window.innerWidth-inset-BUTTON_WIDTH,corner.includes('top')?Math.min(110,bottom):bottom)
+}
 const track = (reference:Parameters<typeof autoUpdate>[0], floating:HTMLElement, update:()=>void) => autoUpdate(reference, floating, update, {animationFrame:true})
 
 export function FloatingControls({kind,onAdd}:{kind:'task'|'outcome';onAdd:()=>void}) {
@@ -30,7 +39,7 @@ export function FloatingControls({kind,onAdd}:{kind:'task'|'outcome';onAdd:()=>v
   const popup = useFloating({placement:'top-end',strategy:'fixed',middleware:[offset(60),flip(),shift({padding:12})],whileElementsMounted:track})
   const tooltip = useFloating({placement:'top-start',strategy:'fixed',middleware:[offset(8),flip(),shift({padding:12})],whileElementsMounted:track})
   const cancelHide = () => {timers.current.forEach(clearTimeout);timers.current=[]}
-  const move = (next:Position) => {rememberedPosition=next;setPosition(next)}
+  const move = (next:Position,corner:Corner|null=null) => {rememberedPosition=next;rememberedCorner=corner;setPosition(next)}
   const closeMenu = (restore=false) => {setMenu(false);setAnchor('hidden');if(restore)primary.current?.focus()}
   const finishDrag = () => {
     const moved = drag.current?.moved ?? false
@@ -41,9 +50,11 @@ export function FloatingControls({kind,onAdd}:{kind:'task'|'outcome';onAdd:()=>v
   }
   useEffect(()=>{
     setMounted(true)
-    if(rememberedPosition)move(constrain(rememberedPosition.x,rememberedPosition.y))
-    const resize=()=>{if(rememberedPosition)move(constrain(rememberedPosition.x,rememberedPosition.y))}
-    const focus=(event:FocusEvent)=>{const node=event.target as Node;if(node!==primary.current&&!anchorElement.current?.contains(node)&&!menuElement.current?.contains(node))setKeyboard(false)}
+    const resize=()=>{if(rememberedCorner)move(cornerPosition(rememberedCorner),rememberedCorner);else if(rememberedPosition)move(constrain(rememberedPosition.x,rememberedPosition.y))}
+    resize()
+    // The controls share one focus boundary even though the menu is portaled.
+    // Moving between them must not remove a pointer target before its click.
+    const focus=(event:FocusEvent)=>{const node=event.target as Node;if(!wrapper.current?.contains(node)&&!anchorElement.current?.contains(node)&&!menuElement.current?.contains(node)){cancelHide();setKeyboard(false);setHelp(false);setMenu(false);setAnchor('hidden')}}
     window.addEventListener('resize',resize)
     document.addEventListener('focusin',focus)
     return()=>{window.removeEventListener('resize',resize);document.removeEventListener('focusin',focus);cancelHide()}
@@ -74,11 +85,9 @@ export function FloatingControls({kind,onAdd}:{kind:'task'|'outcome';onAdd:()=>v
     {mounted&&createPortal(<>
       {showTarget&&<button ref={node=>{anchorElement.current=node;target.refs.setFloating(node)}} className={`float-position floating-target ${anchor==='fading'&&!menu&&!keyboard?'is-fading':''}`} style={target.floatingStyles} data-placement={target.placement}
         aria-label="Move add button" aria-expanded={menu} aria-controls={menuId}
-        onBlur={event=>{if(!menu&&!menuElement.current?.contains(event.relatedTarget as Node))setKeyboard(false)}}
         onClick={()=>{cancelHide();setHelp(false);setKeyboard(false);if(menu)closeMenu(true);else{setAnchor('visible');setMenu(true)}}}>↔</button>}
-      {menu&&<div ref={node=>{menuElement.current=node;popup.refs.setFloating(node)}} id={menuId} className="placement-menu floating-placement" style={popup.floatingStyles} data-placement={popup.placement} role="group" aria-label="Add button position"
-        onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node)&&!anchorElement.current?.contains(event.relatedTarget as Node))closeMenu()}}>
-        <p>Button position</p>{['top left','top right','bottom left','bottom right'].map(c=><button key={c} onClick={()=>{move(constrain(c.includes('left')?16:window.innerWidth-192,c.includes('top')?110:window.innerHeight-148));closeMenu(true)}}>{c}</button>)}
+      {menu&&<div ref={node=>{menuElement.current=node;popup.refs.setFloating(node)}} id={menuId} className="placement-menu floating-placement" style={popup.floatingStyles} data-placement={popup.placement} role="group" aria-label="Add button position">
+        <p>Button position</p>{corners.map(c=><button key={c} onClick={()=>{move(cornerPosition(c),c);closeMenu(true)}}>{c}</button>)}
       </div>}
       {help&&!showTarget&&!menu&&<span ref={tooltip.refs.setFloating} className="floating-tooltip" style={tooltip.floatingStyles} data-placement={tooltip.placement} role="tooltip">Drag to move · ↑↓ to position</span>}
     </>,document.body)}
