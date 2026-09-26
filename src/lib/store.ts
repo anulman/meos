@@ -6,6 +6,7 @@ import type { Task, Project, Routine, Occurrence } from './contracts'
 import type { WeeklyOutcome, PeriodNote } from './planner-contracts'
 export const queryClient=new QueryClient({defaultOptions:{queries:{retry:false,refetchOnWindowFocus:false}}})
 async function request(path:string, init?:RequestInit) {
+ if(!getConfig().demo){const {realRequest}=await import('./backend/ui-repository');return realRequest(path,init)}
  const {ready}=await import('./mock'); await ready
  const response=await fetch(getConfig().apiBase+path,init)
  if(!response.ok) { const data=await response.json().catch(()=>({})); throw new Error(data.error || `Demo request failed (${response.status})`) }
@@ -15,12 +16,12 @@ const json=(method:string,body:unknown):RequestInit=>({method,headers:{'Content-
 export const tasksCollection=createCollection(queryCollectionOptions<Task>({
  id:'tasks',queryKey:['tasks'],queryClient,getKey:task=>task.id,
  queryFn:async()=>((await request('/tasks')) as Task[]).map(task=>({...task,projectId:task.projectId,schedule:task.schedule,durationMinutes:task.durationMinutes})),
- onUpdate:async({transaction})=>{for(const mutation of transaction.mutations) await request(`/tasks/${mutation.original.id}`,json('PATCH',mutation.modified))},
+ onUpdate:async({transaction})=>{for(const mutation of transaction.mutations) await request(`/tasks/${mutation.original.id}`,json('PATCH',{...mutation.modified,_revision:(mutation.original as any)._revision}))},
 }))
 export const projectsCollection=createCollection(queryCollectionOptions<Project>({
  id:'projects',queryKey:['projects'],queryClient,getKey:project=>project.id,
  queryFn:()=>request('/projects') as Promise<Project[]>,
- onUpdate:async({transaction})=>{for(const mutation of transaction.mutations) await request(`/projects/${mutation.original.id}`,json('PUT',mutation.modified))},
+ onUpdate:async({transaction})=>{for(const mutation of transaction.mutations) await request(`/projects/${mutation.original.id}`,json('PUT',{...mutation.modified,_revision:(mutation.original as any)._revision}))},
 }))
 /** Both UI and future agent clients share these resource operations. */
 export async function saveTask(task:Task,isNew=false) {
@@ -41,7 +42,7 @@ export const outcomesCollection=plannerCollection<WeeklyOutcome>('outcomes')
 export const periodNotesCollection=plannerCollection<PeriodNote>('period-notes')
 export async function savePlanner<T extends {id:string}>(name:'routines'|'occurrences'|'outcomes'|'period-notes',value:T) {
  const saved=await request(`/${name}/${encodeURIComponent(value.id)}`,json('PUT',value)) as T
- await queryClient.invalidateQueries({queryKey:[name]});return saved
+ await queryClient.invalidateQueries({queryKey:[name]});if(name==='routines'){await queryClient.cancelQueries({queryKey:['occurrences']});await queryClient.invalidateQueries({queryKey:['occurrences']})}return saved
 }
 export async function removeOutcome(id:string) {
  await request(`/outcomes/${encodeURIComponent(id)}`,{method:'DELETE'})

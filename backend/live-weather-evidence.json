@@ -1,0 +1,30 @@
+{
+  "runId": "48c006581c5494589e69af1b123dec97",
+  "checks": [
+    "form login token-free",
+    "two Secure HttpOnly cookies",
+    "safe session identity",
+    "form login token-free",
+    "two Secure HttpOnly cookies",
+    "safe session identity",
+    "form login token-free",
+    "two Secure HttpOnly cookies",
+    "safe session identity",
+    "scoped bridge ingests coarse latest observation",
+    "ordinary owner cannot impersonate bridge",
+    "bridge cannot read owner planner",
+    "out of order bridge update rejected",
+    "future bridge update rejected",
+    "bridge owner redirection rejected",
+    "owner weather preferences saved",
+    "stale bridge falls back to manual and provider failure bounded",
+    "new observation replaces latest",
+    "fresh bridge location used with graceful offline provider",
+    "provider failure does not block planner writes",
+    "weather can be disabled again"
+  ],
+  "count": 21,
+  "providerNetwork": "none; failure path only",
+  "data": "synthetic coordinates only",
+  "evidenceRecordedAt": "2026-09-26T06:38:59.762449+00:00"
+}

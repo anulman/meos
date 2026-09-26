@@ -1,0 +1,9 @@
+{
+  "runId": "48c006581c5494589e69af1b123dec97",
+  "job": "meos-weather-prune",
+  "privateHostJobReceipt": true,
+  "expiredSyntheticRowDeleted": true,
+  "runCount": 3,
+  "ranAt": 1790402760014,
+  "evidenceRecordedAt": "2026-09-26T06:38:59.762449+00:00"
+}

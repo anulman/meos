@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {chromium} from 'playwright'
 
 const base = process.env.MEOS_TEST_URL || 'http://127.0.0.1:3182'
-const browser = await chromium.launch({executablePath:'/usr/bin/chromium-browser',args:['--no-sandbox']})
+const browser = await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium-browser',args:['--no-sandbox']})
 let selections = 0
 try {
   for (const viewport of [{width:390,height:844},{width:1280,height:900}]) {

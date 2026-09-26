@@ -16,4 +16,4 @@ const buildOnlyBoundary = {
   }
  },
 }
-export default defineConfig({plugins:[buildOnlyBoundary,stylex({}),tanstackStart({spa:{enabled:true}}),react()],server:{host:'127.0.0.1'}})
+export default defineConfig({plugins:[buildOnlyBoundary,stylex({}),tanstackStart({spa:{enabled:true},prerender:{concurrency:1}}),react()],server:{host:'127.0.0.1'}})

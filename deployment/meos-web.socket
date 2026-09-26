@@ -1,0 +1,10 @@
+[Unit]
+Description=MeOS protected loopback listener
+
+[Socket]
+ListenStream=127.0.0.1:@PORT@
+NoDelay=true
+Service=@PREFIX@-web.service
+
+[Install]
+WantedBy=sockets.target

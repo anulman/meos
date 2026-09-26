@@ -1,0 +1,165 @@
+{
+  "schema": 1,
+  "verifiedAt": "2026-09-26T07:36:35.404588+00:00",
+  "runId": "d0e3d579b5a534f44de49e541c027bce",
+  "containerId": "28a12d5a9f7e2a05a42db99c37e6e0e379d599603bb55ca6702fb95f6821606f",
+  "image": "sha256:592e54a55bf2ce63de2669736aaa7153bd1dd712057989f3fdb0a230e19b3aff",
+  "guestSHA256": "ed7ea966cc47c25e7c05873200f33cff0ee9b7df8ae2f7406d6c104cfa49f198",
+  "sourceSHA256": {
+    "backend/body.mjs": "24c0a7ba0938ca06d5816aad5b176931435da95f72bce6ec2170721e7211e094",
+    "backend/bridge.mjs": "bff932379fa3f56e4ecf98314dcc4dac8a3712263a4d3295dbab3c998246ffed",
+    "backend/commands.mjs": "d5d14b4c0c86efc9455d8bd48d164f55cc91dd0c51d1bdc8127756231e668dc4",
+    "backend/contract.mjs": "904603f20916214c37950d9d999033dea0b6d6ba95bdb6fb9a347f4dce2edd62",
+    "backend/domain.mjs": "84b8cbdb33713f43c8190b39a856460362db5e27b4f907aae1c73f92fabeac9c",
+    "backend/guest/entry.mjs": "9dabf1d013ddccdd15467d6bfb8f4f4687ab25b01ef982ece34316261b9a5fc8",
+    "backend/guest/install-platform.mjs": "42bba2de990d2eee2d02872c4f2e066f2821ff99c20af70316192424f0375466",
+    "backend/guest/platform.mjs": "ed027c3af6e73dec451b8c485522110a67c17a7a48c42194372c52627c67a720",
+    "backend/guest/streams.mjs": "0433449c8e49fc89b0e9db281e3300151ebb0ca689a2fbba77bb8cc276de1972",
+    "backend/http-handler.mjs": "1e7d8c906fe056022339476041dfb5fac343347ab68a577bea61fc46986c6b3c",
+    "backend/instance.mjs": "237fb46ff3b6a0d49cff68f361a622d8f0177306a456312d95756e09effbd458",
+    "backend/isolation.mjs": "03dd1f957e74888c1df8c93a885b5bb8f271e69ea678c6e3dc25ba6221270736",
+    "backend/maintenance.mjs": "997e598420653d7e89add6c77f6a718589dd448cd5c5a1b38a42a0a0c3bbecb5",
+    "backend/mcp.mjs": "d96b4ee8622ad15ea65b474a6c748d0da3a805752a2f0343675456f075544fb9",
+    "backend/protected-proxy.mjs": "5d89ee3c7ece3b404c868eea582485359f58ea61d7625379416a36e60b7de994",
+    "backend/scheduling.mjs": "063285d1e3558943fb659ba215850602c3eebdb0a0be9ada893e976b18dfc1b0",
+    "backend/timezone-rules.mjs": "133cecfc7e2949036f170f4fd38d9c792db9171ccced7fa141b615269fa890d3",
+    "backend/timezones.mjs": "2b090f163bc60601bf5fffac1d7efa4f21ffb376a805b03e3139bb6541dec92c",
+    "backend/trailbase-port.mjs": "2251a4091095bf15915bd071afabed32b3dd490fb007cc6c5ecd9fd9ce6f21e7",
+    "backend/weather-storage.mjs": "209bcf6edb19f7c95d003812ab01593b60e3020ea46a6452e5a9eda5e2de7e6d",
+    "backend/weather.mjs": "f41813079bf88b8f10fccdf694f25e1440c5297010391366e9943495d84b2913",
+    "docs/openapi.json": "81d2bdd2e04c053e03fc04fddb10e6a8be319e1079d5826d590fb0686a7d63e7",
+    "scripts/generate-contract.mjs": "8b897c8b0259ea1d2508fae603c347d503ddb67992877f7a79da949accc1e0e8",
+    "src/lib/backend/generated.ts": "7b78b053aae534b12fc108dd3e2ad5841339bb71bc45daa4f3b0c14ebef9c161"
+  },
+  "migrationsSHA256": {
+    "U1790380800__planner.sql": "ee062039c4bae123aec1ef5b420fea1fc130d8a34fd32df063c5ab15ffb395b0",
+    "U1790380801__weather.sql": "22229cec2215f85f38630231ef5dfaa398122e859e05e05fe65ecf4a8a81a2ae",
+    "U1790380804__bridge_seal.sql": "bad62129aab8b320c3eb057f86871fae15380562d61825f78c0ad3fbf0a013d0",
+    "U1790380805__scheduling_contract.sql": "64b5630910f532b4f2256791adeaf579c5be48b08b366be5bccb2333f6306fed",
+    "U1790380803__bridge.sql": "d46440a4b43b9ec8545a8144bb07a90784b62ee8878903615974aef269457e34",
+    "U1790380802__instance.sql": "b374863db22306c006a92e04cc4dff8aee0078ca1d6947f49780b736693c5dba"
+  },
+  "focused": {
+    "tests": 58,
+    "passed": 58,
+    "failed": 0,
+    "isolation": "private network, no production credentials or mounts; SQLite memory/temp only; UID10001 zero capabilities",
+    "logSHA256": "4d80f97108188b591bc29c8d7d1838eb6f558fab67032aceb8e42237cf10c748"
+  },
+  "generatedClientTypecheck": {
+    "passed": true,
+    "compiler": "TypeScript5.9.3 strict es2022+dom",
+    "logSHA256": "39e82d36d68bae48a7b06109f803f6d35d05543461c8178514425da7bd47b646"
+  },
+  "finalImageChecks": {
+    "planner": {
+      "checks": [
+        "form login token-free",
+        "two Secure HttpOnly cookies",
+        "safe session identity",
+        "form login token-free",
+        "two Secure HttpOnly cookies",
+        "safe session identity",
+        "anonymous read denied",
+        "forged host context denied",
+        "live project create",
+        "live task and rich text create",
+        "live read roundtrip",
+        "second owner read denied",
+        "second owner update denied",
+        "wrong origin denied",
+        "wrong csrf denied",
+        "Anytime rejected live",
+        "live revision increment",
+        "stale revision conflict",
+        "archive atomic command",
+        "archive detaches task",
+        "live pagination",
+        "default preferences live",
+        "routine create live",
+        "occurrence natural create",
+        "occurrence retry idempotent",
+        "week note live",
+        "weekly outcome live",
+        "outcome removal live",
+        "weather disabled without network"
+      ],
+      "count": 29,
+      "runId": "d0e3d579b5a534f44de49e541c027bce"
+    },
+    "protectedProxy": {
+      "runId": "d0e3d579b5a534f44de49e541c027bce",
+      "checks": [
+        "live form proxy does not export native tokens",
+        "live login cookies normalized Secure HttpOnly Lax",
+        "proxy reload uses safe session projection",
+        "native token admin logout and bridge paths denied",
+        "live logout rejects wrong CSRF",
+        "live logout emits browser-valid cookie deletions",
+        "proxy logout revokes native refresh session"
+      ],
+      "count": 7,
+      "network": "none; UID10001 and zero effective capabilities"
+    },
+    "mcp": {
+      "runId": "d0e3d579b5a534f44de49e541c027bce",
+      "mcporter": "0.14.1",
+      "checks": [
+        "production network, paths and credentials denied",
+        "MCPorter 0.14.1 actual Streamable HTTP initialization and scoped discovery",
+        "real MCPorter tool call returns structured output",
+        "MCP retry is idempotent",
+        "MCP reads owner-bound browser domain data",
+        "browser reads same MCP-created record",
+        "agent native token denied browser resource API",
+        "owner native token has no implicit agent grant",
+        "browser cookies cannot authenticate MCP",
+        "MCP cross-origin denied",
+        "routine creation with shared recurrence contract live",
+        "real guest materializes exactly bounded rolling horizon",
+        "real guest move preserves original slot and identity",
+        "real guest rejects day fifteen",
+        "real daily agenda excludes unscheduled",
+        "MCP typed payload conflict",
+        "real guest preview is non-mutating",
+        "real guest stale schedule rejected atomically",
+        "real guest failed schedule leaves first target unchanged"
+      ],
+      "count": 19
+    }
+  },
+  "migrationUpgrade": {
+    "runId": "3b8c725bbc339e3ac3cb14e020232771",
+    "image": "sha256:66f40d0e9f3348686151db9220bacfd2d923aeb06cdff1d99be277a4b16e32c8",
+    "method": "actual native migration on fresh disposable pre005 schema with persisted synthetic before/after",
+    "network": "none",
+    "checks": [
+      "verified fresh disposable identity",
+      "migration005 absent during old-schema seed",
+      "all old migration files byte-identical",
+      "all non-occurrence values and revisions unchanged",
+      "occurrence IDs original slot completion and history retained",
+      "independent snapshot title notes duration template revision added without guessed schedule"
+    ],
+    "beforeSHA256": "7dce44d54b962f42315587d633b108f174d5b058432b4a7e8d9f7f8e0c960c97",
+    "afterSHA256": "9ce22db2c345c85ba52e6f59ce6e17b5b17a0712dd0333e95965e643dc943ef1",
+    "migrationSHA256": "64b5630910f532b4f2256791adeaf579c5be48b08b366be5bccb2333f6306fed"
+  },
+  "review": {
+    "method": "manual self-review plus independent focused/live regressions; parent review requested separately",
+    "fixed": [
+      "guest Headers-only MCP mismatch exposed by real client",
+      "generated TypeScript empty index-signature syntax",
+      "occurrence snapshot/provenance invariants",
+      "external mapping revision CAS",
+      "permanent agent-owner binding"
+    ]
+  },
+  "productionMutated": false,
+  "frontendSameScreen": "pending parent integration",
+  "deferred": [
+    "Google OAuth/Calendar worker and media",
+    "production MCP route/credential provisioning",
+    "production cutover"
+  ]
+}

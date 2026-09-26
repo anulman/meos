@@ -1,0 +1,17 @@
+[Unit]
+Description=MeOS pinned production backend
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/docker --host unix:///var/run/docker.sock start --attach @CONTAINER@
+ExecStartPost=/usr/bin/python3 @RELEASE@/scripts/production-ready.py
+ExecStop=/usr/bin/docker --host unix:///var/run/docker.sock stop --time 20 @CONTAINER@
+PrivateMounts=yes
+BindReadOnlyPaths=@STATE@:/etc/meos/runtime-state.json
+Environment=PATH=/usr/bin:/bin
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=75
+TimeoutStopSec=30

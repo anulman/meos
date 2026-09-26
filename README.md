@@ -37,6 +37,7 @@ A host reverse proxy can use `reverse_proxy 127.0.0.1:3180`; hostname and access
 ## Qualification / limits
 Dependency license gate is fail-closed. See `docs/LICENSE-REVIEW.md` for exact approved build-tool exceptions and retained notices. Apache-2.0 project license is preserved. GitHub checks perform license qualification, build and typecheck only; no automatic deployment.
 
+
 The client-only demo does not include persistence, search, external integrations, weather/location feeds, accounts, notifications or printing. Resources use archive/restore rather than destructive deletion. Paper is the fixed theme. No visible reload/reset banner is shown, per approved steering. See `docs/PHASE45-HANDOFF.md` for planning semantics and qualification evidence.
 
 ## Planning acceptance
@@ -52,6 +53,13 @@ MEOS_TEST_URL=http://127.0.0.1:3181 node scripts/browser-anchor.mjs
 ```
 
 `browser.mjs` is journey A; B is resource editing, C planning/routines/period notes, D preferences/midnight/reset, E (`browser-shell`) mobile/desktop and floating/modal behavior. Anchor checks preserve the previously approved 48 mouse/touch/keyboard corner cases. Test-only static origin stays loopback on 3181; deployed preview stays loopback on 3180.
+
+## Application contract and agent integration
+
+See [Backend contract](docs/BACKEND-CONTRACT.md) for independent routine occurrences,
+optional schedules, bounded materialization, OpenAPI/generated types, scoped MCP
+tools, transactional scheduling and deferred Calendar sync foundations.
+Run `pnpm contract:check` to check generated-contract drift.
 
 ## Agent operating skills
 

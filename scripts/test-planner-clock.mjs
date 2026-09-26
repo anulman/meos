@@ -18,8 +18,8 @@ try {
 } finally {
   await rm(output, { recursive: true, force: true });
 }
-for (const module of ['react', 'react/jsx-runtime', './dates']) {
-  const resolved = module === './dates' ? new URL('../src/lib/dates.ts', import.meta.url).href : import.meta.resolve(module);
+for (const module of ['react', 'react/jsx-runtime', './dates', './config', '../../backend/scheduling.mjs']) {
+  const resolved = module === './dates' ? new URL('../src/lib/dates.ts', import.meta.url).href : module==='./config'?new URL('../src/lib/config.ts',import.meta.url).href:module==='../../backend/scheduling.mjs'?new URL('../backend/scheduling.mjs',import.meta.url).href:import.meta.resolve(module);
   compiled = compiled.replaceAll(`from '${module}'`, `from '${resolved}'`).replaceAll(`from "${module}"`, `from "${resolved}"`);
 }
 const { selectedWeekPeriod, projectScheduledTasks, projectRoutineOccurrences } =
@@ -31,12 +31,19 @@ const period = Object.freeze({ start: '2023-12-31', end: '2023-12-31' });
 const task = { id: 'timed', schedule: { date: '2024-01-01', time: '00:30', timezone: 'Asia/Tokyo' } };
 const tasks = [task, { id: 'floating', schedule: { date: '2023-12-31', timezone: 'Asia/Tokyo' } },
   { id: 'archived', archived: true, schedule: { date: '2023-12-31', timezone: 'UTC' } }, { id: 'unscheduled' }];
+for (const schedule of [
+  { date: '2023-12-31', time: '', timezone: 'UTC' },
+  { date: '2023-12-31', time: '25:00', timezone: 'UTC' },
+  { date: '2023-02-30', time: '12:00', timezone: 'UTC' },
+  { date: '2023-12-31', time: '12:00', timezone: 'invalid/zone' },
+  { date: '2023-12-31', time: '12:00' },
+]) tasks.push({ id: 'invalid', completed: true, priority: 'high', schedule });
 const before = JSON.stringify(tasks);
 const result = projectScheduledTasks(tasks, period, 'America/Los_Angeles');
-assert.deepEqual(result.map(item => item.task.id), ['timed', 'floating']);
+assert.deepEqual(result.map(item => item.task.id), ['timed']);
 assert.equal(result[0].displayDate, '2023-12-31');
 assert.equal(new Date(result[0].instant).toISOString(), '2023-12-31T15:30:00.000Z');
-assert.equal(result[1].instant, undefined);
+assert.equal(result.length, 1, 'Legacy untimed tasks must not become Anytime agenda entries');
 assert.equal(JSON.stringify(tasks), before, 'Projection must not mutate schedule intent');
 assert.deepEqual(projectScheduledTasks([task], period, 'Asia/Tokyo'), []);
 const routine = { id: 'routine', weekdays: [1], time: '00:30', timezone: 'Asia/Tokyo' };
@@ -50,4 +57,4 @@ assert.equal(projected[0].completed, true);
 assert.equal(projectRoutineOccurrences([routine], [{ routineId: 'routine', date: '2023-12-31', completed: true }], period,
   'America/Los_Angeles')[0].completed, false, 'Display-date completion must not complete a different occurrence');
 assert.deepEqual(projectRoutineOccurrences([{ ...routine, archived: true }], completions, period, 'America/Los_Angeles'), []);
-console.log('Planner projection checks passed: week selection, immutable schedules, floating dates, occurrence identity, archived exclusion.');
+console.log('Planner projection checks passed: week selection, immutable schedules, untimed exclusion, occurrence identity, archived exclusion.');

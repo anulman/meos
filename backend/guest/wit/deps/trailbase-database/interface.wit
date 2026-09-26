@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: Apache-2.0
+// Independent declarations of the pinned host's interoperable SQL wire ABI.
+package trailbase:database@0.1.1;
+interface sqlite {
+  variant tx-error { other(string) }
+  variant value { null, text(string), blob(list<u8>), integer(s64), real(f64) }
+  resource transaction {
+    constructor();
+    commit: func() -> result<_, tx-error>;
+    rollback: func() -> result<_, tx-error>;
+    execute: func(query: string, params: list<value>) -> result<u64, tx-error>;
+    query: func(query: string, params: list<value>) -> result<list<list<value>>, tx-error>;
+  }
+}

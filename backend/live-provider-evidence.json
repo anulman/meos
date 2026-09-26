@@ -1,0 +1,24 @@
+{
+  "runId": "ab9603e037e143889b27a7f3d3478cbb",
+  "checks": [
+    "form login token-free",
+    "two Secure HttpOnly cookies",
+    "safe session identity",
+    "form login token-free",
+    "two Secure HttpOnly cookies",
+    "safe session identity",
+    "synthetic provider preference set",
+    "real WASI TLS provider forecast succeeds",
+    "native persisted provider cache reused"
+  ],
+  "count": 9,
+  "hourly": 168,
+  "daily": 7,
+  "attribution": {
+    "label": "Weather data by Open-Meteo",
+    "url": "https://open-meteo.com/"
+  },
+  "coordinates": "synthetic0,0",
+  "transport": "actual independent guest WASI HTTPS through fixed-provider-only egress",
+  "evidenceRecordedAt": "2026-09-26T06:38:59.762449+00:00"
+}
