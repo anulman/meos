@@ -1,5 +1,7 @@
 name: Agent client
 on:
+  push:
+    paths: ['clients/meos-agent/**', 'scripts/agent-client-*.py', '.github/workflows/agent-client.yml']
   pull_request:
     paths: ['clients/meos-agent/**', 'scripts/agent-client-*.py', '.github/workflows/agent-client.yml']
   workflow_dispatch:
