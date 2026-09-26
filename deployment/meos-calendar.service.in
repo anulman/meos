@@ -1,0 +1,33 @@
+[Unit]
+Description=MeOS private Google Calendar service
+Requires=meos-calendar.socket
+After=meos-calendar.socket
+
+[Service]
+Type=simple
+ExecStartPre=+/usr/bin/python3 @RELEASE@/scripts/calendar-uid-check.py
+ExecStart=/usr/bin/setpriv --reuid=61004 --regid=61004 --clear-groups --bounding-set=-all --inh-caps=-all --ambient-caps=-all /opt/node/bin/node /app/scripts/serve-calendar.mjs
+WorkingDirectory=/app
+Environment=PATH=/usr/bin:/bin
+Environment=HOME=/tmp
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_SETPCAP
+AmbientCapabilities=
+PrivateTmp=yes
+ProtectHome=tmpfs
+ProtectSystem=strict
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX AF_INET
+IPAddressDeny=any
+@GOOGLE_ALLOW@
+InaccessiblePaths=/mnt /var/lib /root -/run/docker.sock -/var/run/docker.sock -/etc/ssh -/etc/ssl/private
+BindPaths=@STATE@:/data
+BindReadOnlyPaths=@RELEASE@:/app @NODE_DIR@:/opt/node @CONFIG@:/run/meos-calendar/config.json @OAUTH@:/run/meos-calendar/oauth.json
+TemporaryFileSystem=/run
+MemoryMax=256M
+TasksMax=32
+Restart=on-failure
+RestartSec=5

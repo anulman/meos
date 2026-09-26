@@ -7,7 +7,7 @@ import http from 'node:http'
 import {spawnSync} from 'node:child_process'
 import {createHash} from 'node:crypto'
 import {chromium} from 'playwright'
-export async function proveAccessBrowser({port,origin,access,owner}){
+export async function proveAccessBrowser({port,origin,access,owner,calendar=false}){
  const checks=[],errors=[]
  assert.equal(spawnSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-keyout','/tmp/access-key.pem','-out','/tmp/access-cert.pem','-days','1','-subj','/CN='+new URL(origin).hostname],{stdio:'ignore'}).status,0)
  let assertion=access.token
@@ -22,6 +22,16 @@ export async function proveAccessBrowser({port,origin,access,owner}){
   await page.reload();await page.getByRole('heading',{name:'Settings',exact:true}).waitFor();await context.clearCookies();await page.reload();await page.getByRole('heading',{name:'Settings',exact:true}).waitFor();checks.push('reload persists and missing native cookies renew automatically behind verified Access')
   const label='Access persistence '+Date.now();await page.getByRole('button',{name:'New project',exact:true}).click();const sheet=page.locator('dialog[open]');await sheet.getByLabel('Project name',{exact:true}).fill(label);await sheet.getByRole('button',{name:'Create project',exact:true}).click();await sheet.waitFor({state:'hidden'});await page.reload();await page.getByRole('button',{name:new RegExp(label)}).waitFor();checks.push('Access-mode ordinary save persists across browser reload')
   const second=await context.newPage();await second.goto(origin+'/settings');await second.getByRole('button',{name:new RegExp(label)}).waitFor();await second.close();checks.push('second tab receives same single-owner persisted data without password')
+  if(calendar){
+   const calendarChecks=[];
+   await page.getByRole('button',{name:'Connect Google Calendar',exact:true}).waitFor();
+   await page.route('https://accounts.google.com/o/oauth2/v2/auth**',async route=>{const url=new URL(route.request().url());assert.equal(url.searchParams.get('redirect_uri'),origin+'/api/calendar/google/callback');const state=url.searchParams.get('state');assert.match(state,/^[A-Za-z0-9_-]{43}$/);await route.fulfill({status:302,headers:{location:origin+'/api/calendar/google/callback?state='+state+'&code=synthetic-code'}})});
+   await page.getByRole('button',{name:'Connect Google Calendar',exact:true}).click();await page.getByText('Connected · update subscriptions active.',{exact:true}).waitFor();calendarChecks.push('rendered Settings connects through real OAuth state, private RPC/store and exact callback with synthetic Google');
+   assert.equal(await page.evaluate(()=>document.cookie.includes('meos-calendar-flow')),false);assert.equal((await context.cookies()).some(c=>c.name==='__Host-meos-calendar-flow'),false);calendarChecks.push('HttpOnly flow binding is not script-visible and is cleared on callback');
+   await page.reload();await page.getByRole('button',{name:'Disconnect Calendar',exact:true}).waitFor();await page.getByRole('button',{name:'Disconnect Calendar',exact:true}).click();await page.getByRole('button',{name:'Connect Google Calendar',exact:true}).waitFor();calendarChecks.push('connection survives reload; disconnect clears grant and returns to Connect');
+   await page.goto(origin+'/api/calendar/google/callback?state=invalid&code=synthetic-code');await page.getByRole('button',{name:'Connect Google Calendar',exact:true}).waitFor();assert.equal(new URL(page.url()).searchParams.get('calendar'),'failed');calendarChecks.push('unbound callback cannot connect and returns a fixed safe Settings result');
+   fs.writeFileSync('calendar-browser-evidence.json',JSON.stringify({runId:process.env.MEOS_ACCEPTANCE_RUN,count:calendarChecks.length,checks:calendarChecks,provider:'synthetic-only'},null,2));console.log('PASS '+calendarChecks.length+' Calendar browser checks');
+  }
   assertion='spoofed';assert.equal(await page.evaluate(async()=> (await fetch('/api/meos/v1/session')).status),403);assert.equal((await page.goto(origin+'/settings')).status(),403);assert.equal(await page.locator('input[type=password]').count(),0);checks.push('invalid external assertion blocks native cookies and document access')
   assertion=access.token;fs.writeFileSync('private/access-public/keys.json',JSON.stringify({...access.keys,fetchedAt:1}));assert.equal(await page.evaluate(async()=> (await fetch('/api/meos/v1/session')).status),403);fs.writeFileSync('private/access-public/keys.json',JSON.stringify(access.keys));await page.goto(origin+'/settings');await page.getByRole('button',{name:new RegExp(label)}).waitFor();checks.push('stale signing-key bundle fails closed and refresh restores passwordless browser access')
   assert.deepEqual(errors,[]);fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:'artifacts/access-settings.png',fullPage:true});fs.writeFileSync('access-browser-evidence.json',JSON.stringify({runId:process.env.MEOS_ACCEPTANCE_RUN,count:checks.length,checks},null,2));console.log('PASS '+checks.length+' Access browser checks')
