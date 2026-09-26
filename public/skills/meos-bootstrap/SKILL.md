@@ -157,6 +157,46 @@ First discover and verify an actual authenticated event API and its protocol. MC
 
 When supported, configure a supervised durable **host service** that waits for events and wakes the agent only for actionable work. It is not a sleeping LLM, recurring chat prompt, or lifecycle callback registry. Keep credentials in the host's secret store and use references in configuration.
 
+### Select and install the transport
+
+For a release containing `clients/meos-agent`, read that pinned checkout's
+`clients/meos-agent/README.md`, `main.go`, and
+`docs/agent-notifications/ARCHITECTURE.md` before selecting the transport. The
+supported distribution is source-only; do not look for a precompiled consumer
+archive or treat a private qualification artifact as a release.
+
+- **Go-capable Linux/macOS host:** install the reviewed source commit or module
+  version with the command below. Verify that the host compiler satisfies
+  `go.mod`. Discover `GOBIN` or `$(go env GOPATH)/bin` and use that exact installed
+  executable in the supervisor, rather than assuming `~/.local/bin`.
+- **Another environment:** use the pinned source and durable-dispatch contract
+  to implement an equivalent host-specific client. Preserve native bearer
+  authentication and refresh persistence, bounded waits/backoff, lease fencing,
+  stable IDs, durable deduplication, handoff-before-ack, cancellation, explicit
+  gap reconciliation and restart recovery. Qualify it before enabling it.
+
+```sh
+go install github.com/anulman/meos/clients/meos-agent@REPLACE_WITH_REVIEWED_COMMIT_OR_VERSION
+```
+
+Resolve the placeholder before execution; do not select `latest` implicitly.
+Provision a distinct `notifications:consume` principal through the release's
+qualified native-principal procedure. Keep protected credential/configuration
+files outside the ledger. The client requires an idempotent durable dispatcher:
+its matching `accepted:true` receipt means persisted queue admission, not merely
+that a process started or an agent completed work. Supervise both that queue's
+worker and the client. Follow the pinned guide's `install`, `doctor`, `run` and
+`status` procedure, verify restart/replay, and record the actual installed commit,
+service IDs and receipts. Installation alone does not prove the machine endpoint
+is deployed or reachable.
+
+This transport signals explicitly timed MeOS task/occurrence blocks. Imported
+primary-calendar events remain display-only; do not invent notification records
+or permission to mutate that calendar. Source installation does not grant planning
+or external-communication authority.
+
+### Configure recovery and supervision
+
 - Use bounded long-poll waits, documented reconnect behavior, exponential backoff with jitter, and explicit handling for authentication failure, throttling, and retention gaps. Avoid busy loops and unbounded retries.
 - Persist the protocol's cursor and processing state durably. Follow its actual acknowledgment rules; do not advance past unprocessed work or acknowledge before the required durable handoff. If the protocol cannot support reliable recovery, record the limitation rather than promise exactly-once delivery.
 - Deduplicate using stable event identity/revision and durable processing receipts. Serialize or claim work through supported host mechanisms; prevent duplicate consumers for the same installation. Reconcile ambiguous effects before retrying.
