@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "tag": "v0.33.22",
+  "tagObject": {
+    "sha": "3dfb2f70d8266036f1e7e9db4902e8b81026f69d",
+    "type": "commit",
+    "url": "https://api.github.com/repos/trailbaseio/trailbase/git/commits/3dfb2f70d8266036f1e7e9db4902e8b81026f69d"
+  },
+  "sources": [
+    {
+      "path": ".github/workflows/release.yml",
+      "url": "https://raw.githubusercontent.com/trailbaseio/trailbase/v0.33.22/.github/workflows/release.yml",
+      "sha256": "54f442a3e137af688bef60a58adeaffd76b800abeba8a1ba326e56564ea3e3cb"
+    },
+    {
+      "path": "Cargo.lock",
+      "url": "https://raw.githubusercontent.com/trailbaseio/trailbase/v0.33.22/Cargo.lock",
+      "sha256": "887fcef9641fae3caf57f6786b6a67f577dec079b11bc6663386a86d917dd34c"
+    },
+    {
+      "path": "crates/cli/Cargo.toml",
+      "url": "https://raw.githubusercontent.com/trailbaseio/trailbase/v0.33.22/crates/cli/Cargo.toml",
+      "sha256": "0b5816fdd364073b5692315857d3c5ea4c545e29f373a1c1e39626df9f2c95ff"
+    },
+    {
+      "path": "crates/core/Cargo.toml",
+      "url": "https://raw.githubusercontent.com/trailbaseio/trailbase/v0.33.22/crates/core/Cargo.toml",
+      "sha256": "67c6b62eac67c588c41964f28a4c5fec459bfd22cd03c3cb0d0cf072440cd13a"
+    },
+    {
+      "path": "guests/typescript/package.json",
+      "url": "https://raw.githubusercontent.com/trailbaseio/trailbase/v0.33.22/guests/typescript/package.json",
+      "sha256": "df35b3af6aec6552c6e558cf7ec7078d79356fad4d646f51f41c980bf431d9f6"
+    },
+    {
+      "path": "crates/wasm-runtime-guest/Cargo.toml",
+      "url": "https://raw.githubusercontent.com/trailbaseio/trailbase/v0.33.22/crates/wasm-runtime-guest/Cargo.toml",
+      "sha256": "4fff5c3da18e89f2dd86a23bfaf6de56bdef37cc3a1e20458ae437d9250b306c"
+    }
+  ],
+  "blockedStockRelease": {
+    "feature": "geos-static",
+    "component": "GEOS",
+    "embeddedVersion": "3.15.1dev",
+    "carrier": "geos-src",
+    "carrierVersion": "0.2.5",
+    "carrierSha256": "4eee1f85b9bb01f9b6051facc23971da8e7baebee757c1642973d95eb3510092",
+    "evidenceFiles": [
+      "geos-src-0.2.5/source/Version.txt",
+      "geos-src-0.2.5/source/COPYING",
+      "geos-src-0.2.5/source/include/geos/geom/Geometry.h"
+    ],
+    "license": "LGPL-2.1",
+    "status": "not-approved"
+  },
+  "unadmittedGuestLibraries": [
+    {
+      "name": "trailbase-wasm",
+      "ecosystem": "npm",
+      "version": "0.6.0",
+      "license": "OSL-3.0"
+    },
+    {
+      "name": "trailbase-wasm",
+      "ecosystem": "cargo",
+      "version": "0.7.0",
+      "license": "OSL-3.0"
+    }
+  ],
+  "alternative": {
+    "kind": "unchanged-tagged-source-build",
+    "featureSelection": "-p trailbase-cli --no-default-features --features trailbase/wasm --bin trail",
+    "qualified": false,
+    "notes": "No geospatial SQL needed. Requires build-feature closure, toolchain/build dependency and artifact license qualification; no compilation attempted."
+  }
+}

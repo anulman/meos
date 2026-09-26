@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "name": "TrailBase",
+  "version": "0.33.22",
+  "status": "not-admitted",
+  "license": "OSL-3.0",
+  "exception": "Telegram41790: unmodified separately operated TrailBase v0.33.22 only; retain matching source/notices; unidentified transitive components not approved",
+  "upstreamRelease": "https://github.com/trailbaseio/trailbase/releases/tag/v0.33.22",
+  "archive": "https://github.com/trailbaseio/trailbase/releases/download/v0.33.22/trailbase_v0.33.22_x86_64_linux.zip",
+  "upstreamArchiveDigest": "sha256:c5c97c4a075be665dd72052c3573a91e2c5a3c8f87e0a07a0d51f73f18dcb6be",
+  "digestSource": "https://api.github.com/repos/trailbaseio/trailbase/releases/tags/v0.33.22",
+  "downloadVerified": true,
+  "downloadVerification": "Archive downloaded into memory only and SHA-256 matched; entries trail, CHANGELOG.md, LICENSE. Not executed or retained as an admitted runtime.",
+  "matchingSourceRetained": false,
+  "transitiveInventoryReviewed": false,
+  "runtimeImage": null,
+  "authAndCliQualified": false
+}
