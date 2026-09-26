@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Trusted launcher. Repository tests see only a verified disposable UDS, never Docker/production.
+raise SystemExit('Retired shared-UID launcher. Use reviewed integration-runner.py native/proxy/mcp modes.')
 import pathlib,json,subprocess,sys,re,os,stat,time,hashlib,tarfile
 assert os.geteuid()==0, "Run this trusted launcher with sudo; test process drops all capabilities"
 repo=pathlib.Path(__file__).resolve().parents[1];q=repo/'.qualification';r=json.loads((q/'runtime-launch.json').read_text());plan=r['plan'];run=plan['runId']

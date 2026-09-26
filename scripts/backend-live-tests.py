@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 import pathlib,json,os,http.client,urllib.parse,socket,uuid
-q=pathlib.Path(__file__).resolve().parents[1]/'.qualification';e=json.loads((q/'acceptance-endpoint.json').read_text());creds=json.loads((q/'synthetic-credentials.json').read_text());assert e['runId']==creds['runId'];os.chdir('/run/meos-acceptance-data')
-assert os.getuid()==10001
+q=pathlib.Path(__file__).resolve().parents[1]/'private';e=json.loads((q/'acceptance-endpoint.json').read_text());creds=json.loads((q/'synthetic-credentials.json').read_text());assert e['runId']==creds['runId'];os.chdir('/run/meos-acceptance-data')
+assert os.getuid()==61001
 assert 'CapEff:\t0000000000000000' in pathlib.Path('/proc/self/status').read_text()
 class UnixConnection(http.client.HTTPConnection):
  def connect(self):self.sock=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);self.sock.settimeout(20);self.sock.connect('server.sock')
 def request(method,path,body=None,headers=None):
- c=UnixConnection('meos-acceptance.invalid');c.request(method,path,body,{'Host':'meos-acceptance.invalid',**(headers or {})});r=c.getresponse();b=r.read();h={**dict(r.getheaders()),'cookies':r.headers.get_all('Set-Cookie') or []};c.close();return r.status,h,b
+ c=UnixConnection(urllib.parse.urlparse(e['origin']).netloc);c.request(method,path,body,{'Host':urllib.parse.urlparse(e['origin']).netloc,**(headers or {})});r=c.getresponse();b=r.read();h={**dict(r.getheaders()),'cookies':r.headers.get_all('Set-Cookie') or []};c.close();return r.status,h,b
 checks=[]
 def check(name,condition):
  if not condition:raise AssertionError(name)

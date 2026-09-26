@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import {readFileSync,writeFileSync} from 'node:fs'
 import http from 'node:http'
 import {createProtectedApiProxy} from '../backend/protected-proxy.mjs'
-const q=new URL('../.qualification/',import.meta.url)
+const q=new URL('../private/',import.meta.url)
 const endpoint=JSON.parse(readFileSync(new URL('acceptance-endpoint.json',q))),credentials=JSON.parse(readFileSync(new URL('synthetic-credentials.json',q)))
-assert.equal(endpoint.runId,credentials.runId);assert.equal(process.getuid(),10001);assert.match(readFileSync('/proc/self/status','utf8'),/CapEff:\s+0000000000000000/)
+assert.equal(endpoint.runId,credentials.runId);assert.equal(process.getuid(),61001);assert.match(readFileSync('/proc/self/status','utf8'),/CapEff:\s+0000000000000000/)
 const origin=endpoint.origin,checks=[]
 const upstream=async request=>{
  const url=new URL(request.url);assert.equal(url.origin,origin)
@@ -30,4 +30,4 @@ const logout=csrf=>new Request(origin+'/api/meos/auth/logout',{method:'POST',hea
 assert.equal((await handle(logout('wrong'))).status,403);checks.push('live logout rejects wrong CSRF')
 const result=await handle(logout(safe.csrf));assert.equal(result.status,204);assert.deepEqual(result.headers.getSetCookie(),['auth_token=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0','refresh_token=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0']);checks.push('live logout emits browser-valid cookie deletions')
 const refresh=cookie.split('; ').find(value=>value.startsWith('refresh_token='));session=await handle(new Request(origin+'/api/meos/v1/session',{headers:{Cookie:refresh}}));assert.deepEqual(await session.json(),{user:null});checks.push('proxy logout revokes native refresh session')
-const proof={runId:endpoint.runId,checks,count:checks.length,network:'none; UID10001 and zero effective capabilities'};writeFileSync(new URL('proxy-live-checks.json',q),JSON.stringify(proof,null,2));console.log(JSON.stringify(proof))
+const proof={runId:endpoint.runId,checks,count:checks.length,network:'none; UID61001 and zero effective capabilities'};writeFileSync(new URL('proxy-live-checks.json',q),JSON.stringify(proof,null,2));console.log(JSON.stringify(proof))

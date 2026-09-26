@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 """Trusted acceptance launcher. Inspect/review before running with sudo. No endpoint overrides."""
-import os,pathlib,json,subprocess,shutil,sys,stat,tempfile,time,hashlib,fcntl
+import os,pathlib,json,subprocess,shutil,sys,stat,tempfile,time,hashlib,fcntl,tarfile
 assert os.geteuid()==0
 uid_lock=os.open('/run/lock/meos-test-61001.lock',os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600);fcntl.flock(uid_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
 assert '61001' not in subprocess.check_output(['/usr/bin/ps','-eo','uid='],env={'PATH':'/usr/bin:/bin'},text=True).split(),'Dedicated test UID already active'
 repo=pathlib.Path(__file__).resolve().parents[1]
-raw_mode=sys.argv[1] if len(sys.argv)==2 else 'probe';candidate=raw_mode.startswith('candidate-');mode=raw_mode.removeprefix('candidate-');assert mode in ['probe','build','browser','demo','checks','restart','production-smoke'];prefix='candidate-' if candidate else ''
-source=repo/'.qualification/release-acceptance' if candidate else repo.parent/'meos-backend'/'.qualification'
+raw_mode=sys.argv[1] if len(sys.argv)==2 else 'probe';candidate=raw_mode.startswith('candidate-');mode=raw_mode.removeprefix('candidate-');assert mode in ['probe','build','browser','demo','checks','restart','production-smoke','native','proxy','mcp','release'];prefix='candidate-' if candidate else ''
+source=repo/'.qualification/release-hardened-acceptance' if candidate else repo.parent/'meos-backend'/'.qualification'
 r=json.loads((source/'runtime-launch.json').read_text());p=r['plan'];run=p['runId']
 assert len(run)==32 and all(c in '0123456789abcdef' for c in run)
 assert p['environment']=='acceptance' and p['network']=='none' and p['syntheticOnly'] is True
@@ -44,7 +44,7 @@ for part in ['package.json','pnpm-lock.yaml','tsconfig.json','vite.config.ts']:
  assert not (repo/part).is_symlink();shutil.copyfile(repo/part,sandbox/part)
 source_files=sorted(p for p in sandbox.rglob('*') if p.is_file());source_hashes={str(p.relative_to(sandbox)):hashlib.sha256(p.read_bytes()).hexdigest() for p in source_files};source_digest=hashlib.sha256(json.dumps(source_hashes,sort_keys=True).encode()).hexdigest()
 private=sandbox/'private';private.mkdir(exist_ok=True)
-if mode=='production-smoke':
+if mode in ['production-smoke','release']:
  assert candidate
  (sandbox/'dist').mkdir()
  (private/'runtime.json').write_text(json.dumps({'origin':endpoint['origin'],'environment':'production','instanceId':run}))
@@ -64,7 +64,23 @@ for path in [sandbox,*sandbox.rglob('*')]:
 node='/home/clawy/.local/share/mise/installs/node/24.19.0'
 deps=repo.parent/'meos'/'node_modules';assert deps.is_dir() and not deps.is_symlink()
 props={'PrivateNetwork':'yes','ProtectHome':'tmpfs','ProtectSystem':'strict','PrivateTmp':'yes','NoNewPrivileges':'yes','ProtectProc':'invisible','ProcSubset':'pid','TemporaryFileSystem':'/run /opt /work/node_modules/.vite-temp:mode=1777 /work/node_modules/.vite:mode=1777','InaccessiblePaths':'/mnt /var/lib /root -/etc/ssl/private -/etc/ssh','BindPaths':str(sandbox)+':/work','BindReadOnlyPaths':f'{sock}:/run/meos-acceptance-data/server.sock {deps}:/work/node_modules {node}:/opt/node /opt/playwright:/opt/playwright','MemoryMax':'1800M','TasksMax':'180','CapabilityBoundingSet':'CAP_SETUID CAP_SETGID CAP_SETPCAP','WorkingDirectory':'/work'}
-if mode=='production-smoke':
+if mode=='mcp':
+ audit=repo.parent/'meos-backend'/'.qualification/mcporter-audit';inventory=json.loads((repo/'backend/mcp-qualification-dependencies.json').read_text())
+ assert hashlib.sha256((audit/'package-lock.json').read_bytes()).hexdigest()==inventory['lockSHA256']
+ installed=json.loads((audit/'node_modules/.package-lock.json').read_text())['packages']
+ assert set(installed)=={'node_modules/'+p['name'] for p in inventory['packages']}
+ for package in inventory['packages']:
+  assert package['license'] in ['MIT','ISC']
+  key='node_modules/'+package['name'];archive=audit/'archives'/(hashlib.sha256(key.encode()).hexdigest()+'.tgz')
+  assert hashlib.sha256(archive.read_bytes()).hexdigest()==package['sha256']
+  with tarfile.open(archive) as tar:
+   for item in tar:
+    if not item.isfile():continue
+    assert item.name.startswith('package/') and '..' not in pathlib.PurePosixPath(item.name).parts
+    target=audit/key/item.name[len('package/'):]
+    assert target.read_bytes()==tar.extractfile(item).read(),'Installed MCP dependency drift'
+ props['BindReadOnlyPaths']+=' '+str(audit/'node_modules')+':/run/meos-mcporter/node_modules'
+if mode in ['production-smoke','release']:
  props['BindReadOnlyPaths']+=f' {sock}:/run/meos/backend.sock {private}/runtime.json:/run/meos/runtime.json'
  props['BindPaths']+=f' {sandbox}/dist:/app'
 cmd=['systemd-run','--wait','--pipe','--collect']+[f'--property={k}={value}' for k,value in props.items()]+['/usr/bin/setpriv','--reuid=61001','--regid=61001','--clear-groups','--bounding-set=-all','/usr/bin/env','-i','PATH=/opt/node/bin:/usr/bin:/bin','HOME=/tmp','MEOS_ACCEPTANCE_RUN='+run,'/opt/node/bin/node','scripts/integration-harness.mjs',mode]
@@ -77,11 +93,21 @@ for part in ['isolation-proof.json','integration-evidence.json','demo-evidence.j
  path=sandbox/part
  if path.is_file():
   assert path.stat().st_size<1000000 and not path.is_symlink();shutil.copyfile(path,q/(prefix+part));os.chown(q/(prefix+part),repo.stat().st_uid,repo.stat().st_gid)
+for part in ['live-fixture.json','live-checks.json','proxy-live-checks.json','mcp-live-checks.json']:
+ path=private/part
+ if path.exists():
+  assert path.is_file() and not path.is_symlink() and path.stat().st_size<1000000
+  assert json.loads(path.read_text())['runId']==run
+  shutil.copyfile(path,q/(prefix+part));os.chown(q/(prefix+part),repo.stat().st_uid,repo.stat().st_gid)
 artifacts={}
 if (sandbox/'dist/client').is_dir():
  for artifact in sorted((sandbox/'dist/client').rglob('*')):
   assert not artifact.is_symlink()
   if artifact.is_file():artifacts[str(artifact.relative_to(sandbox/'dist/client'))]=hashlib.sha256(artifact.read_bytes()).hexdigest()
 receipt={'runId':run,'mode':mode,'exitCode':result.returncode,'sourceDigest':source_digest,'sourceFiles':source_hashes,'clientArtifactDigest':hashlib.sha256(json.dumps(artifacts,sort_keys=True).encode()).hexdigest(),'clientFiles':artifacts,'sandbox':str(sandbox),'checkedAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())}
+if mode=='release' and result.returncode==0:
+ receipt['browserEvidence']=json.loads((sandbox/'integration-evidence.json').read_text());receipt['productionPathEvidence']=json.loads((sandbox/'production-path-evidence.json').read_text())
+ assert receipt['browserEvidence']['runId']==receipt['productionPathEvidence']['runId']==run
+ assert receipt['browserEvidence']['count']==26 and receipt['productionPathEvidence']['count']==4
 (q/('run-evidence-'+raw_mode+'.json')).write_text(json.dumps(receipt,indent=2));os.chown(q/('run-evidence-'+raw_mode+'.json'),repo.stat().st_uid,repo.stat().st_gid)
 sys.exit(result.returncode)

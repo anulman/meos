@@ -5,21 +5,21 @@ import net from 'node:net'
 import assert from 'node:assert/strict'
 import {randomUUID} from 'node:crypto'
 import {createRuntime} from '/run/meos-mcporter/node_modules/mcporter/dist/runtime.js'
-const q=new URL('../.qualification/',import.meta.url),credentials=JSON.parse(readFileSync(new URL('synthetic-credentials.json',q))),endpoint=JSON.parse(readFileSync(new URL('acceptance-endpoint.json',q)))
-assert.equal(credentials.runId,endpoint.runId);assert.equal(process.getuid(),10001)
+const q=new URL('../private/',import.meta.url),credentials=JSON.parse(readFileSync(new URL('synthetic-credentials.json',q))),endpoint=JSON.parse(readFileSync(new URL('acceptance-endpoint.json',q)))
+assert.equal(credentials.runId,endpoint.runId);assert.equal(process.getuid(),61001)
 assert.match(readFileSync('/proc/self/status','utf8'),/CapEff:\s+0000000000000000/)
 assert.throws(()=>readFileSync('/home/clawy/.openclaw/openclaw.json'));assert.throws(()=>readFileSync('/var/run/docker.sock'))
 await new Promise((resolve,reject)=>{const s=net.createConnection({host:'192.0.2.1',port:5432});s.on('connect',()=>{s.destroy();reject(Error('production network available'))});s.on('error',resolve);s.setTimeout(1000,()=>{s.destroy();reject(Error('no immediate network denial'))})})
 const checks=['production network, paths and credentials denied']
 const check=(name,condition)=>{assert.ok(condition,name);checks.push(name)}
-function upstream(path,{method='GET',headers={},body}={}){return new Promise((resolve,reject)=>{const req=http.request({socketPath:'/run/meos-acceptance-data/server.sock',path,method,headers:{Host:'meos-acceptance.invalid',...headers}},res=>{const data=[];res.on('data',b=>data.push(b));res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body:Buffer.concat(data).toString()}))});req.on('error',reject);req.end(body)})}
+function upstream(path,{method='GET',headers={},body}={}){return new Promise((resolve,reject)=>{const req=http.request({socketPath:'/run/meos-acceptance-data/server.sock',path,method,headers:{Host:new URL(endpoint.origin).host,...headers}},res=>{const data=[];res.on('data',b=>data.push(b));res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body:Buffer.concat(data).toString()}))});req.on('error',reject);req.end(body)})}
 async function login(role){const user=credentials.users.find(x=>x.email.startsWith(role+'-'));assert.ok(user);const r=await upstream('/api/auth/v1/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Origin:endpoint.origin},body:new URLSearchParams({email:user.email,password:user.password}).toString()});assert.ok([200,303].includes(r.status));const cookies=r.headers['set-cookie'];return {cookie:cookies.map(s=>s.split(';')[0]).join('; '),token:cookies.find(s=>s.startsWith('auth_token=')).split(';')[0].slice('auth_token='.length)}}
 const agent=await login('agent'),owner=await login('owner')
 const ownerSession=JSON.parse((await upstream('/api/meos/v1/session',{headers:{Cookie:owner.cookie}})).body)
 const browserHeaders={Cookie:owner.cookie,Origin:endpoint.origin,'X-CSRF-Token':ownerSession.csrf,'Content-Type':'application/json'}
 const operation=(name,input)=>upstream('/api/meos/v1/operations/'+name,{method:'POST',headers:browserHeaders,body:JSON.stringify(input)})
 // Only a loopback relay inside the disposable network namespace. Fixed UDS only.
-const server=http.createServer(async(req,res)=>{try{if(req.url!=='/mcp'){res.writeHead(404).end();return}const chunks=[];for await(const c of req)chunks.push(c);const r=await upstream('/api/meos/v1/mcp',{method:req.method,headers:{...req.headers,host:'meos-acceptance.invalid'},body:Buffer.concat(chunks)});res.writeHead(r.status,r.headers);res.end(r.body)}catch{res.writeHead(503).end()}})
+const server=http.createServer(async(req,res)=>{try{if(req.url!=='/mcp'){res.writeHead(404).end();return}const chunks=[];for await(const c of req)chunks.push(c);const r=await upstream('/api/meos/v1/mcp',{method:req.method,headers:{...req.headers,host:new URL(endpoint.origin).host},body:Buffer.concat(chunks)});res.writeHead(r.status,r.headers);res.end(r.body)}catch{res.writeHead(503).end()}})
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 const runtime=await createRuntime({servers:[{name:'meos',command:{kind:'http',url:new URL('http://127.0.0.1:'+server.address().port+'/mcp'),headers:{Authorization:'Bearer '+agent.token}}}],rootDir:'/tmp',logger:{debug(){},info(){},warn(){},error(){}}})
 try{

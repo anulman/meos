@@ -44,7 +44,7 @@ acceptance-only. No acceptance database or credentials will be promoted.
   date and planner projection checks. Six demo suites and four candidate restart-browser assertions now also pass
   on the current application source. Independent staged-diff review found no B4
   source blocker. A hardened compiler rebuild produced a different WASM hash;
-  that new candidate needs fresh admission and exact-image checks before release.
+  the new artifact was admitted afresh and separately qualified (see below).
 - Authoritative fresh evidence: `.qualification/run-evidence-<mode>.json`
   contains source-file hashes, client-file hashes, run ID, exit result and sandbox
   identity. Browser counts are in corresponding integration evidence. A change
@@ -82,3 +82,34 @@ acceptance-only. No acceptance database or credentials will be promoted.
 No tests deliberately modify production. Full Calendar OAuth/sync, media capture,
 and AI scheduling execution remain out of scope. Settings time-format choice
 remains explicitly session-local; timezone and week start persist.
+
+## Final hardened artifact checkpoint
+
+The fresh hardened image is `sha256:70e887448c5458d9735835a47bb3f1d2586a16cab1560df8f899cc55702bc63d`,
+with guest `sha256:c644fca6ea9b0f6bcb73b32a9b95ee809ac4ace785ced152cf065ca5ffd8fb2b`.
+Acceptance run `65e110e797dc4f22969f792af1efd8f8` passed native29,
+protected-proxy7, actual MCPorter19, browser26, production-entrypoint4 and
+restart-persistence4. Every repository test/build launch first passed six
+isolation groups. Hardened guest compilation also used a distinct, unoccupied
+build UID61003 with live backend/web-UID process denial proofs.
+
+The combined release run builds once and tests the actual production entrypoint
+and browser against **that same output**. Its frozen client digest is
+`2618f9708b12ef1b6bbe05c101f50dcc3e70cc2583be1385e4a09f6d836b99a4`;
+receipt `.qualification/run-evidence-candidate-release.json` SHA256 is
+`de975ee9c829238d48d6163842c13bcee1ecb5ee0b36e1975e8983655bb716fc`.
+The selected sandbox is `.qualification/integration-mp_n57o_`. Deployment must
+copy this qualified output, not rebuild it. Restart qualification rebuilt a
+separate client and does not replace this selection (prerendered shell timestamps
+can differ across builds).
+
+The legacy shared-UID backend launcher now refuses execution. Additional native,
+proxy and MCP modes use the trusted distinct-UID/socket-only integration launcher.
+A browser navigation timing error was fixed by awaiting the Week view before
+selecting the current week; this was harness synchronization, not a product defect.
+Failed release runs cannot retain a successful combined proof receipt.
+
+Production lifecycle staging/bootstrap/restart qualification is separate and
+still pending at this checkpoint. Node runtime dependency-policy admission and
+secure ordinary-owner input remain production-only gates. Production, public
+routing and existing preview have not been modified.

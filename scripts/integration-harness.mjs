@@ -25,9 +25,15 @@ fs.writeFileSync('isolation-proof.json',JSON.stringify({runId:process.env.MEOS_A
 console.log('Isolation checks passed: '+checks.length)
 const mode=process.argv[2]
 function run(args){const result=spawnSync('/opt/node/bin/node',args,{stdio:'inherit',env:args[0]==='--test'?{PATH:process.env.PATH}:process.env});assert.equal(result.status,0,args.join(' '))}
-if(['build','browser','demo','restart','production-smoke'].includes(mode)){run(['scripts/licenses.mjs']);run(['node_modules/typescript/bin/tsc','--noEmit']);run(['node_modules/vite/bin/vite.js','build'])}
+if(['build','browser','demo','restart','production-smoke','release'].includes(mode)){run(['scripts/licenses.mjs']);run(['node_modules/typescript/bin/tsc','--noEmit']);run(['node_modules/vite/bin/vite.js','build'])}
 if(mode==='checks') {run(['scripts/generate-contract.mjs','--check']);run(['--test',...fs.readdirSync('scripts').filter(p=>/^backend-.*-tests.mjs$/.test(p)).map(p=>'scripts/'+p),'scripts/backend-tests.mjs']);run(['scripts/test-dates.mjs']);run(['scripts/test-planner-clock.mjs'])}
 if(mode==='browser'||mode==='restart')await import('./integration-browser.mjs')
 if(mode==='demo')await import('./integration-demo.mjs')
 
 if(mode==='production-smoke')await import('./integration-production-path.mjs')
+
+if(mode==='mcp')await import('./backend-mcp-live.mjs')
+if(mode==='proxy')await import('./backend-proxy-live.mjs')
+if(mode==='native'){const result=spawnSync('/usr/bin/python3',['scripts/backend-live-tests.py'],{stdio:'inherit',env:process.env});assert.equal(result.status,0)}
+
+if(mode==='release'){await import('./integration-production-path.mjs');await import('./integration-browser.mjs')}
