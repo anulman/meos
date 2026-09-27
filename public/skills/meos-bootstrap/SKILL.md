@@ -7,7 +7,7 @@ description: Install or maintain MeOS from a verified supported release; enable 
 
 Use when a user's agent should install MeOS from scratch or finish configuring an existing installation, including its operating skills. Reading this document alone authorizes no installation or side effects. Use supported host tools within existing authority; do not add a MeOS callback framework or invent deployment or MCP operations.
 
-A user's bootstrap request covers the necessary supported installation and configuration dependencies of the requested setup, within that user's existing authority and standing constraints. Reconcile working components, then complete missing scoped MCP access, event listener and durable dispatcher/worker setup when included in that scope; discovery alone is not completion. Do not ask again for authority already granted. For a genuinely missing grant or decision, prepare the concrete supported changes first and ask only for that exact permission or choice, stating why it is required. Missing packaging or implementation is not a permission question: report the concrete capability gap and, when coding is authorized, assign an implementation owner instead of inventing production infrastructure. Preserve independent qualification and human-only release gates.
+A user's bootstrap request covers the necessary supported installation and configuration dependencies of the requested setup, within that user's existing authority and standing constraints. Reconcile working components, then complete missing authorized MCP access, event listener and durable dispatcher/worker setup when included in that scope; discovery alone is not completion. Do not ask again for authority already granted. For a genuinely missing grant or decision, prepare the concrete supported changes first and ask only for that exact permission or choice, stating why it is required. Missing packaging or implementation is not a permission question: report the concrete capability gap and, when coding is authorized, assign an implementation owner instead of inventing production infrastructure. Preserve independent qualification and human-only release gates. Use supported, reversible defaults and make a recommendation when the environment or established preferences resolve the choice; proceed within authority instead of silently waiting for unnecessary decisions. Surface real blockers with their next action and owner, and continue independent work.
 
 ## Installation target
 
@@ -214,7 +214,11 @@ Within installation authority, create a clearly labeled disposable item, retriev
 
 Treat provider integrations as optional separate components. For Calendar/OAuth, use the release's real supported provider setup and consent flow, exact registered redirect URI and requested scopes, and user-controlled secret entry. Confirm connection state and supported behavior with safe, authorized checks. Missing consent or an unqualified integration must not masquerade as active sync or prevent truthful reporting of an otherwise working core installation.
 
-Create or connect a scoped agent identity using the release's actual auth/MCP procedure. Verify authenticated discovery and a harmless read against the intended workspace/account. Record granted scopes; do not reuse an unrestricted owner credential by default. A missing connection is setup work when the supported procedure and authority are available, not a reason to stop at discovery. If MCP or an event API is unavailable, distinguish missing configuration, an exact missing grant, and an unsupported capability; apply the continuation rule above and proceed with compatible parts of agent setup. Never substitute another service's credential to bypass the missing grant.
+Connect MCP using the release's supported authentication procedure on behalf of the intended user. When the user delegates their access to the operating agent, reuse that authorized user identity; do not create a separate agent principal by default. Identity and credential scoping are separate choices: use a supported delegated or appropriately scoped credential for the same identity when available, without inventing token-exchange capabilities or narrowing access below the requested operations. An explicitly delegated owner credential is not categorically forbidden. Protect credentials and refresh state in supported secret storage/private files; verify effective identity, workspace and permissions with authenticated discovery and a harmless read. Record only non-secret references and effective permissions, and distinguish technical restrictions from instruction-only authority limits.
+
+Prefer a local Unix socket when the release supports one, using a supported stdio MCP adapter if the agent host requires stdio. Socket permissions restrict connection access; they do not replace application authentication unless the release explicitly supports that mechanism. HTTP can be preferable across hosts, across container boundaries without a shared socket, or for managed/remote MCP clients that do not support local stdio/socket access. Use the release's actual HTTP transport, supported authentication and TLS appropriate to exposure; do not add public routing or a new auth server merely because HTTP is available. Verify endpoint/adapter capabilities rather than assuming a backend socket or HTTP API already speaks MCP.
+
+A missing connection is setup work when the supported procedure and authority are available, not a reason to stop at discovery. If the release requires a separate principal but the user chose delegated identity, report an implementation capability mismatch and route authorized coding work to an owner; do not provision against that decision. If MCP or an event API is unavailable, distinguish missing configuration, an exact missing grant, and an unsupported capability; apply the continuation rule above and proceed with compatible parts of agent setup. Never substitute an unrelated service's credential to bypass a missing grant.
 
 ## Stage 4 — Configure the operating agent
 
@@ -282,7 +286,7 @@ or recreate jobs, recipients, registrations or seed data merely to rerun this sk
   resources, but let unrelated planning runs continue. Stop only the affected
   client when its documented operation requires exclusive state ownership.
 
-Create an installation ledger in durable host storage containing the pinned MeOS release and installation-manifest reference, artifact verification, host/deployment path, service IDs, persistent-storage references, non-secret access endpoints, workspace/account identity, skill versions, job IDs, triggers, timezone, execution settings, authority, status, verification receipts, and remaining blockers. Never store tokens or secret values in it. A job created successfully is **configured**, not proof of a successful execution.
+Create an installation ledger in durable host storage containing the pinned MeOS release and installation-manifest reference, artifact verification, host/deployment path, service IDs, persistent-storage references, non-secret access endpoints, workspace/account identity, skill versions, job IDs, triggers, timezone, execution settings, authority, status, verification receipts, and remaining blockers. Never store tokens or secret values in it. A job created successfully is **configured**, not proof of a successful execution. Install authorized morning/evening/review schedules independently of the event pipeline. Missing MCP access may block a ritual's planning execution, not its schedule installation: require an access preflight, explicit blocked reporting and no invented plans. Reuse known times and ordering; when a weekly review follows evening close, sequence them in one execution rather than creating concurrent jobs.
 
 For each maintenance run, record the selected mode/features, observed starting
 state, intended changes, completed effects and unresolved steps. Keep secret
@@ -291,7 +295,7 @@ without rewriting managed resources.
 
 ### Reflection capability
 
-Read the [learning-loop reference](../learning-loop.md) and verify which authorized context and notes capabilities this installation exposes. Current MeOS MCP has no generic period-note read/write operations; owner HTTP endpoints do not grant a scoped agent access. If an authorized host/application notes capability is unavailable, record reflection persistence as unsupported and deliver reflections unsaved. Do not substitute occurrence edits or calendar scopes, borrow owner credentials, or install a sandbox, learning service or schema to satisfy this skill. Verify saved-note readback separately from planning and notification readiness.
+Read the [learning-loop reference](../learning-loop.md) and verify which authorized context and notes capabilities this installation exposes. At this source revision, MeOS MCP has no generic period-note read/write operations; verify the selected release rather than assuming they exist. An owner HTTP endpoint may be usable through supported tooling under explicit delegated user authorization, but neither its existence nor delegation creates a missing MCP operation. Verify actual notes API support, effective permissions and the delegated grant separately. If an authorized host/application notes capability is unavailable, record reflection persistence as unsupported and deliver reflections unsaved. Do not substitute occurrence edits or calendar scopes, borrow credentials outside the delegated grant, or install a sandbox, learning service or schema to satisfy this skill. Verify saved-note readback separately from planning and notification readiness.
 
 ## Configure the event long-poller
 
@@ -322,9 +326,14 @@ go install github.com/anulman/meos/clients/meos-agent@REPLACE_WITH_REVIEWED_COMM
 ```
 
 Resolve the placeholder before execution; do not select `latest` implicitly.
-Provision a distinct `notifications:consume` principal through the release's
-qualified native-principal procedure. Keep protected credential/configuration
-files outside the ledger. The client requires an idempotent durable dispatcher:
+Verify the selected release's notification authentication contract. A requirement
+for a distinct `notifications:consume` principal, if present, is an implementation
+constraint, not a universal bootstrap policy. Prefer supported credentials acting
+on behalf of the delegated user; do not create another identity against the user's
+choice. If the current endpoint/client only accepts distinct principals, record
+that concrete mismatch and route authorized implementation to a coding owner while
+continuing MCP and ritual setup independently. Keep protected credentials, refresh
+state and configuration outside the ledger. The client requires an idempotent durable dispatcher:
 its matching `accepted:true` receipt means persisted queue admission, not merely
 that a process started or an agent completed work. Supervise both that queue's
 worker and the client. Follow the pinned guide's `install`, `doctor`, `run` and
@@ -336,6 +345,34 @@ This transport signals explicitly timed MeOS task/occurrence blocks. Imported
 primary-calendar events remain display-only; do not invent notification records
 or permission to mutate that calendar. Source installation does not grant planning
 or external-communication authority.
+
+### Select the durable outbox for this deployment
+
+Use the simplest supported durable outbox/dispatch store that fits the deployment,
+not one universal broker requirement:
+
+- **Single persistent VPS (including this installation):** use a local SQLite
+  outbox on persistent storage and a supervised worker. Preserve its database and
+  processing receipts across service/container replacement; keep writes and work
+  claims coordinated. SQLite on an ephemeral container filesystem is not durable.
+- **Shared or multiworker deployment:** prefer an existing transactional database
+  outbox with supported atomic claims/leases and, where applicable, atomic
+  application-write/event publication. Do not assume multiple hosts can safely
+  share a SQLite file or introduce a second database without a need.
+- **Ephemeral/serverless deployment:** use a supported managed durable queue or
+  platform durable store with recovery, retention and worker ownership semantics;
+  local scratch storage is insufficient. Provision paid/external resources only
+  within the user's authority.
+
+For every strategy, persist admission before acknowledging the producer. Track
+stable event/revision IDs, deduplication, bounded retries, claimed runs and handling
+receipts separately. An accepted enqueue or a successful agent turn is not proof
+that the requested work was handled: require a validated handling outcome and the
+protocol's actual acknowledgment/delivery receipts. Keep blocked or unverified
+outcomes actionable, preserve run IDs, and reconcile unknown effects before retry
+rather than replaying them blindly. Verify that required receipt/freshness APIs
+exist; a worker prompt cannot supply missing capabilities. Report actual delivery
+and recovery guarantees; do not claim exactly-once effects from queue durability.
 
 ### Configure recovery and supervision
 
