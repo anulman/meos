@@ -17,22 +17,6 @@ Use for decisions about work. Weekly review composes this procedure rather than 
 
 ## Interpret the work once
 
-Follow the [learning-loop reference](../learning-loop.md). Retrieve original intent, definition of done, prior answers and applicable lessons before choosing a next action. Surface a missing audience, deliverable or dependency only when it changes a decision. Reuse resolutions across walk, weekly, evening and morning; one shared unresolved question is not four prompts. Separate a proposed interpretation from an accepted scope revision.
-
-**Ideal query — design only; use discovered ordinary tools today:**
-
-```ts
-const context = await meos.learning.context({
-  taskIds: reviewSliceIds, knownAt: decisionAt,
-  include: ["request", "scope", "forecast", "budget", "answers"], limit: 20
-});
-const lessons = await meos.learning.lessons({
-  taskIds: reviewSliceIds, knownAt: decisionAt, states: ["trial", "retained"], limit: 3
-});
-return { context, lessons,
-  questions: learning.questions(context, { decision: "choose-next-action", max: 1 }) };
-```
-
-If a consequential forecast needs support, compose a bounded `episodes` read with `comparableTo: reviewSliceIds` as defined in the reference. Do not ask the user to reconstruct facts already available to tools. Save coverage and decisions for weekly review instead of rerunning its learning pass here.
+Follow the [learning-loop reference](../learning-loop.md). Retrieve available intent, definition of done and relevant prior answers before choosing a next action. Ask about audience, deliverable or dependency only when the answer changes the decision. An interpretation remains a proposal until supported or accepted. Reuse accessible answers across rituals; save a small reflection only through authorized notes capabilities. If unavailable, report missing context or unsaved output rather than promising durable reuse.
 
 **Result:** decisions, next actions, blockers with a next step, explicit deferrals and remaining capacity conflicts—not a recital of statuses. Save coverage/checkpoint so a later weekly review resumes rather than repeats the walk.

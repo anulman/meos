@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0
+// Independently authored world; standard WASI interfaces are supplied by the
+// qualified Wasmtime source distribution at build time, not the TrailBase SDK.
+package meos:backend@0.1.0;
+world handler {
+  include wasi:http/proxy@0.2.12;
+  import trailbase:database/sqlite@0.1.1;
+  export trailbase:component/init-endpoint@0.2.0;
+  export trailbase:component/sqlite-function-endpoint@0.2.0;
+}

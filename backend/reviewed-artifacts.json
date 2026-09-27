@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "artifacts": [
+    {
+      "image": "sha256:592e54a55bf2ce63de2669736aaa7153bd1dd712057989f3fdb0a230e19b3aff",
+      "version": "0.33.22",
+      "reviewStatus": "approved",
+      "cliSourceReviewed": true,
+      "dataPath": "/data",
+      "command": [
+        "/bin/trail",
+        "--depot",
+        "/data",
+        "--public-url",
+        "https://meos-acceptance.invalid",
+        "run",
+        "--address",
+        "unix:/data/server.sock",
+        "--admin-address",
+        "unix:/data/admin.sock"
+      ],
+      "review": "Local source/artifact admission only; live acceptance pending. OSL41790, build-only version policy41831.",
+      "inventoryFile": "retained-inventory.json",
+      "inventoryDigest": "sha256:0b40e5a34b38d96b485bcd7f7f9a5e10822cf3037526bf07b9ab1f522ca17f4e",
+      "sourceFile": "retained-source.tar.gz",
+      "sourceDigest": "sha256:0ca2e836ecb9c361e66db699a6a699ac0ef5f75cca46e15ef4fadf74064d9e51",
+      "noticesFile": "retained-notices.txt",
+      "noticesDigest": "sha256:645142e7a8046a12ce6cb75abf3da3cdfa32a223d8e39b903d2543b971559abf"
+    }
+  ]
+}

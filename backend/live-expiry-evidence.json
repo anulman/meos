@@ -1,0 +1,15 @@
+{
+  "runId": "48c006581c5494589e69af1b123dec97",
+  "checks": [
+    "form login token-free",
+    "two Secure HttpOnly cookies",
+    "safe session identity",
+    "expired browser auth cookie refreshes from HttpOnly refresh cookie",
+    "refreshed token stays cookie-only",
+    "expired signed cookie and refresh session rejected"
+  ],
+  "count": 6,
+  "authTTLSeconds": 2,
+  "refreshTTLSeconds": 10,
+  "jwtLeewaySeconds": 60
+}

@@ -150,3 +150,11 @@ export function routineDatesInPeriod(routine: RoutineSchedule, period: DatePerio
   }
   return dates;
 }
+
+/** Google ends are exclusive; planner period dates are inclusive. */
+export function calendarEventOverlaps(event: {start?: {date?: string; dateTime?: string}; end?: {date?: string; dateTime?: string}}, period: DatePeriod, timezone: string): boolean {
+  if (event.start?.date && event.end?.date) return event.start.date <= period.end && event.end.date > period.start;
+  const start = Date.parse(event.start?.dateTime ?? ''), end = Date.parse(event.end?.dateTime ?? '');
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return false;
+  return start < zonedInstant(addDays(period.end, 1), '00:00', timezone) && end > zonedInstant(period.start, '00:00', timezone);
+}

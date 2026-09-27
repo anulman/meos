@@ -1,6 +1,6 @@
 ---
 name: meos-bootstrap
-description: Install MeOS for a new user from a verified supported release, prove persistent application and agent access, then configure operating skills, schedules, authority, and a supported event long-poller; inspect, update, pause, or uninstall an existing installation safely.
+description: Install or maintain MeOS from a verified supported release; enable selected features, diagnose or repair partial setup, and configure application access, operating schedules and event delivery without resetting working state.
 ---
 
 # Install MeOS and bootstrap its agent
@@ -89,15 +89,120 @@ Inspect only actual release-owned resources using the manifest's resource names/
 
 ## Recovery planning and verification
 
-This guide does **not** enable backups or recovery. Before installation/upgrade approval, explain the selected release's recovery path, expected data-loss window and restoration limits using evidence, not promises. Reuse existing approvals; otherwise obtain the actual backup destination, retention/deletion policy, access authority and any costs before provisioning. Do not assume a vendor, retention period or cloud spending grant. Compose is the first single-host path; keep the maintained Helm example for a later cluster installation, not a prerequisite.
+Backups are optional. If no S3-compatible bucket is supplied, do nothing: do not
+provision resources, request credentials, install a schedule, or warn about a
+missing optional component. A requested but failing configured backup is an error,
+not the same as an absent bucket. This guide itself grants no backup authority.
 
-- Use the release/database-supported **consistent snapshot or export** mechanism, not a live database-file copy. Cover persistent application data plus the private configuration and secret material needed to restore; protect and restore secrets safely without putting them in receipts or chat.
-- Verify an authorized **off-host copy** by its actual upload/integrity receipts; a local snapshot alone does not cover host loss. Document what is excluded and how encryption keys/configuration are recoverable by the owner.
-- Restore into an **isolated** disposable target with verified test data/service identities and blocked real-provider egress (including Calendar sync, messaging and notifications). Verify restored data identities, intended login and supported migration behavior without touching production or exercising real providers. Record the restore result and remaining gaps.
-- Verify scheduler startup at boot, durable/persistent missed-run handling, bounded retry behavior, health and last-success evidence. Verify an authorized **external stale-backup alert** that can detect host/scheduler failure, not only an alert running on the backed-up host.
-- Record timer/job identity and next run, successful backup/run and off-host upload receipts, isolated restore receipt, and alert verification separately in the installation ledger. Do not claim recovery is enabled/verified from this text, an enabled timer or a configured destination alone. Report missing receipts or unsupported components explicitly.
+### Configure optional host backup tooling
 
-This section is a planning/verification requirement, not a backup implementation or permission to create services or spend money.
+For a release containing `tools/backup/meos-backup.py`, read that exact release's
+`docs/BACKUP-RECOVERY.md` before installation. It targets the native/Calendar Linux
+amd64 host deployment with Python 3.11+, systemd, Docker and pinned age, not an
+invented Compose/Helm sidecar or MeOS API. If the selected deployment does not match
+that contract, leave this optional component uninstalled and record the mismatch.
+
+1. Reuse the user's bucket/prefix and existing grants. Resolve only missing choices:
+   backup cadence, maximum data-loss interval, preupgrade requirement, pause state,
+   retention/deletion policy and an optional external freshness-alert destination.
+   No cloud account, paid resource, deletion policy or schedule is implicit.
+2. Use the source-first age installation procedure below. Identify all five
+   live source roots and the actual writer closure: native depot, Calendar state,
+   installed configuration, immutable release and five MeOS units. Prove no other
+   host process writes these roots; a Docker volume check alone is insufficient.
+   Capacity admission must cover each destination filesystem, source growth and
+   the minimum 5 GiB reserve; never delete old evidence/backups to pass it.
+3. Configure the private age identity and S3 credential files using supported
+   private tooling, outside the archived roots. Escrow the recovery key separately
+   off-host. Keep secrets out of chat and the installation ledger. Use the exact
+   release's example schema, including verified runtime identity and required
+   configuration roles; do not substitute stale copies for live configuration.
+4. Under backup execution authority, run the documented `config-check`, `backup`
+   and `status` commands. Verify upload and isolated data-restore receipts
+   separately. The runner resumes recorded active writers in `finally`; reconcile
+   a surviving journal with `resume-writers` before another run. Data integrity
+   alone does not prove login, readiness, restart or application recovery:
+   `applicationRecoveryVerified` remains false.
+5. Only with scheduling authority, install the release's example service/timer
+   through supported host controls, adjusting the reviewed cadence. Reuse matching
+   owned units instead of creating duplicates. Verify boot startup, missed-run
+   behavior, next run and observed success. Verify the independently authorized
+   off-host stale-success alert; an enabled timer cannot detect a dead host.
+6. Restore into a new isolated disposable target first, with real Calendar,
+   messaging and notification egress denied. Use the independently escrowed key,
+   compare restored identities/data, then separately qualify application login,
+   readiness and restart with the exact release. Production replacement requires
+   its own explicit approval and preserved rollback state; this tool never
+   overwrites a live target or starts restored services.
+
+### Install or maintain backup encryption from source
+
+The default backup package ships MeOS source, `install-age.py` and
+`source-lock.json`, not an age executable. Use the pinned release's
+`docs/BACKUP-RECOVERY.md` commands and admission contract. Python manages backups;
+age supplies age-format encryption/decryption. Go is needed only for a new source
+build, not for running backups or reusing an admitted installation.
+
+- **Discover:** inspect the current backup config, runtime path, admission receipt
+  and ledger digest before changing anything. With no bucket, skip this entire
+  optional installation. Do not install Go just for an unselected feature.
+- **Build:** on the supported Linux amd64 host, install a Go launcher through
+  supported host tools if needed and authorized. Run `install-age.py --output`
+  with a new trusted directory. It fetches pinned Go/module source, checks source
+  checksums and license hashes, verifies linked build metadata, and atomically
+  publishes age plus age-keygen and a hash receipt. Check the documented 1200 MiB
+  allocation plus 5 GiB reserve first. Do not substitute `go install ...@latest`.
+- **Reuse:** pass `--reuse-from` plus `--admission-sha256` from a previously trusted
+  installation ledger. This is offline and needs no Go. A PATH executable or its
+  self-reported version alone is not admission. Without a trusted receipt, build
+  the pinned source instead; never bless unknown binaries by hashing them.
+- **Configure:** record the reviewed receipt digest in the ledger and the backup
+  fields `ageAdmissionFile`/`ageAdmissionSHA256`, with `age` pointing at the admitted
+  executable. Keep these files owned by the runtime user under trusted paths.
+  Retain local dependency notices with built binaries. Generate a recovery key
+  only for a genuinely new setup; preserve and escrow an existing key.
+- **Inspect/repeat:** `install-age.py --output PATH --check --admission-sha256 HASH`
+  is read-only, including for missing paths. An unchanged ordinary rerun also
+  leaves files, services and schedules untouched. `config-check` verifies runtime
+  admission without executing age or contacting the bucket; `status` only reports
+  config/receipts. Neither proves current provider availability or a fresh restore.
+- **Repair/recover:** changed or partial installed files fail closed. Build a new
+  runtime, verify it, then switch only backup config within repair authority;
+  preserve keys, objects, receipts, schedules, planning state and client cursors.
+  An interrupted build never selects its staging directory. If the final path
+  exists, verify it before retrying. Otherwise retry installation without replaying
+  key generation, uploads or scheduler activation. Coordinate only shared backup
+  resource mutations; unrelated planning can continue.
+
+Environment-specific tooling may implement the same workflow, but the current
+installer does not automatically admit alternate encryption implementations or
+platforms. Require age-format compatibility, authenticated restore/tamper proofs,
+source provenance and license review before claiming equivalent support. Do not
+invent cryptography to avoid installing Go or carrying redistribution notices.
+
+### Inspect, pause, update and remove optional backups
+
+- **Inspect:** use `status` and actual scheduler/provider receipts. Record backup
+  and data-restore times, separate application-recovery evidence, policy, owned
+  unit IDs and alert verification in the ledger without credentials.
+- **Pause:** `paused: true` suppresses scheduled `due` runs but fails explicit or
+  required preupgrade backups. `enabled: false` disables all operations; do not
+  use it to conceal a configured failure. Preserve keys, objects and receipts.
+- **Update:** reverify bundle/source hashes and compatibility. The Calendar upgrade
+  guard holds the backup lock through the transition and rejects failed required
+  preupgrade backups. Preserve the retained-depot/runtime admission checks; do
+  not bypass the guard or reinterpret source qualification as deployment approval.
+- **Retention:** `keepLast: 0` retains everything. Inspect `retention` first;
+  `retention --apply` deletes only under explicit deletion authority. Provider
+  lifecycle policies are separate and must not expire the only recovery copy.
+- **Uninstall:** stop/remove only owned backup triggers/services within scope.
+  Preserve remote objects, private recovery keys, receipts and application data
+  unless their deletion is separately authorized. Record what remains recoverable.
+
+Report configured, uploaded, data-restored and application-recovery-qualified as
+separate states. Real-provider compatibility, installed writer closure and
+application recovery need installation evidence; synthetic source tests do not
+satisfy those gates.
 
 ## Stage 3 — Prove persistent MeOS works
 
@@ -149,21 +254,88 @@ Capture natural-language routine intent, frequency targets, soft time preference
 
 Use supported host configuration tools within the user's existing authority. Compare desired state with existing state before creating or updating anything. Preserve unrelated configuration. Use stable installation and job identifiers, reuse matching resources, and record previous values for changes to shared resources. Pin or record the installed skill versions and source references so upgrades can be reviewed.
 
+Bootstrap is an ongoing maintenance workflow, not a one-time setup. Select the
+requested mode before acting: install, enable a named feature, inspect, repair,
+update, pause, or uninstall. An unchanged repeat must make no changes: do not
+reinstall matching artifacts, restart healthy services, rewrite configuration,
+or recreate jobs, recipients, registrations or seed data merely to rerun this skill.
+
+- **Inspect:** compare the ledger with current versions, feature configuration
+  and observable health using read-only host tools. Command names do not prove
+  read-only behavior. In this release, `meos-agent doctor` can initialize local
+  state, refresh credentials and plan events or renew a server lease; it is an
+  active verification step, not read-only diagnosis. `status` reads local state
+  but its loader can create a missing state directory. Inspect existing files
+  and service metadata directly when no mutation is authorized.
+- **Enable or repair:** change only the selected feature and necessary
+  dependencies. Reuse existing authority, but do not treat diagnosis as a grant
+  to repair or broaden activation/migration authority. Preserve configuration,
+  secrets, user data, cursors, acknowledgements and accepted-work receipts.
+- **Resume partial setup:** reconcile actual effects with the ledger before
+  retrying. Reuse completed resources; do not replay an uncertain external or
+  destructive action. Record the next safe step and exact unresolved effect.
+- **Keep planning independent:** installation maintenance must not reset
+  planning state or overwrite operating skills. Pin bootstrap independently;
+  update planning skills only when requested. Coordinate changes to shared
+  resources, but let unrelated planning runs continue. Stop only the affected
+  client when its documented operation requires exclusive state ownership.
+
 Create an installation ledger in durable host storage containing the pinned MeOS release and installation-manifest reference, artifact verification, host/deployment path, service IDs, persistent-storage references, non-secret access endpoints, workspace/account identity, skill versions, job IDs, triggers, timezone, execution settings, authority, status, verification receipts, and remaining blockers. Never store tokens or secret values in it. A job created successfully is **configured**, not proof of a successful execution.
 
-### Learning capability and skill-only maintenance
+For each maintenance run, record the selected mode/features, observed starting
+state, intended changes, completed effects and unresolved steps. Keep secret
+references, never secret contents. An unchanged run records a no-change result
+without rewriting managed resources.
 
-Read the [learning-loop reference](../learning-loop.md) and discover supported history, evidence, review-state and revision-safe write capabilities. Record which learning steps are supported or limited; do not invent fields or require the future code-mode facade. Ordinary tools can perform supported rituals now. Enabling this method does not authorize an eval service, database migration, sandbox, direct SQL access or automatic skill rewriting.
+### Reflection capability
 
-Treat reruns as install/enable/doctor reconciliation, including **between application releases**. Compare pinned skill/reference versions and capability requirements; update only the requested owned configuration and verify the affected path. Preserve per-user observations, lessons, answers, decisions, grants, cursors and receipts. A skill update is not a reason to reinstall the application or recreate jobs.
-
-Planning rituals can continue independently of a skill-only update. Use supported revision/claim controls and an execution-time pinned skill/reference set so an in-flight run does not mix incompatible instructions. If the host cannot provide safe concurrent updates, stage the update without resetting or overwriting progress. Activation requires a supported, verified quiescent/claimed window that prevents new affected runs, or another mechanism guaranteeing coherent version pinning. Completion of one observed run alone is insufficient; leave activation blocked when no safe switch exists. Record the applied version and readback receipt separately from successful ritual execution. Doctor reports unsupported learning capabilities without blocking unrelated healthy features or asserting that the ideal query interface exists.
+Read the [learning-loop reference](../learning-loop.md) and verify which authorized context and notes capabilities this installation exposes. Current MeOS MCP has no generic period-note read/write operations; owner HTTP endpoints do not grant a scoped agent access. If an authorized host/application notes capability is unavailable, record reflection persistence as unsupported and deliver reflections unsaved. Do not substitute occurrence edits or calendar scopes, borrow owner credentials, or install a sandbox, learning service or schema to satisfy this skill. Verify saved-note readback separately from planning and notification readiness.
 
 ## Configure the event long-poller
 
 First discover and verify an actual authenticated event API and its protocol. MCP access alone does not prove such an API exists. Obtain its documented endpoint/tool, authentication mechanism, event types, cursor and acknowledgment semantics, retention/replay limits, and supported wait duration. Do not invent endpoints, MCP operations, cursor formats, or delivery guarantees.
 
 When supported, configure a supervised durable **host service** that waits for events and wakes the agent only for actionable work. It is not a sleeping LLM, recurring chat prompt, or lifecycle callback registry. Keep credentials in the host's secret store and use references in configuration.
+
+### Select and install the transport
+
+For a release containing `clients/meos-agent`, read that pinned checkout's
+`clients/meos-agent/README.md`, `main.go`, and
+`docs/agent-notifications/ARCHITECTURE.md` before selecting the transport. The
+supported distribution is source-only; do not look for a precompiled consumer
+archive or treat a private qualification artifact as a release.
+
+- **Go-capable Linux/macOS host:** install the reviewed source commit or module
+  version with the command below. Verify that the host compiler satisfies
+  `go.mod`. Discover `GOBIN` or `$(go env GOPATH)/bin` and use that exact installed
+  executable in the supervisor, rather than assuming `~/.local/bin`.
+- **Another environment:** use the pinned source and durable-dispatch contract
+  to implement an equivalent host-specific client. Preserve native bearer
+  authentication and refresh persistence, bounded waits/backoff, lease fencing,
+  stable IDs, durable deduplication, handoff-before-ack, cancellation, explicit
+  gap reconciliation and restart recovery. Qualify it before enabling it.
+
+```sh
+go install github.com/anulman/meos/clients/meos-agent@REPLACE_WITH_REVIEWED_COMMIT_OR_VERSION
+```
+
+Resolve the placeholder before execution; do not select `latest` implicitly.
+Provision a distinct `notifications:consume` principal through the release's
+qualified native-principal procedure. Keep protected credential/configuration
+files outside the ledger. The client requires an idempotent durable dispatcher:
+its matching `accepted:true` receipt means persisted queue admission, not merely
+that a process started or an agent completed work. Supervise both that queue's
+worker and the client. Follow the pinned guide's `install`, `doctor`, `run` and
+`status` procedure, verify restart/replay, and record the actual installed commit,
+service IDs and receipts. Installation alone does not prove the machine endpoint
+is deployed or reachable.
+
+This transport signals explicitly timed MeOS task/occurrence blocks. Imported
+primary-calendar events remain display-only; do not invent notification records
+or permission to mutate that calendar. Source installation does not grant planning
+or external-communication authority.
+
+### Configure recovery and supervision
 
 - Use bounded long-poll waits, documented reconnect behavior, exponential backoff with jitter, and explicit handling for authentication failure, throttling, and retention gaps. Avoid busy loops and unbounded retries.
 - Persist the protocol's cursor and processing state durably. Follow its actual acknowledgment rules; do not advance past unprocessed work or acknowledge before the required durable handoff. If the protocol cannot support reliable recovery, record the limitation rather than promise exactly-once delivery.
@@ -177,6 +349,16 @@ If the API, supervision, durable state, or necessary permissions are unavailable
 ## Verify and hand off
 
 Read back the actual installed configuration: resource IDs, enabled state, next scheduled times, timezone/DST handling, model/reasoning settings, delivery route, and authority limits. Confirm there is one intended consumer, not multiple overlapping installations. Capture receipts in the ledger.
+
+Verify affected installation paths with before/after evidence: first install;
+an unchanged repeat with identical managed configuration and resource IDs;
+selective enablement with unrelated features unchanged; read-only diagnosis
+followed by separately authorized scoped repair; and recovery from a partial
+run without duplicate resources or lost state. Use disposable fixtures for
+interruption tests, not a live installation. Distinguish executable evidence
+from a procedure review: this skill does not provide a universal host installer,
+and these instructions alone do not prove live idempotence. Report unsupported
+host cases as unverified rather than claiming all five paths passed.
 
 Where the host/protocol supports them, use safe synthetic events and a non-mutating test target to verify receipt, actionable wake-up, cursor persistence, restart recovery, replay deduplication, stale/canceled-event handling, and health reporting. Do not mutate a real calendar, send messages, print, or trigger other external effects merely to prove installation. If a proof is unavailable, report it as unverified instead of manufacturing evidence. Enabled configuration is not evidence that the long-poller is connected and processing correctly.
 

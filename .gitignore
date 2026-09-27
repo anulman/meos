@@ -5,3 +5,8 @@ dist/
 .tanstack/
 artifacts/
 .env*
+.qualification/
+
+# Retained qualification evidence stays on the attached volume, never git.
+backend/retained-source.tar.gz
+backend/retained-notices.txt

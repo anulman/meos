@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "toolchain": "go1.27.0",
+  "toolchainLicense": "BSD-3-Clause",
+  "toolchainLicenseSHA256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+  "modules": {
+    "filippo.io/age": {
+      "version": "v1.3.2",
+      "sum": "h1:r6RSZLFSMm6rzKepZ7ZAYkKCu14f3/Me8c7uKYh7C8c=",
+      "license": "BSD-3-Clause",
+      "licenseSHA256": "c5d65279d02955c0fc2294ae417c3add650d228f4f5c82bd6d531fc26c89cd96"
+    },
+    "filippo.io/edwards25519": {
+      "version": "v1.2.0",
+      "sum": "h1:crnVqOiS4jqYleHd9vaKZ+HKtHfllngJIiOpNpoJsjo=",
+      "license": "BSD-3-Clause",
+      "licenseSHA256": "2d36597f7117c38b006835ae7f537487207d8ec407aa9d9980794b2030cbc067"
+    },
+    "filippo.io/hpke": {
+      "version": "v0.4.0",
+      "sum": "h1:p575VVQ6ted4pL+it6M00V/f2qTZITO0zgmdKCkd5+A=",
+      "license": "BSD-3-Clause",
+      "licenseSHA256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+    },
+    "filippo.io/nistec": {
+      "version": "v0.0.4",
+      "sum": "h1:F14ZHT5htWlMnQVPndX9ro9arf56cBhQxq4LnDI491s=",
+      "license": "BSD-3-Clause",
+      "licenseSHA256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+    },
+    "golang.org/x/crypto": {
+      "version": "v0.55.0",
+      "sum": "h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=",
+      "license": "BSD-3-Clause",
+      "licenseSHA256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+    },
+    "golang.org/x/sys": {
+      "version": "v0.47.0",
+      "sum": "h1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=",
+      "license": "BSD-3-Clause",
+      "licenseSHA256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+    },
+    "golang.org/x/term": {
+      "version": "v0.45.0",
+      "sum": "h1:NwWyBmoJCbfTHpxrWoZ9C6/VxOf7ic219I8xZZFdrf0=",
+      "license": "BSD-3-Clause",
+      "licenseSHA256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+    }
+  }
+}

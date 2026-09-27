@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# Example only. Install only after bucket/policy authority and a successful drill.
+[Unit]
+Description=MeOS optional consistent backup
+After=network-online.target
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/usr/bin/python3 /opt/meos-backup/meos-backup.py --config /etc/meos/backup.json due
+# A durable writers.json precedes all stops; this restores only previously active units.
+ExecStopPost=/usr/bin/python3 /opt/meos-backup/meos-backup.py --config /etc/meos/backup.json resume-writers
+TimeoutStartSec=30min
+TimeoutStopSec=5min

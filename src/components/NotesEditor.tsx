@@ -1,11 +1,15 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { schema } from 'prosemirror-schema-basic'
-import { EditorState, TextSelection } from 'prosemirror-state'
+import { EditorState } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
+import { baseKeymap, chainCommands, exitCode, toggleMark } from 'prosemirror-commands'
+import { history, undo, redo } from 'prosemirror-history'
+import { keymap } from 'prosemirror-keymap'
 import type { Notes } from '../lib/contracts'
 
 /** ProseMirror owns its active document. Parent forms own the unsaved JSON draft. */
 export function NotesEditor({value,onChange,label='Notes'}:{value:Notes;onChange:(value:Notes)=>void;label?:string}) {
+ const [formatting,setFormatting]=useState({strong:false,em:false})
  const host=useRef<HTMLDivElement>(null)
  const view=useRef<EditorView|null>(null)
  const change=useRef(onChange);change.current=onChange
@@ -16,10 +20,21 @@ export function NotesEditor({value,onChange,label='Notes'}:{value:Notes;onChange
   try{doc=schema.nodeFromJSON(initial.current)}catch{doc=schema.topNodeType.createAndFill()!}
   if(!doc.childCount)doc=schema.topNodeType.createAndFill()!
   const editor=new EditorView(host.current,{
-   state:EditorState.create({schema,doc}),
+   state:EditorState.create({schema,doc,plugins:[
+    history(),
+    keymap({
+     'Mod-b':toggleMark(schema.marks.strong),'Mod-i':toggleMark(schema.marks.em),
+     'Mod-z':undo,'Shift-Mod-z':redo,'Mod-y':redo,
+     'Shift-Enter':chainCommands(exitCode,(state,dispatch)=>{
+      if(dispatch)dispatch(state.tr.replaceSelectionWith(schema.nodes.hard_break.create()).scrollIntoView())
+      return true
+     }),
+    }),
+    keymap(baseKeymap),
+   ]}),
    attributes:{role:'textbox','aria-label':label,'aria-multiline':'true',class:'notes-editor'},
    dispatchTransaction(transaction){
-    const state=editor.state.apply(transaction);editor.updateState(state)
+    const state=editor.state.apply(transaction);editor.updateState(state);updateFormatting(state)
     if(transaction.docChanged)change.current(state.doc.toJSON() as Notes)
    },
    handleKeyDown(current,event){
@@ -29,30 +44,29 @@ export function NotesEditor({value,onChange,label='Notes'}:{value:Notes;onChange
      const dialog=current.dom.closest('dialog')
      if(dialog){event.preventDefault();dialog.requestClose();return true}
     }
-    if(event.key==='Enter'&&!event.shiftKey){
-     const {state}=current
-     if(state.selection instanceof TextSelection){
-      try{current.dispatch(state.tr.split(state.selection.from).scrollIntoView());return true}catch{return false}
-     }
-    }
     return false
    },
   })
+  updateFormatting(editor.state)
   view.current=editor
   return()=>{editor.destroy();view.current=null}
  },[label])
+ function updateFormatting(state:EditorState) {
+  const {from,to,empty}=state.selection
+  const active=(name:'strong'|'em')=>Boolean(empty
+   ? schema.marks[name].isInSet(state.storedMarks??state.selection.$from.marks())
+   : state.doc.rangeHasMark(from,to,schema.marks[name]))
+  setFormatting({strong:active('strong'),em:active('em')})
+ }
  function toggle(markName:'strong'|'em') {
   const editor=view.current;if(!editor)return
-  const {state}=editor;const mark=schema.marks[markName];const {from,to,empty}=state.selection
-  const active=empty?mark.isInSet(state.storedMarks||state.selection.$from.marks()):state.doc.rangeHasMark(from,to,mark)
-  let transaction=state.tr
-  transaction=empty?(active?transaction.removeStoredMark(mark):transaction.addStoredMark(mark.create())):(active?transaction.removeMark(from,to,mark):transaction.addMark(from,to,mark.create()))
-  editor.dispatch(transaction);editor.focus()
+  toggleMark(schema.marks[markName])(editor.state,editor.dispatch,editor)
+  editor.focus()
  }
  return <div className="notes-surface">
   <div className="notes-toolbar" aria-label="Note formatting">
-   <button type="button" aria-label="Bold" onMouseDown={e=>e.preventDefault()} onClick={()=>toggle('strong')}><strong>B</strong></button>
-   <button type="button" aria-label="Italic" onMouseDown={e=>e.preventDefault()} onClick={()=>toggle('em')}><em>I</em></button>
+   <button type="button" aria-label="Bold" aria-pressed={formatting.strong} onMouseDown={e=>e.preventDefault()} onClick={()=>toggle('strong')}><strong>B</strong></button>
+   <button type="button" aria-label="Italic" aria-pressed={formatting.em} onMouseDown={e=>e.preventDefault()} onClick={()=>toggle('em')}><em>I</em></button>
   </div>
   <div ref={host}/>
  </div>

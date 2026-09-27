@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "runId": "e204270d24e9575477eeae7236b17847",
+  "containerId": "e35c8bb17de9386f8503c315ad24e1110e4c8822302d86785eb35782d041a1eb",
+  "image": "sha256:9a42759ad1d1239023c7d0f4d56c9908b6700b75ffe8a021c2ba58bc20ceab35",
+  "guest": {
+    "runId": "e204270d24e9575477eeae7236b17847",
+    "image": "sha256:9a42759ad1d1239023c7d0f4d56c9908b6700b75ffe8a021c2ba58bc20ceab35",
+    "guestSHA256": "1588f5e215882f98c42633d09945633cdd4460c54873ce97a6d2f7a3072f4842",
+    "checks": [
+      "live replacement rebind denied",
+      "live replacement rebind denied"
+    ],
+    "bindingUnchanged": true,
+    "network": "none"
+  },
+  "planner": {
+    "checks": [
+      "form login token-free",
+      "two Secure HttpOnly cookies",
+      "safe session identity",
+      "form login token-free",
+      "two Secure HttpOnly cookies",
+      "safe session identity",
+      "anonymous read denied",
+      "forged host context denied",
+      "live project create",
+      "live task and rich text create",
+      "live read roundtrip",
+      "second owner read denied",
+      "second owner update denied",
+      "wrong origin denied",
+      "wrong csrf denied",
+      "Anytime rejected live",
+      "live revision increment",
+      "stale revision conflict",
+      "archive atomic command",
+      "archive detaches task",
+      "live pagination",
+      "default preferences live",
+      "routine create live",
+      "occurrence natural create",
+      "occurrence retry idempotent",
+      "week note live",
+      "weekly outcome live",
+      "outcome removal live",
+      "weather disabled without network"
+    ],
+    "count": 29,
+    "runId": "e204270d24e9575477eeae7236b17847"
+  },
+  "protectedProxy": {
+    "runId": "e204270d24e9575477eeae7236b17847",
+    "checks": [
+      "live form proxy does not export native tokens",
+      "live login cookies normalized Secure HttpOnly Lax",
+      "proxy reload uses safe session projection",
+      "native token admin logout and bridge paths denied",
+      "live logout rejects wrong CSRF",
+      "live logout emits browser-valid cookie deletions",
+      "proxy logout revokes native refresh session"
+    ],
+    "count": 7,
+    "network": "none; UID10001 and zero effective capabilities"
+  },
+  "freshVolume": true,
+  "guestDevelopmentReplacement": false,
+  "network": "none",
+  "verifiedAt": "2026-09-26T06:45:31.338433+00:00",
+  "limitations": "Earlier lifecycle/restore/provider suites retain their separate run IDs; frontend same-screen browser B4 not yet performed"
+}

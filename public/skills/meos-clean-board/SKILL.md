@@ -17,18 +17,6 @@ Use for data hygiene, not priority decisions. Start with an explicit scope or a 
 
 ## Preserve learning evidence
 
-Use the [learning-loop reference](../learning-loop.md) to preserve original requests, estimates, revisions, answers and provenance during cleanup. Similar titles do not make two effort episodes duplicates. Keep unknowns explicit; a missing actual is not zero and a scheduled block is not evidence of work. Propose ambiguous identity repairs instead of merging away history.
-
-**Ideal query — design only; use discovered ordinary tools today:**
-
-```ts
-const context = await meos.learning.context({
-  taskIds: cleanupSliceIds, knownAt: decisionAt,
-  include: ["request", "scope", "forecast", "budget", "answers", "evidence"], limit: 20
-});
-return { items: context.items, coverage: context.coverage };
-```
-
-Inspect missing fields/source links, not just empty values. Route substantive questions to the shared unresolved-question record and walk/weekly decision flow; do not perform an independent estimation review or ask every missing-field question during hygiene.
+Follow the [learning-loop reference](../learning-loop.md). Preserve existing requests, estimates, answers, source references and user prose during authorized cleanup. Similar titles do not prove duplicate work; a missing actual is not zero. Propose ambiguous repairs instead of merging away evidence. Route consequential questions to walk/weekly review rather than asking about every empty field. Read or edit reflection notes only through an exposed, authorized capability; otherwise disclose the limit.
 
 **Result:** reviewed scope, verified hygiene changes, unresolved candidates and excluded/unreviewed work. A clean-looking board is not proof that all work was reviewed.

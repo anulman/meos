@@ -4,10 +4,10 @@
 
 ## Operating skills
 
-- [Install and bootstrap](public/skills/meos-bootstrap/SKILL.md): Install a post-cutover production release (Compose first, Helm later), plan and verify recovery, then configure agent schedules, per-install planning authority and event long-polling.
+- [Install and bootstrap](public/skills/meos-bootstrap/SKILL.md): Install a post-cutover production release (Compose first, Helm later), install optional backup encryption from pinned source or an admitted runtime, plan and verify recovery, then configure agent schedules, per-install planning authority and event long-polling.
 
 - [Shared operating contract](public/skills/contract.md): Required authority, tentative/target-day planning, Google-wins reconciliation, evidence-aware actuals, weekly reflection, tool discovery and delivery rules.
-- [Learning-loop reference](public/skills/learning-loop.md): Shared decision records, evidence-aware weekly learning, selective questions and ideal future code-mode query design; ordinary tools work today where capabilities exist.
+- [Learning-loop reference](public/skills/learning-loop.md): Small qualitative reflections using available context and authorized notes; explicit unsaved fallback when note tools are unavailable.
 - [Weekly review + 14-day look-ahead](public/skills/meos-weekly-review/SKILL.md): Review priorities and capacity across the next 14 days when the user requests weekly planning or a configured weekly review fires; composes board decisions and schedules only within existing authority.
 - [Morning launch](public/skills/meos-morning-launch/SKILL.md): Prepare today and the first concrete action when the user asks for a morning plan or a configured morning launch fires; reuses last evening’s decisions and highlights changes rather than the entire backlog.
 - [Evening close + tomorrow prep](public/skills/meos-evening-close/SKILL.md): Reconcile today and prepare tomorrow when the user requests shutdown or a configured evening close fires; captures actuals and gives unfinished work explicit dispositions without automatic rollover.

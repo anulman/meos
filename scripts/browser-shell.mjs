@@ -1,7 +1,7 @@
 import { chromium } from 'playwright'
 import assert from 'node:assert/strict'
 import { mkdir } from 'node:fs/promises'
-const browser=await chromium.launch({executablePath:'/usr/bin/chromium-browser',headless:true,args:['--no-sandbox']})
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium-browser',headless:true,args:['--no-sandbox']})
 const base=process.env.PREVIEW_URL||'http://127.0.0.1:3180'
 await mkdir('artifacts',{recursive:true})
 const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true})
@@ -15,7 +15,8 @@ try {
  assert.equal(await fab.evaluate(e=>getComputedStyle(e).position),'fixed')
  const overflow=()=>page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)
  assert.equal(await overflow(),false)
- await page.screenshot({path:'artifacts/phase2-today-mobile.png',fullPage:false});await page.evaluate(()=>window.scrollTo(0,180));let rect=await fab.boundingBox();assert.equal(rect.y,original.y)
+ // Compact cards may fit without scrolling; provide a tall content fixture for overlay/scroll assertions.
+ await page.locator('main').evaluate(e=>{e.style.minHeight='1600px'});await page.screenshot({path:'artifacts/phase2-today-mobile.png',fullPage:false});await page.evaluate(()=>window.scrollTo(0,180));let rect=await fab.boundingBox();assert.equal(rect.y,original.y)
  // Overlay must cover actual content, not occupy a reserved layout row.
  assert.ok(await fab.evaluate(e=>{const r=e.getBoundingClientRect();return document.elementsFromPoint(r.x+40,r.y+25).some(x=>x.closest('main'))}))
  await page.screenshot({path:'artifacts/phase2-today-mobile-scrolled.png',fullPage:false})

@@ -1,110 +1,54 @@
 # Learning through MeOS rituals
 
-Use this reference with the [operating contract](contract.md). The skills carry the method; each user's **SQLite-backed MeOS history** carries their observations, decisions and lessons. No eval service, separate analytics database, direct SQL access or sandbox is required to start. Read and record only through discovered, authorized MeOS tools.
+Use this reference with the [operating contract](contract.md). Start with a qualitative loop: read available context, notice what happened, choose at most one useful adjustment, and revisit it. No code execution, new learning API, embeddings, model service or database schema is required.
 
-## Three questions, not one score
+## Discover before promising persistence
 
-- **Interpretation:** did we understand the requested outcome, scope and definition of done? Which assumption or unanswered question mattered?
-- **Effort:** how much focused work did that understood scope require? Compare completion forecasts with evidenced effort, not calendar occupancy.
-- **Capacity:** did the day leave enough usable time, preparation and slack? Interruptions, waiting and changed priorities are not automatically bad estimates.
+Use only tools actually exposed to this agent and authorized for this user. Existing MCP reads such as `list_agenda`, when discovered, can supply planning context; inspect their current schemas and coverage. `list_agenda` excludes unscheduled, skipped and archived items, so it cannot establish whole-board coverage. Read relevant tasks, available history and prior reflection notes through supported tools before asking the user to repeat known context.
 
-A **budget** is a chosen spending/participation limit. A **forecast** predicts effort to achieve a stated outcome, preferably as a range. A 30-minute writing budget does not promise a finished article. A scheduled slot is neither an effort observation nor a completion forecast. Preserve these meanings even when the current tool represents them as notes rather than distinct fields.
+**The current MeOS MCP registry does not expose generic period-note reads or writes.** The application has day/week period notes and owner HTTP endpoints, but their existence does not grant a scoped agent access. Use notes only if an authorized host/application capability is actually exposed. Do not invent an MCP note tool, borrow owner credentials or bypass scopes. An inaccessible note is not evidence that no note exists.
 
-## Keep a small decision record
+If notes cannot be read, identify which prior context is unavailable. If they cannot be written, deliver the short reflection as **unsaved** and state that persistence and cross-run reuse are unavailable. Continue supported planning; do not claim a durable learning loop. The small follow-up gap is scoped period-note retrieval and revision-safe saving through MCP—not a learning service. This document does not implement that gap.
 
-For consequential planning decisions, preserve the original request or its source reference, decision timestamp and context available then, task/occurrence identity, scope and definition of done, original effort forecast/range, budget if any, assumptions, questions and answers, and the selected next action. Append later revisions with reasons; do not replace the original with hindsight. Reuse existing records rather than transcribing entire conversations.
+## A small reflection
 
-At meaningful transitions, attach evidence: focused effort when actually observed/reported, elapsed time separately, outcome and acceptance evidence, scope changes, interruptions, dependencies, rework and priority changes. Keep source, observed/reported time, recorded time, confidence and missingness. A later recollection can inform reflection but was not known at the earlier decision. Unknown is not zero. Calendar duration, location, a boundary or a task status alone cannot establish focused effort or accepted completion. Partial effort is a lower bound, not total effort.
+Use the same four fields in an existing authorized day/week note, or in the unsaved result:
 
-These are conceptual record requirements, **not a new database schema**. Map to discovered structured fields or supported durable notes/review state with source references. If a required read/write is unsupported, report that gap and retain an explicit proposal through available durable tools; do not invent an API field or claim persistence. Without durable state, provide the bounded result and say cross-run learning/resumption is unavailable.
+- **Observation:** what happened, with relevant task/occurrence references and the source of the claim. Keep unknowns explicit.
+- **Possible explanation:** a hypothesis, not an established cause.
+- **Next experiment:** at most one concrete adjustment, including when it applies. “None yet” is valid.
+- **Review date:** a local date to reconsider the adjustment. A date in a note does not schedule a reminder.
 
-## Retrieve, infer, or ask
+For example, given a user report about task `draft-brief`:
 
-Before asking, retrieve available task context, prior answers and relevant lessons. Missing context in this prompt is not necessarily missing from MeOS. Distinguish a fact from a tentative interpretation. Infer only when the decision is low-cost/reversible and the assumption can remain explicit; ask when an unresolved answer could materially change the outcome, authority, sequence or feasible plan. Weigh decision value against interruption cost. Do not turn every missing field into a questionnaire.
+> **Observation:** You reported that the brief needed an audience decision before drafting; focused effort is unknown. Source: today's evening conversation, task `draft-brief`.
+>
+> **Possible explanation:** Clarifying the audience earlier might reduce rework.
+>
+> **Next experiment:** Before the next comparable brief, confirm its audience before choosing a first drafting step.
+>
+> **Review date:** The agreed local date for the next weekly review.
 
-Record the question's purpose and whether its answer changed a decision, when known. At weekly review, examine both useful questions and avoidable interruptions, plus important ambiguities left unasked. A hindsight-discovered ambiguity is a candidate lesson—not proof that asking would have helped. Check what was knowable then. Reuse stable answers until material context changes; do not ask morning what evening already settled.
+Label this example as a proposal until an authorized write is verified. Do not copy its hypothetical observation into real history.
 
-## Weekly learning, light daily capture
+## Light daily capture; qualitative weekly review
 
-1. Select comparable cases by work kind, outcome/scope and relevant constraints—not just matching titles. Include successes, surprises, unfinished work and unknown outcomes in coverage. Only eligible completed, scope-comparable cases with adequate effort evidence enter completion-forecast error summaries. Report exclusions and denominators; do not quietly select only successes or only overruns.
-2. Separate interpretation misses, original-scope effort error, scope growth, interruptions, dependencies, rework and capacity/priority changes. Causes can coexist; preserve uncertainty and do not claim causal proof from an association. Where effort cannot be attributed between old/new scope, do not calculate original-scope estimation error.
-3. Inspect individual cases alongside medians/ranges and evidence coverage. Sparse or dissimilar history supports a tentative example, not a personalized multiplier. Never inflate every estimate from one overrun. Distinguish observed variation from uncertainty in the small sample.
-4. Bring the user's corrections or acceptance judgments into the assessment; model judgments remain hypotheses until calibrated against that evidence. Do not repeatedly demand ratings or equate silence with acceptance.
-5. Propose **one small contextual experiment**, if the evidence warrants one: for example, retrieve the intended audience before estimating a writing task. Record supporting cases, the condition where it applies, expected benefit, burden, and how a later comparable episode will count for/against it. No new experiment is required when evidence is inadequate.
-6. On later episodes, freeze the decision-time forecast/context and the experiment version before observing the result. Evaluate prospectively; never use later answers to make an earlier interpretation appear better. Compare against prior comparable cases cautiously, reporting coverage and confounders rather than claiming an A/B result. Retain, revise or retire the hypothesis after review; do not automatically rewrite skill instructions or convert a hypothesis into standing authority.
+**Morning:** read relevant prior notes when accessible, reuse settled answers, and consider an applicable experiment when choosing today's first action. Ask only about a missing fact that would change the plan. Do not perform another weekly critique.
 
-Daily rituals retrieve relevant lessons and capture material surprises. Evening closes gaps and prepares tomorrow; weekly review owns estimation critique. A missed ritual is not learning debt.
+**Evening or a meaningful transition:** capture a material surprise or useful success already supported by evidence. Ask a bounded question only when needed for the next decision. Keep unfinished work and missing effort explicit; do not reconstruct every minute or demand a reflection every day.
 
-## Ideal code-mode design — not a runnable API
+**Weekly:** review a bounded set of available tasks and notes, including successes, surprises and unfinished work. State the period, sources considered and missing/unreviewed context. Compare intentions with outcomes where the evidence supports it. Distinguish unclear scope, added scope, interruptions, dependencies and capacity changes without assigning blame or asserting causality. Keep, revise or retire a prior experiment; choose at most one next adjustment. No adjustment is required when evidence is weak.
 
-The examples here and in the skills describe **future query ergonomics**, not shipped functions, schemas or sandbox support. `meos.learning` is a conceptual, account-scoped facade over authorized history, not direct SQLite access. No runtime or dependency is selected by this design. Until implemented, discover ordinary tools and compose equivalent bounded reads and supported writes; unavailable history limits the result, not all useful planning. Never send these examples to an execution tool merely because they appear here.
+A scheduled duration is not focused effort. A budget is a chosen limit, not a prediction of completion. Unknown effort is not zero; a completed status alone does not establish accepted scope or work time. Do not derive forecast calibration, personalized multipliers or historical decision-time analysis from mutable current tasks and informal notes. Record explicit estimates prospectively when useful, but do not promise immutable snapshots or reconstruct missing originals. A later recollection is not proof of what was known earlier.
 
-Each example assumes `zone` is the verified IANA timezone, `decisionAt` is an ISO instant from the current decision, and IDs come from discovered state. `calendar.day(date, zone)` and `calendar.days({ through, count, zone })` denote local calendar windows with inclusive start/exclusive end instants; `through` is an included local date. They respect DST, not fixed 24-hour arithmetic. These helpers are also design-only. In weekly code, `reviewDate` is the user's local review date.
+Reflections remain hypotheses, not new instructions or authority. Never automatically rewrite skills, change standing permissions, contact others or alter commitments because a note suggests it. A missed ritual is not learning debt.
 
-### A small read vocabulary
+## Save only through supported semantics
 
-```ts
-// DESIGN ONLY. All result envelopes include coverage; no silent truncation.
-const context = await meos.learning.context({
-  taskIds, knownAt: decisionAt,
-  include: ["request", "scope", "forecast", "budget", "answers", "evidence"],
-  limit: 20
-});
-const cases = await meos.learning.episodes({
-  window: calendar.days({ through: reviewDate, count: 42, zone }),
-  knownAt: decisionAt,
-  comparableTo: taskIds, // use context then available; expose match rationale
-  select: ["decision", "revisions", "effort", "outcome", "causes"],
-  limit: 60
-});
-const lessons = await meos.learning.lessons({
-  taskIds, knownAt: decisionAt, states: ["trial", "retained"], limit: 3
-});
-```
+Before editing a note, read its current content and revision. Preserve user prose and unrelated entries; add or update the small reflection rather than replacing the whole note with an agent summary. Keep stable task/source references and the same semantic entry across retries so a resumed ritual does not append a duplicate.
 
-- `context` accepts either `taskIds` for task-level context or `occurrenceIds` for exact occurrence context, never both. It returns `items` with explicit task/occurrence and episode identities, requested projections, source references and revisions. A task-level read must not select an arbitrary occurrence: return task-level facts and identify any unresolved occurrence selection. Boundary reads use the verified occurrence ID. `answers` includes supported question purpose, source checks, asked/resolved timestamps, resolution, applicability and whether the answer changed a decision; unavailable history remains explicit. Superseded answers remain history. `knownAt` excludes records not yet available at that instant, including backdated observations recorded later.
-- `episodes` returns bounded `items`, match rationale and coverage. Its window selects decision timestamps; it includes subsequent revisions/outcomes only if known by `knownAt`. The `decision` projection includes the frozen scope/forecast/context, selected action and any applicable experiment ID/version and exposure timestamp recorded before the outcome; absent exposure remains unknown, not proof the experiment was used. It also includes available question/source-check history and decision effects, with missingness disclosed. For a retrospective cohort queried today, use each episode's frozen `decision` snapshot when judging the original choice. `comparableTo` is optional; omit it for a broad review, then group by reference class rather than mixing tasks. Matching is inspectable, not evidence of causality.
-- `lessons` returns contextual hypotheses with applicability, supporting case IDs, version, status and later test results—not new permissions or unquestionable facts. Empty results are valid.
-- Every envelope carries `coverage`: requested scope/window, returned count, eligible count if knowable, excluded counts/reasons, missing/unavailable fields, freshness and `nextCursor` or explicit truncation. Fetch further pages only within the ritual budget; otherwise disclose partial coverage. Limits bound returned rows; a limit is not proof that the whole history was examined. Joined/computed outputs preserve source coverage.
+Use the discovered note tool’s actual schema and revision/retry rules. Do not assume it accepts Markdown, arbitrary fields or an idempotency key. A supported note operation is not an invitation to bypass the agent’s scope.
 
-### Local composition and units
+On timeout or uncertain success, read back before retrying. If the entry is already present, do not append again. If another writer changed the note, refresh and reconcile against that content; never replay a stale whole-note replacement. If safe read/merge/revision semantics are unavailable, do not attempt another write. Label a reflection unsaved only when no write was attempted; if a write may have succeeded, report persistence as unverified until safe readback resolves it. Verify the stored result before saying “saved.”
 
-`learning.summarize` is a conceptual **pure** helper over retrieved episodes, not a hidden second data fetch. `learning.questions` is a pure prioritizer over retrieved context, not a source of new facts. Their inputs are envelopes so missingness follows the computation.
-
-```ts
-const reflection = learning.summarize(cases, {
-  by: ["referenceClass"],
-  measures: ["focusedMinutes", "forecastErrorMinutes", "withinForecastRange"],
-  include: ["successes", "surprises", "causeCounts", "coverage"]
-});
-return { reflection, lessons, coverage: cases.coverage };
-```
-
-For each group, return sample count per measure, median and observed min/max where meaningful, cause counts (non-exclusive), and excluded/unknown counts. `focusedMinutes` uses adequately evidenced total focused effort, never elapsed minutes. `forecastErrorMinutes` is actual minus original point forecast in minutes; if only a range exists, report range coverage rather than inventing a midpoint. `withinForecastRange` reports eligible count and count inside the **original** range; a stated range without a probability is not a calibrated 80% interval. Exclude budget-only, incomplete-effort and changed/unattributable-scope cases from these forecast measures while retaining them in review coverage. Do not emit quantiles or ratios that the evidence cannot support.
-
-```ts
-const questions = learning.questions(context, {
-  decision: "choose-next-action", // also estimate, plan-day, or reconcile-outcome
-  max: 1
-});
-return { questions, coverage: context.coverage };
-// Each candidate: question, unresolved fact, source checks already made,
-// decision affected, why asking beats an explicit assumption, interruption cost.
-// No candidate is a valid result. A resolved/reusable answer is not a candidate.
-```
-
-The prioritizer offers candidates, not automatic messages or a numerical oracle. Human judgment, current mode and authority still decide whether to interrupt.
-
-### Recording without pretending a script is a transaction
-
-Conceptually, `meos.learning.record` accepts one evidence observation, decision revision, question resolution, or hypothesis with stable episode/source identity. The final schema is deferred; use only current discovered equivalents. Ordinary writes have the same constraints as future code mode:
-
-```ts
-// DESIGN ONLY; learningEntry is a bounded, provenance-bearing record above.
-const receipt = await meos.learning.record(learningEntry, {
-  expectedRevision, idempotencyKey: `${episodeId}:${sourceEventId}:${entryKind}`
-});
-return { operationId: receipt.operationId, status: receipt.status };
-```
-
-A key identifies the same semantic operation across retries and rituals, not an entire week's edits or a fresh invocation. Here `entryKind` distinguishes an observation from a question resolution from the same source; the shared episode/source identity must survive workflow changes. Distinct observations need distinct identities. Verify the stored result and preserve its receipt. On a changed value, use a distinct revision/operation identity rather than reusing a key for different content. On timeout, retrieve operation/live state before retrying. A script is **not atomic**: if a note succeeds and a schedule edit fails, retain the note receipt and reconcile only the unresolved edit. Concurrent rituals must use supported claims/revisions and shared episode/question identities; absent safe semantics, withhold affected automated writes and report the limit. Learning writes never authorize calendar mutations, third-party messages, new schedules or skill rewrites.
+A saved reflection is not a calendar commitment, boundary acknowledgment or message-delivery receipt. Reconcile each operation separately after partial success. An inaccessible checkpoint cannot support a claim that questions or messages will be deduplicated across runs.

@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "usage": "runtime URL parsing in independent guest",
+  "packages": [
+    {
+      "name": "whatwg-url",
+      "version": "14.2.0",
+      "license": "MIT",
+      "archiveSHA256": "b26982a9855af10a5cd8fedbdba5ac73db4b8eab1f81528104f585039fac863e",
+      "integrity": "sha512-De72GdQZzNTUBBChsXueQUnPKDkg/5A5zp7pFDuQAj5UFoENpiACU0wlCvzpAGnTkj++ihpKwKyYewn/XNUbKw==",
+      "sourceArchive": "https://registry.npmjs.org/whatwg-url/-/whatwg-url-14.2.0.tgz",
+      "notices": [
+        {
+          "path": "LICENSE.txt",
+          "sha256": "db480f236292a093e77a83c35431a8496624e1e664a3547768a9ce2bdde39877"
+        }
+      ],
+      "dependencies": {
+        "tr46": "^5.1.0",
+        "webidl-conversions": "^7.0.0"
+      }
+    },
+    {
+      "name": "tr46",
+      "version": "5.1.1",
+      "license": "MIT",
+      "archiveSHA256": "62dbfa0e7959c7bf972b157afcbedd7432116891c374b7de3f78224bd7e4d7e6",
+      "integrity": "sha512-hdF5ZgjTqgAntKkklYw0R03MG2x/bSzTtkxmIRw/sTNV8YXsCJ1tfLAX23lhxhHJlEf3CRCOCGGWw3vI3GaSPw==",
+      "sourceArchive": "https://registry.npmjs.org/tr46/-/tr46-5.1.1.tgz",
+      "notices": [
+        {
+          "path": "LICENSE.md",
+          "sha256": "499d6d466d064e0460427967a344e2a32fcb86ea8c6cd1a285ec4f1fa03fba67"
+        }
+      ],
+      "dependencies": {
+        "punycode": "^2.3.1"
+      }
+    },
+    {
+      "name": "webidl-conversions",
+      "version": "7.0.0",
+      "license": "BSD-2-Clause",
+      "archiveSHA256": "fd4d12781018d99e2cc68cf2d997215a0b301761ab26ac2a171116960419e454",
+      "integrity": "sha512-VwddBukDzu71offAQR975unBIGqfKZpM+8ZX6ySk8nYhVoo5CYaZyzt3YBvYtRtO+aoGlqxPg/B87NGVZ/fu6g==",
+      "sourceArchive": "https://registry.npmjs.org/webidl-conversions/-/webidl-conversions-7.0.0.tgz",
+      "notices": [
+        {
+          "path": "LICENSE.md",
+          "sha256": "a889cc4dbee2ae172c179856b25d75b0b7a5a136e1b97109b9b590b2ff1a879c"
+        }
+      ],
+      "dependencies": {}
+    },
+    {
+      "name": "punycode",
+      "version": "2.3.1",
+      "license": "MIT",
+      "archiveSHA256": "e4ce59f9fbac44349abab87279ab658f6b4614916bec5e088ae3be9323e193bb",
+      "integrity": "sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==",
+      "sourceArchive": "https://registry.npmjs.org/punycode/-/punycode-2.3.1.tgz",
+      "notices": [
+        {
+          "path": "LICENSE-MIT.txt",
+          "sha256": "483acb265f182907d1caf6cff9c16c96f31325ed23792832cc5d8b12d5f88c8a"
+        }
+      ],
+      "dependencies": {}
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh MeOS public Access keys every six hours
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=6h
+Persistent=true
+Unit=meos-access-keys.service
+
+[Install]
+WantedBy=timers.target

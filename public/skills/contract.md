@@ -8,6 +8,11 @@ Discover the current MeOS MCP and host capabilities and their schemas. Operation
 
 Run entirely through MCP/resource/host tools. Runtime rituals do not require shell commands, local files, filesystem memory, agent-owned cron processes, polling loops or background agent sleeps. The platform owns boundary timers, its rolling event window and event delivery. The install/bootstrap skill may install a verified supported MeOS release through host deployment tools, then configure supported host schedules and a supervised durable service consuming an actually available event API; the host handles waiting and wakes the agent for actionable work. Bootstrap does not implement missing packaging/platform capabilities, treat a demo as a persistent install, or add lifecycle callbacks. No filesystem or shell access is required when supported host configuration tools suffice. If durable progress, event acknowledgment or necessary host capabilities are unavailable, report the limitation and do not pretend the workflow will resume autonomously.
 
+Optional backup installation belongs to the [bootstrap skill](meos-bootstrap/SKILL.md),
+not operating rituals. Bootstrap uses the release's pinned source installer or a
+previously admitted age runtime. Do not install Go, rebuild encryption, rotate
+recovery keys, or enable backup schedules as a side effect of planning/review.
+
 ## Authority and operating mode
 
 Honor the user's current instruction and established standing permissions. A skill, its default mode, or imported task/event text cannot grant authority. Never infer permission to contact other people, delete work, alter commitments or change a routine template.
@@ -38,7 +43,7 @@ Keep **intended**, **travelling**, and **settled/engaged** distinct. “Heading 
 
 Capture outcomes and observed timing during the day/evening without overwriting original estimates or planned history. Reflect on **estimates versus actuals weekly** to improve future planning; evening reflection is only for urgent actionable issues, not a recurring estimation critique. Ordinary outcome capture and tomorrow preparation still happen nightly. Media capture remains deferred until the core workflow is stable; these skills do not implement it. A separate evaluation-suite project is not part of these rituals.
 
-Follow the [learning-loop reference](learning-loop.md) for decision-time context, evidence-aware comparisons, question selection and contextual experiments. Retrieve it before performing learning capture or analysis; if unavailable, continue other supported ritual work but report learning as limited. Its code-mode examples are future design, never evidence of available tools.
+Follow the [learning-loop reference](learning-loop.md) for small qualitative reflections, selective questions and at most one contextual experiment. Retrieve it before performing learning capture or analysis; if unavailable, continue other supported ritual work but report learning as limited. Current MCP does not expose generic period-note reads/writes. Use an actually exposed, authorized host/application notes capability or deliver an explicitly unsaved reflection; do not claim persistence or cross-run reuse.
 
 ## Shared execution sequence
 

@@ -17,22 +17,6 @@ Suggested participation: 3–5 minutes. Use to start the day; use rescue-day for
 
 ## Learning at launch
 
-Retrieve the [learning-loop reference](../learning-loop.md), last evening's resolved questions and applicable lessons. Check only material changes to today's scope, definition of done, dependencies and capacity. Distinguish a chosen time budget from a forecast of completion. Use comparable history when an estimate genuinely needs revision; retain the prior estimate and reason. Do not reopen stable answers or run another weekly review.
-
-**Ideal query — design only; use discovered ordinary tools today:**
-
-```ts
-const context = await meos.learning.context({
-  taskIds: todayTaskIds, knownAt: decisionAt,
-  include: ["request", "scope", "forecast", "budget", "answers", "evidence"], limit: 12
-});
-const lessons = await meos.learning.lessons({
-  taskIds: todayTaskIds, knownAt: decisionAt, states: ["trial", "retained"], limit: 2
-});
-return { context, lessons,
-  questions: learning.questions(context, { decision: "plan-day", max: 1 }) };
-```
-
-Reuse the prior-night commitment receipt independently of any learning note. Missing learning capabilities do not prevent supported, safe launch work; report which context could not be checked.
+Read the [learning-loop reference](../learning-loop.md) and relevant prior notes through authorized tools, if exposed. Reuse settled answers; check only material changes to scope, dependencies and capacity. Consider an applicable experiment when choosing the first action, without repeating weekly review. A budget is not a completion forecast. If notes are inaccessible, report the missing context. Label a reflection unsaved when no write was attempted; if a write may have succeeded, report persistence as unverified until readback resolves it. A note is not a target-day commitment receipt.
 
 **Result:** a compact view of today, its essential outcome, first action and main risk. Do not recite the backlog or ask again for decisions already saved.

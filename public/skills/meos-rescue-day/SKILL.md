@@ -18,22 +18,6 @@ Use on a meaningful disruption or an explicit “help me recover today” reques
 
 ## Diagnose before resizing
 
-Use the [learning-loop reference](../learning-loop.md) to distinguish original-scope effort, added scope, interruption, dependency and priority changes. More elapsed time does not identify the cause. Reuse prior answers, retrieve available context first, and ask only what changes the repair. Resizing a block changes today's budget/capacity allocation, not the original completion forecast. Record the reason and preserved scope; do not teach a global estimate multiplier from a disrupted day.
-
-**Ideal query — design only; use discovered ordinary tools today:**
-
-```ts
-const context = await meos.learning.context({
-  taskIds: affectedTaskIds, knownAt: decisionAt,
-  include: ["request", "scope", "forecast", "budget", "answers", "evidence"], limit: 10
-});
-const lessons = await meos.learning.lessons({
-  taskIds: affectedTaskIds, knownAt: decisionAt, states: ["trial", "retained"], limit: 2
-});
-return { context, lessons,
-  questions: learning.questions(context, { decision: "choose-next-action", max: 1 }) };
-```
-
-Use the evidence to choose the smallest repair through actual scheduling tools. Learning history does not expand authority or make imported commitments writable.
+Use the [learning-loop reference](../learning-loop.md) to distinguish changed scope, interruptions, dependencies and priorities before asking a decision-changing question. Elapsed time does not identify a cause, and resizing a block does not revise the original forecast. Choose the smallest authorized repair; learning notes do not make imported commitments writable. Preserve the reason through authorized notes if available, otherwise deliver it unsaved without claiming cross-run memory.
 
 **Result:** a workable next action plus a concise change summary and explicit deferrals. No promise of new notifications without verified platform support/receipts.

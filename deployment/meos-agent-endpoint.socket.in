@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Reverse proxy connects here; this is not a public listener by itself.
+[Socket]
+ListenStream=@AGENT_SOCKET@
+SocketMode=0660
+SocketUser=@AGENT_ENDPOINT_UID@
+SocketGroup=@PROXY_GID@
+RemoveOnStop=true
+[Install]
+WantedBy=sockets.target

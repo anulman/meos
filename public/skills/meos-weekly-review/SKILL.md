@@ -18,29 +18,6 @@ Suggested participation: 20–30 minutes. Use for strategic weekly reconciliatio
 
 ## Learning pass
 
-Use the [learning-loop reference](../learning-loop.md) before step 1. Review both successful and surprising cases; separate misunderstood outcomes, original-scope effort error and changes to the day. Preserve the original forecast. Show comparable-case counts and missing evidence, not a universal correction factor. For forward planning, retrieve relevant lessons and choose at most one contextual experiment with a later review criterion. Record what was knowable at each decision; later answers cannot improve an earlier score retroactively. Reuse walk/clean progress and ask only a decision-changing question.
-
-**Ideal query — design only; use discovered ordinary tools today:**
-
-```ts
-const cases = await meos.learning.episodes({
-  window: calendar.days({ through: reviewDate, count: 42, zone }),
-  knownAt: decisionAt,
-  select: ["decision", "revisions", "effort", "outcome", "causes"], limit: 60
-});
-const lessons = await meos.learning.lessons({
-  taskIds: nextFortnightTaskIds, knownAt: decisionAt,
-  states: ["trial", "retained"], limit: 3
-});
-return {
-  reflection: learning.summarize(cases, {
-    by: ["referenceClass"],
-    measures: ["focusedMinutes", "forecastErrorMinutes", "withinForecastRange"],
-    include: ["successes", "surprises", "causeCounts", "coverage"]
-  }), lessons
-};
-```
-
-Use the bounded summary to select cases worth discussing, not to assign blame. A reference class with one case or poor coverage is a hypothesis source, not a calibrated forecast. Save the review window, considered case IDs and experiment version with the checkpoint so reruns do not invent a second experiment or repeat delivered questions.
+Follow the [learning-loop reference](../learning-loop.md). Review available tasks and notes, including successes, surprises and unfinished work; state the period, reviewed sources and missing evidence. Compare intentions with supported outcomes without treating scheduled time as effort or inferring a universal correction factor. Keep, revise or retire the prior experiment; choose at most one next adjustment. Save the four-field reflection through an authorized notes capability or deliver it explicitly unsaved. Reuse walk/clean decisions; mutable current records do not establish what was known historically.
 
 **Result:** chosen priorities/outcomes, verified scheduled blocks, explicit deferrals, identified gaps and a short unresolved decision list. Persist a checkpoint if the review is interrupted rather than restarting it.

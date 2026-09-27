@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# User unit. Replace absolute paths; do not put secrets in Environment/ExecStart.
+[Unit]
+Description=MeOS durable notification client
+After=network-online.target
+[Service]
+ExecStart=%h/.local/bin/meos-agent run %h/.config/meos-agent/config.json
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=10
+UMask=0077
+NoNewPrivileges=true
+[Install]
+WantedBy=default.target

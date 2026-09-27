@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "status": "not-admitted",
+  "asOf": "2026-09-26T03:58:46.973952+00:00",
+  "authority": "Telegram41818 exact unchanged Cargo/libgit2/LibXDiff and sharp/libvips build-only exception",
+  "sourceCommit": "3dfb2f70d8266036f1e7e9db4902e8b81026f69d",
+  "recipe": [
+    "cargo",
+    "tree",
+    "--locked",
+    "-p",
+    "trailbase-cli",
+    "--no-default-features",
+    "--features",
+    "trailbase/wasm",
+    "--target",
+    "x86_64-unknown-linux-gnu",
+    "-e",
+    "normal,build"
+  ],
+  "submodules": [
+    {
+      "name": "pgrow2serde",
+      "commit": "5879f5e321f1d320956fc8393b27e7d4d65156a5",
+      "url": "https://codeload.github.com/ignatz/pgrow2serde/tar.gz/5879f5e321f1d320956fc8393b27e7d4d65156a5",
+      "sha256": "efd0edb44a043e2653ce3e8089121829896ac0aad664c55c0750ec9bea9d18ba"
+    },
+    {
+      "name": "rmcp-openapi-minimal",
+      "commit": "deac51f04b37e2d01b83e403fd22e4fa5acba800",
+      "url": "https://codeload.github.com/ignatz/rmcp-openapi-minimal/tar.gz/deac51f04b37e2d01b83e403fd22e4fa5acba800",
+      "sha256": "003fe061c5ac0bc622f4d74e4740091ae538fc436329405764ec1e34db4e34bc"
+    },
+    {
+      "name": "sqlite-vec",
+      "commit": "d0006d774bc8f0f8bee3b3be8353f7299088adbd",
+      "url": "https://codeload.github.com/ignatz/sqlite-vec/tar.gz/d0006d774bc8f0f8bee3b3be8353f7299088adbd",
+      "sha256": "4423a635434e6c7322a331cb48763684b949b35d7dd654e2cb43d406b4f201f7"
+    }
+  ],
+  "evidence": {
+    "rustc-1.95.0-src.tar.xz": {
+      "sha256": "62b67230754da642a264ca0cb9fc08820c54e2ed7b3baba0289876d4cdb48c08",
+      "bytes": 238952004
+    },
+    "cargo-metadata.json": {
+      "sha256": "1a7cbb0bf3b9691f872bf0b4a826224d3fafb807bd84ad4063eccbff71513a57",
+      "bytes": 4603257
+    },
+    "selected-tree.txt": {
+      "sha256": "746c54b2d576140118884641d8904b3f30efb0815e3b18a716fd08a6afda1a0f",
+      "bytes": 85988
+    },
+    "cargo-license-inventory.json": {
+      "sha256": "d7a5a654087f921d990d3b48725fab1d50b5683830512d914717ad52f7699bfc",
+      "bytes": 340723
+    },
+    "admin-closure.json": {
+      "sha256": "64b46713de2006897e075f43b7110c75ee708fe7f382fd132aa29c2bf8528be6",
+      "bytes": 174739
+    },
+    "admin-license-inventory.json": {
+      "sha256": "6e9db4bc8f37a401491fbf8b56c3f33390a53dd38d75c0a403beac1aa471a0d1",
+      "bytes": 663726
+    },
+    "lightningcss-1.32.0-source.tgz": {
+      "sha256": "b9451f8a7bb1a9cf0cd905af3a23db2e963a6c3171a9272633e5fd03f2842198",
+      "bytes": 7565797
+    },
+    "qjs-source.tgz": {
+      "sha256": "303a7857de4bb99812360ff861be2431184698b40e1098f13fdb11a34664a270",
+      "bytes": 171052
+    }
+  },
+  "notes": [
+    "Cargo metadata workspace graph is overinclusive; selected tree limits normal/build dependencies for CLI and Linux target.",
+    "Admin JS lock closure includes selected dev/build dependencies and local client; linux/x64/glibc optional filters applied.",
+    "No dependency build scripts or TrailBase server executed.",
+    "License inventories are retained qualification evidence, not artifact admission."
+  ],
+  "cargoSelectedPackageCount": 611,
+  "adminSelectedPackageCount": 702,
+  "gate": {
+    "packages": [
+      "lightningcss@1.32.0",
+      "lightningcss-linux-x64-gnu@1.32.0"
+    ],
+    "license": "MPL-2.0",
+    "selectedBy": "@tailwindcss/node@4.3.3 -> admin @tailwindcss/vite@4.3.3",
+    "scope": "unchanged isolated admin-UI build tools; exclude binaries from service/browser assets",
+    "approved": true,
+    "approval": "Telegram41831: previously approved packages may change versions for security/compatibility when license and approved usage remain unchanged"
+  },
+  "gnuBuild": {
+    "state": "completed",
+    "binarySHA256": "e60098122b6139efc2126c7df550acf0c061ef7d7c7933933584f0b36a15cf95",
+    "duration": "13m06s",
+    "peakRAM": "1.2GiB",
+    "peakSwap": "319.5MiB",
+    "serviceExecuted": false,
+    "runtimeAdmitted": false,
+    "dynamicLibraries": [
+      "libgcc_s.so.1",
+      "libm.so.6",
+      "libc.so.6",
+      "ld-linux-x86-64.so.2"
+    ],
+    "next": "musl-static service image candidate; GNU build stays private qualification evidence"
+  },
+  "runtimeContinuation": {
+    "staticMuslBuild": true,
+    "embeddedAssetsFeature": "rust-embed/debug-embed",
+    "focusedTests": 39,
+    "livePlannerChecks": 29,
+    "liveSessionChecks": 13,
+    "finalImageAndBrowserAcceptance": false
+  }
+}

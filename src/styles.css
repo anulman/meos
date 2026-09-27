@@ -24,3 +24,55 @@
 
 /* Live planning retains the approved paper, ink and olive hierarchy. */
 .agenda-row .task{min-height:94px}.routine-live{display:flex;align-items:center;gap:12px}.routine-edit{display:block;width:100%;border:0;text-align:left;color:var(--ink);margin-bottom:12px;min-height:72px}.routine-edit span{display:block;font-size:12px;color:var(--muted);line-height:1.5;margin-top:8px}.weekday-options{border:1px solid var(--line);border-radius:10px;display:flex;gap:8px;flex-wrap:wrap}.weekday-options label{display:flex;align-items:center;gap:6px;font-size:12px}.weekday-options input{width:20px;height:20px}.week-glance li{padding:0}.week-glance li button{width:100%;min-height:83px;border:0;border-radius:10px;background:transparent;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;color:var(--ink)}.week-glance li button[aria-pressed=true]{background:var(--priority);outline:2px solid var(--olive)}.outcome-row{margin:14px 0}.outcome-row>.quiet-action{margin-left:12px}.preferences-form label{display:grid;gap:8px;font-size:14px;color:var(--muted);margin:18px 0}.preferences-form input,.preferences-form select{font:inherit;padding:12px;border:1px solid var(--line);border-radius:9px;background:#fffefa;max-width:100%;min-width:0;color:var(--ink)}.preferences-form .primary{margin-top:16px}.settings-card details{margin-top:16px}.settings-card summary,.week-section summary{min-height:44px;padding-block:12px;font-size:13px;color:var(--muted);cursor:pointer}.resource-body>.notes-surface{margin-top:18px}
+
+.notes-toolbar button[aria-pressed="true"]{background:var(--olive);color:white}.notes-toolbar button:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+
+/* Today, Week and Settings share compact cards; detail sheets retain their spacing. */
+:is(.today-view,.week-view,.settings-view) .agenda-row{margin-bottom:10px}
+:is(.today-view,.week-view,.settings-view) .task{min-height:76px;padding:10px 12px;gap:8px}
+:is(.today-view,.week-view,.settings-view) .task-title{line-height:1.2}
+:is(.today-view,.week-view,.settings-view) .task small{margin-top:4px;line-height:1.25}
+:is(.today-view,.week-view,.settings-view) .task-kind{margin-bottom:3px!important}
+:is(.today-view,.week-view,.settings-view) .routine-card{padding:10px 12px}
+:is(.today-view,.week-view,.settings-view) .routine-card h2{line-height:1.2}
+:is(.today-view,.week-view,.settings-view) .routine-card p{margin-top:4px;line-height:1.25}
+:is(.today-view,.week-view,.settings-view) .routine-live{gap:8px}
+:is(.today-view,.week-view,.settings-view) .check{width:44px;flex-basis:44px}
+:is(.today-view,.week-view,.settings-view) .agenda-row>.time{padding-top:15px}
+
+/* A single compact title/metadata block; actions remain 44px targets. */
+:is(.today-view,.week-view,.settings-view) .agenda-row{margin-bottom:8px}
+:is(.today-view,.week-view,.settings-view) .task{min-height:0;padding:6px 8px;gap:6px;border-radius:12px}
+:is(.today-view,.week-view,.settings-view) .task-title{font-size:15px;line-height:1.2}
+:is(.today-view,.week-view,.settings-view) .task-meta{font-size:11px;font-weight:400;margin:3px 0 0;line-height:1.2}
+:is(.today-view,.week-view,.settings-view) .task-meta:empty{display:none}
+:is(.today-view,.week-view,.settings-view) .routine-card{padding:8px;border-radius:12px}
+:is(.today-view,.week-view,.settings-view) .routine-card h2{font-size:15px}
+:is(.today-view,.week-view,.settings-view) .routine-card p{font-size:11px;margin-top:3px}
+.agenda-progress{color:var(--muted);font-size:12px;margin:0 0 14px}
+.completed-tasks{margin-top:16px;border-top:1px solid var(--line)}
+.completed-tasks summary{cursor:pointer;color:var(--muted);font-size:13px;min-height:44px;display:list-item;padding:14px 0}
+
+:is(.week-view,.settings-view) .routine-edit{min-height:56px;padding:10px 12px}
+:is(.week-view,.settings-view) .routine-edit span{font-size:11px;margin-top:3px}
+.week-view .outcome-row{margin:8px 0}
+
+/* Shared searchable timezone control stays inside native editor dialogs. */
+.timezone-field{min-width:0;margin:12px 0;color:var(--muted);font-size:14px}
+.timezone-field>span{display:block;margin-bottom:6px}
+.timezone-trigger{width:100%;min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:9px;background:#fffefa;color:var(--ink);padding:8px 10px;text-align:left}
+.timezone-trigger small,.timezone-option small{display:block;color:var(--muted);font-size:11px;margin-top:3px;overflow-wrap:anywhere}
+.timezone-device{display:block;white-space:normal;text-align:left}
+.timezone-positioner{z-index:60;width:max(var(--anchor-width),290px);max-width:calc(100vw - 32px)}
+.timezone-popup{background:#fffefa;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 30px #30332c26;padding:8px;max-height:min(420px,var(--available-height));display:flex;flex-direction:column;overflow:hidden}
+.timezone-popup .timezone-search{width:100%;min-height:44px;flex-shrink:0;margin:0;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--paper);color:var(--ink)}
+.timezone-popup .timezone-hint{font-size:11px;line-height:1.4;margin:8px 2px;color:var(--muted)}
+.timezone-list{overflow-y:auto;overscroll-behavior:contain;min-height:0}
+.timezone-option{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:56px;padding:8px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink)}
+.timezone-option>span:first-child{min-width:0;overflow-wrap:anywhere}
+.timezone-option[data-highlighted]{background:var(--soft);outline:2px solid var(--olive);outline-offset:-2px}
+.timezone-option[data-selected]{background:var(--priority)}
+.timezone-local{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;flex-shrink:0}
+.timezone-empty{font-size:13px;padding:12px;color:var(--muted)}
+
+.timezone-empty:empty{display:none}

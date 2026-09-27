@@ -17,19 +17,6 @@ Suggested participation: 5–10 minutes. Use for closing the day, not for assumi
 
 ## Capture without a nightly critique
 
-Use the [learning-loop reference](../learning-loop.md) to reconcile only material gaps. Preserve evidence of effort and accepted outcomes separately; leave unobserved effort unknown. Record changed scope, interruptions or blockers when already known or worth one useful question. Save tomorrow's outcome, assumptions and answers for morning reuse. Do not ask for minute-by-minute reconstruction or critique estimation every night.
-
-**Ideal query — design only; use discovered ordinary tools today:**
-
-```ts
-const context = await meos.learning.context({
-  taskIds: [...todayTaskIds, ...tomorrowTaskIds], knownAt: decisionAt,
-  include: ["scope", "forecast", "budget", "answers", "evidence"], limit: 20
-});
-return { context,
-  questions: learning.questions(context, { decision: "reconcile-outcome", max: 1 }) };
-```
-
-Record only new evidence/resolutions using the shared receipt and retry rules. A successful outcome note is not a successful target-day commitment; verify each separately. Save unresolved gaps once instead of asking again on every resume.
+Follow the [learning-loop reference](../learning-loop.md). Capture a material surprise or success with its task/source reference, and leave unobserved effort unknown. Ask only a question that changes the next decision; do not reconstruct every minute or critique estimates nightly. Preserve tomorrow's settled answers in authorized notes when available; otherwise deliver an unsaved reflection and disclose that cross-run reuse is unavailable. Verify note saving separately from tomorrow's calendar commitment.
 
 **Result:** known outcomes and actuals, follow-ups, unfinished-work dispositions, tomorrow's first action and any necessary decision. A missed close is absorbed into the next launch, not accumulated as review debt.

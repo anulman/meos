@@ -21,19 +21,6 @@ Use for an individual event transition. The platform, not this skill, schedules 
 
 ## Capture a meaningful surprise
 
-Follow the [learning-loop reference](../learning-loop.md). Retrieve the expected outcome and prior answers at the boundary; capture a material scope change, blocker, interruption or useful surprise with its source when it affects the next decision. A smooth outcome can be evidence too. Do not turn every boundary into an interview, or derive focused effort from the event's duration.
-
-**Ideal query — design only; use discovered ordinary tools today:**
-
-```ts
-const context = await meos.learning.context({
-  occurrenceIds: [occurrenceId], knownAt: decisionAt,
-  include: ["scope", "forecast", "budget", "answers", "evidence"], limit: 1
-});
-return { context,
-  questions: learning.questions(context, { decision: "reconcile-outcome", max: 1 }) };
-```
-
-Use the verified boundary occurrence ID; if it cannot be resolved, report ambiguity rather than selecting one occurrence from the task. Attach a new observation to the stable episode and source event/revision, not a fresh episode on each replay. Distinguish a verified observation receipt from boundary acknowledgment and user-message delivery; reconcile partial effects before retrying.
+Follow the [learning-loop reference](../learning-loop.md). Read the expected outcome and accessible prior answers; capture only a useful surprise, success, scope change or blocker. Use the verified occurrence and source-event references, not an arbitrary occurrence of the task. An event's duration is not focused effort; every boundary need not become an interview. Save only through an authorized notes capability, otherwise label the reflection unsaved. Note saving, boundary acknowledgment and message delivery are separate effects; reconcile each before retrying.
 
 **Result:** preparation/next step or captured outcome, any verified adjustment, and durable boundary handling state. Not every agent boundary event deserves a user interruption.
