@@ -157,9 +157,14 @@ Docker and external networking:
 ```sh
 sudo python3 scripts/backend-test-runner.py
 sudo python3 scripts/host-test-runner.py
+sudo python3 scripts/host-template-test-runner.py
 ```
 
-They write source-hashed receipts under `.qualification`. Tests cover delegated
+The backend/host runners write source-hashed receipts under `.qualification`.
+The template runner prints a source-hashed result for capture in your ledger;
+it verifies the shipped privilege-drop command, zero capabilities, directory-FD
+access and non-owner socket denial in an isolated synthetic fixture. It does not
+claim proxy lifecycle or live backend rebind coverage. Tests cover delegated
 owner/service separation, preservation migration, current/tombstone/command
 receipt reads, long Unix paths, renewable credentials, durable proposals,
 regrouped constituents, cancellation during drafting and ambiguous delivery

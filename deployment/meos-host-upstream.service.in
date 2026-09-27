@@ -5,9 +5,8 @@ After=@PREFIX@-backend.service
 PartOf=@PREFIX@-backend.service
 
 [Service]
-ExecStart=/usr/lib/systemd/systemd-socket-proxyd /run/native/backend.sock
-User=61006
-Group=61006
+# Reserved UID/GID has no NSS account; drop identity and all caps before proxy exec.
+ExecStart=/usr/bin/setpriv --reuid=61006 --regid=61006 --clear-groups --bounding-set=-all --inh-caps=-all --ambient-caps=-all /usr/lib/systemd/systemd-socket-proxyd /run/native/backend.sock
 PrivateNetwork=yes
 PrivateTmp=yes
 ProtectHome=yes
@@ -16,7 +15,8 @@ PrivateDevices=yes
 ProtectProc=invisible
 ProcSubset=pid
 NoNewPrivileges=yes
-CapabilityBoundingSet=
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_SETPCAP
+AmbientCapabilities=
 RestrictAddressFamilies=AF_UNIX
 TemporaryFileSystem=/run
 BindReadOnlyPaths=@NATIVE_SOCKET@:/run/native/backend.sock
