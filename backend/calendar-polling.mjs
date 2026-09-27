@@ -36,12 +36,12 @@ export function createCalendarPolling({store,broker,connection,connectionKey,acc
      }catch(error){if(error.status===410&&syncToken&&!recovered){syncToken=undefined;recovered=true;continue}throw error}
      // Expand recurrence through Google's own timezone/exception engine for the
      // planner's current/next-week views, without restricting the full import.
-     let expanded=[];
+     let expanded=[],windowStart=null,windowEnd=null;
      if(broker.listWindow){
-      const timeMin=new Date(now()-32*86400000).toISOString(),timeMax=new Date(now()+64*86400000).toISOString();let pageToken;const seen=new Set();
+      const timeMin=new Date(now()-32*86400000).toISOString(),timeMax=new Date(now()+64*86400000).toISOString();let pageToken;const seen=new Set();windowStart=timeMin;windowEnd=timeMax;
       do{renew();const token=await accessToken();renew();const page=await broker.listWindow({calendarId,accessToken:token,timeMin,timeMax,pageToken});if(!Array.isArray(page?.items))throw Error('invalid_window');expanded.push(...page.items);if(expanded.length>100000)throw Error('window_limit');pageToken=page.nextPageToken;if(pageToken!==undefined){if(!valid(pageToken)||seen.has(pageToken)||seen.size>=10000)throw Error('invalid_window_page');seen.add(pageToken)}}while(pageToken!==undefined);
      }
-     store.transaction(tx=>{fenced(tx);tx.set(snapshotKey(role),{generation,calendarId,syncToken:finalToken,events:Object.fromEntries(events),expanded,revision:(previous?.revision??0)+1,updatedAt:now()})});break;
+     store.transaction(tx=>{fenced(tx);tx.set(snapshotKey(role),{generation,calendarId,syncToken:finalToken,events:Object.fromEntries(events),expanded,windowStart,windowEnd,revision:(previous?.revision??0)+1,updatedAt:now()})});break;
     }
    }
    await flush({renew,fenced,generation});

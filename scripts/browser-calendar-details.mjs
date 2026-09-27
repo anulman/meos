@@ -9,8 +9,9 @@ import {chromium} from 'playwright'
 const event={id:'fixture',role:'primary',summary:'Cached appointment',location:'Room 2\nhttps://example.com/map',description:'Bring notes\n<script>window.injected=true</script>\nhttps://example.com/notes',start:{dateTime:'2026-09-27T01:30:00Z'},end:{dateTime:'2026-09-27T02:30:00Z'},recurring:false}
 const source=`import React,{useState} from 'react';import{createRoot}from'react-dom/client';import{CalendarEventDetails}from'/src/components/CalendarEventDetails.tsx';import{CalendarAgenda}from'/src/components/CalendarAgenda.tsx';import'/src/styles.css';function App(){const[e,setE]=useState(null),[agenda,setAgenda]=useState(false);window.showEvent=setE;window.mountAgenda=()=>setAgenda(true);if(agenda)return React.createElement(CalendarAgenda,{period:{start:'2026-09-26',end:'2026-09-27'}});return React.createElement(React.Fragment,null,React.createElement('button',{id:'open',onClick:()=>setE(${JSON.stringify(event)})},'Open fixture'),e&&React.createElement(CalendarEventDetails,{event:e,timezone:'America/Toronto',onClose:()=>setE(null),onEdit:()=>window.editCalls=(window.editCalls||0)+1}))}createRoot(document.getElementById('root')).render(React.createElement(App));`
 const mocks={
- '../lib/backend/session':`export const transport={request:async()=>structuredClone(window.calendarData)};`,
- '../lib/store':`export const queryClient={invalidateQueries:async()=>{}};`,
+ '../lib/backend/session':`export const transport={request:async(path)=>{throw Error('Unexpected RPC '+path)}};`,
+ '../lib/store':`export const queryClient={invalidateQueries:async()=>{}},calendarCacheCollection={};`,
+ '@tanstack/react-db':`import {useEffect,useState} from 'react';export function useLiveQuery(){const[,set]=useState(0);useEffect(()=>{const changed=()=>set(n=>n+1);window.addEventListener('fixture-cache',changed);return()=>window.removeEventListener('fixture-cache',changed)},[]);return {data:window.calendarData?[window.calendarData]:[],isLoading:false,isError:false}}`,
  '../lib/config':`export const getConfig=()=>({demo:false});`,
  '../lib/planner-clock':`export const usePlannerClock=()=>({preferences:{timezone:'America/Toronto'}});`
 }
@@ -32,11 +33,11 @@ try{
  await page.evaluate(e=>window.showEvent({...e,role:'managed'}),event);await dialog.getByRole('button',{name:'Edit calendar event'}).click();assert.equal(await page.evaluate(()=>window.editCalls),1);await page.keyboard.press('Escape')
  await page.evaluate(e=>window.showEvent({...e,role:'managed',linked:true}),event);assert.equal(await dialog.getByRole('button',{name:'Edit calendar event'}).count(),0);await page.keyboard.press('Escape')
  // Exercise the real agenda's refreshed collection, not only the standalone dialog.
- await page.clock.install();await page.evaluate(e=>{window.calendarData={items:[{...e,role:'managed'}],drafts:[]};window.mountAgenda()},event)
+ await page.clock.install();await page.evaluate(e=>{window.calendarData={items:[{...e,role:'managed'}],drafts:[],status:'fresh'};window.mountAgenda()},event)
  await page.getByRole('button',{name:event.summary,exact:true}).click();await dialog.waitFor();assert.equal(await dialog.getByRole('button',{name:'Edit calendar event'}).count(),1)
- await page.evaluate(()=>{window.calendarData.items[0]={...window.calendarData.items[0],description:'Fresh cached description'};window.calendarData.drafts=[{id:'fixture',state:'pending'}]});await page.clock.fastForward(15000);await dialog.getByText('Fresh cached description',{exact:true}).waitFor();assert.equal(await dialog.getByRole('button',{name:'Edit calendar event'}).count(),0)
- await page.evaluate(()=>{window.calendarData.drafts=[];window.calendarData.items[0]={...window.calendarData.items[0],linked:true}});await page.clock.fastForward(15000);assert.equal(await dialog.getByRole('button',{name:'Edit calendar event'}).count(),0)
- await page.evaluate(()=>{window.calendarData.items=[]});await page.clock.fastForward(15000);await dialog.waitFor({state:'hidden'})
+ await page.evaluate(()=>{window.calendarData.items[0]={...window.calendarData.items[0],description:'Fresh cached description'};window.calendarData.drafts=[{id:'fixture',state:'pending'}]});await page.evaluate(()=>window.dispatchEvent(new Event('fixture-cache')));await dialog.getByText('Fresh cached description',{exact:true}).waitFor();assert.equal(await dialog.getByRole('button',{name:'Edit calendar event'}).count(),0)
+ await page.evaluate(()=>{window.calendarData.drafts=[];window.calendarData.items[0]={...window.calendarData.items[0],linked:true}});await page.evaluate(()=>window.dispatchEvent(new Event('fixture-cache')));assert.equal(await dialog.getByRole('button',{name:'Edit calendar event'}).count(),0)
+ await page.evaluate(()=>{window.calendarData.items=[]});await page.evaluate(()=>window.dispatchEvent(new Event('fixture-cache')));await dialog.waitFor({state:'hidden'})
  assert.deepEqual(errors,[]);await page.close()
  }
  console.log('PASS cached calendar details: read-only primary, managed edit, linked guard, safe text/links, date/time zones, exclusive all-day end, keyboard focus/Escape, empty fields, mobile/desktop')
