@@ -34,6 +34,7 @@ function publicStatus(value) {
     primary: { direction: 'import_only' },
     managed: { direction: 'bidirectional' },
     syncActive: value.syncActive === true,
+    syncError: ['session_expired','retrying'].includes(value.syncError)?value.syncError:null,
     plannerActive:value.plannerActive===true,
     lastSyncAt:Number.isSafeInteger(value.lastSyncAt)?value.lastSyncAt:null,
   };
