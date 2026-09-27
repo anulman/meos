@@ -39,7 +39,7 @@ export function createCalendarService({config,store,broker,planner,now=Date.now}
   async status({ownerId}){check(ownerId);const c=connection();return {state:c.state,...polling.status(c),...bridge.status()}},
   async poll(){try{return await polling.poll()}finally{await mirror.publish()}},
   async events({ownerId}){check(ownerId);return {...events.list(),planner:bridge.status()}},
-  async editEvent({ownerId,...input}){check(ownerId);const result=events.mutate(input);await mirror.publish();return result},
+  async editEvent({ownerId,...input}){check(ownerId);return lifecycle(()=>events.mutate(input))},
   async connect({ownerId,session}){check(ownerId);if(typeof session!=='string'||!session)throw Error('invalid_session');mutate(c=>{c.generation=randomUUID();c.refresh=null;delete c.credentials;c.state='connecting'});return lifecycle(()=>oauth.start({owner,session}))},
   async callback({ownerId,session,...input}){check(ownerId);return lifecycle(()=>oauth.callback({owner,session,...input}))},
   async disconnect({ownerId}){check(ownerId);mutate(c=>{delete c.credentials;c.refresh=null;c.generation=randomUUID();c.state='disconnected'});await lifecycle(async()=>{})},

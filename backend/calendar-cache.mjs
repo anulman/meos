@@ -42,7 +42,7 @@ export function publishCalendarCache(db,owner,input){
 }
 export function readCalendarCache(db,owner,now){
  const id=blob(owner),row=db.query('SELECT sequence,metadata FROM calendar_cache_state WHERE owner_id=?',[id])[0];
- const metadata=row?JSON.parse(row[1]):{available:false,state:'unavailable',syncActive:false,lastSyncAt:null,plannerLastSyncAt:null,windowStart:null,windowEnd:null,drafts:[],planner:{plannerLastSyncAt:null,conflicts:[]}};
+ const metadata=row?.[0]>0?JSON.parse(row[1]):{available:false,state:'unavailable',syncActive:false,lastSyncAt:null,plannerLastSyncAt:null,windowStart:null,windowEnd:null,drafts:[],planner:{plannerLastSyncAt:null,conflicts:[]}};
  const items=db.query('SELECT doc FROM calendar_cache_events WHERE owner_id=? ORDER BY event_key',[id]).map(r=>JSON.parse(r[0]));
  const fresh=metadata.available&&metadata.state==='connected'&&metadata.syncActive&&metadata.lastSyncAt!==null&&now-metadata.lastSyncAt<180000;
  return {id:'calendar',items,...metadata,sequence:row?.[0]??0,status:!metadata.available?'unavailable':fresh?'fresh':'stale'};

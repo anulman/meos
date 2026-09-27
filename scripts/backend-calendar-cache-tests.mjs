@@ -7,12 +7,13 @@ import {readFileSync} from 'node:fs';
 import {createCommands} from '../backend/commands.mjs';
 import {createMcpHandler} from '../backend/mcp.mjs';
 import {createHttpHandler} from '../backend/http-handler.mjs';
+import {schemas,validateSchema} from '../backend/contract.mjs';
 import {createCalendarMirror} from '../backend/calendar-mirror.mjs';
 const blob=id=>Buffer.from(id.replaceAll('-',''),'hex');
 function fixture(t){
  const db=new DatabaseSync(':memory:');t.after(()=>db.close());db.exec('PRAGMA foreign_keys=ON; CREATE TABLE _user(id BLOB PRIMARY KEY) STRICT');
  const owner=randomUUID(),other=randomUUID(),agent=randomUUID();for(const id of [owner,other,agent])db.prepare('INSERT INTO _user VALUES(?)').run(blob(id));
- for(const name of ['U1790380800__planner.sql','U1790380805__scheduling_contract.sql','U1790380807__calendar_cache.sql'])db.exec(readFileSync(new URL('../backend/migrations/'+name,import.meta.url),'utf8'));
+ for(const name of ['U1790380800__planner.sql','U1790380805__scheduling_contract.sql','U1790380811__calendar_cache.sql'])db.exec(readFileSync(new URL('../backend/migrations/'+name,import.meta.url),'utf8'));
  let time=Date.parse('2026-09-27T16:00Z');const commands=createCommands({now:()=>time,begin(){db.exec('BEGIN IMMEDIATE');return {query:(s,p)=>db.prepare(s).all(...p).map(Object.values),execute:(s,p)=>Number(db.prepare(s).run(...p).changes),commit:()=>db.exec('COMMIT'),rollback:()=>db.exec('ROLLBACK')}}});
  const publish=input=>commands.invoke(owner,'calendar_cache_publish',JSON.parse(JSON.stringify(input))),read=()=>commands.calendarCache(owner);
  return {db,owner,other,agent,commands,publish,read,now:()=>time,setTime:v=>time=v};
@@ -79,3 +80,5 @@ test('existing service poll mirrors its durable snapshot, removals, drafts and p
  offline=true;f.setTime(f.now()+70000);await assert.rejects(service.poll());assert.equal(f.read().items.length,1);assert.equal(f.read().status,'stale');
  await service.disconnect({ownerId:f.owner});assert.equal(f.read().state,'disconnected');assert.equal(f.read().items.length,1);assert.equal(f.read().status,'stale');
 });
+
+test('first partial publication stays a schema-valid unavailable cache',t=>{const f=fixture(t);f.publish(page(1,[event('pending')],{pages:2}));const cache=f.read();assert.equal(cache.status,'unavailable');assert.deepEqual(cache.items,[]);validateSchema(schemas.CalendarCache,cache)});
