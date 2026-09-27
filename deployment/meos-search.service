@@ -1,6 +1,8 @@
 [Unit]
 Description=MeOS bounded embedding indexing
-After=network-online.target
+Requires=meos-backend.service
+After=network-online.target meos-backend.service
+PartOf=meos-backend.service
 [Service]
 Type=oneshot
 User=meos-search
@@ -12,6 +14,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-RestrictAddressFamilies=AF_INET AF_INET6
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+BindReadOnlyPaths=@BACKEND_SOCKET@:/run/meos-search/backend.sock
 [Install]
 WantedBy=multi-user.target

@@ -457,7 +457,7 @@
     "/api/meos/v1/operations/search_index_batch": {
       "post": {
         "operationId": "search_index_batch",
-        "description": "Worker-only: lease up to 8 owner-scoped document/query embedding jobs for 60 seconds. Expired leases retry automatically.",
+        "description": "Worker-only: lease up to 8 owner-scoped document/query embedding jobs. Leases start at 60 seconds and back off exponentially to one hour. Expired leases retry automatically.",
         "security": [
           {
             "browserSession": [],
@@ -613,7 +613,7 @@
     "/api/meos/v1/operations/search_index_commit": {
       "post": {
         "operationId": "search_index_commit",
-        "description": "Worker-only: commit an embedding for the exact leased job revision. Stale or deleted jobs return accepted=false; repeating a successful commit is harmless.",
+        "description": "Worker-only: commit an embedding for the exact leased content revision. Unchanged-text source edits retain the job. Stale or deleted jobs return accepted=false; repeating a successful commit is harmless.",
         "security": [
           {
             "browserSession": [],

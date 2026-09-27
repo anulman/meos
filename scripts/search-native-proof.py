@@ -20,6 +20,8 @@ DELETE FROM search_dirty;
 INSERT INTO search_vectors(rowid,embedding) SELECT rowid,'{vector}' FROM search_documents;
 CREATE TABLE proof_vector AS SELECT d.entity_id,vec_distance_cosine(v.embedding,'{vector}') AS distance FROM search_documents d JOIN search_vectors v ON v.rowid=d.rowid WHERE d.owner_id=x'{owner.hex}' ORDER BY distance,d.rowid;
 CREATE TABLE proof_fts AS SELECT d.entity_id,bm25(search_fts,5.0,1.0) AS rank FROM search_fts JOIN search_documents d ON d.rowid=search_fts.rowid WHERE search_fts MATCH 'apples' AND d.owner_id=x'{owner.hex}' ORDER BY rank;
+UPDATE tasks SET doc=json_set(doc,'$.completed',json('true')),revision=revision+1 WHERE id=x'{entity.hex}';
+CREATE TABLE proof_metadata AS SELECT (SELECT count(*) FROM search_vectors) AS vectors,(SELECT count(*) FROM search_dirty) AS dirty,(SELECT revision FROM search_documents LIMIT 1) AS revision;
 UPDATE tasks SET doc=json_set(doc,'$.title','Synthetic pears'),revision=revision+1 WHERE id=x'{entity.hex}';
 DELETE FROM search_vectors WHERE rowid IN (SELECT rowid FROM search_dirty);
 DELETE FROM search_fts WHERE rowid IN (SELECT rowid FROM search_dirty);
@@ -38,10 +40,11 @@ try:
  subprocess.run(['sudo','docker','stop','-t','1',name],check=True,capture_output=True)
  subprocess.run(['sudo','chown','-R',str(pathlib.Path.home().owner())+':'+str(pathlib.Path.home().owner()),str(depot)],check=True)
  db=sqlite3.connect('file:'+str(depot/'data/main.db')+'?mode=ro',uri=True)
- result={table:db.execute('SELECT * FROM '+table).fetchall() for table in ['proof_vector','proof_fts','proof_updated','proof_deleted','proof_versions']}
+ result={table:db.execute('SELECT * FROM '+table).fetchall() for table in ['proof_vector','proof_fts','proof_updated','proof_deleted','proof_versions','proof_metadata']}
  assert result['proof_vector']==[(str(entity),0.0)],result
  assert len(result['proof_fts'])==1,result
- assert result['proof_updated']==[(0,2)],result
+ assert result['proof_updated']==[(0,3)],result
+ assert result['proof_metadata']==[(1,0,2)],result
  assert result['proof_deleted']==[(0,0)],result
  print(json.dumps({'image':image,'passed':True,'results':result,'depot':str(depot)}))
 except Exception:

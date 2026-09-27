@@ -22,7 +22,8 @@ CREATE TRIGGER search_document_insert AFTER INSERT ON search_documents BEGIN
  INSERT INTO search_dirty SELECT new.rowid WHERE NOT EXISTS(SELECT 1 FROM search_dirty WHERE rowid=new.rowid);
  INSERT INTO search_jobs(owner_id,document_id,revision,text,created_at) VALUES(new.owner_id,new.rowid,new.revision,new.title||char(10)||new.body,0);
 END;
-CREATE TRIGGER search_document_update AFTER UPDATE ON search_documents BEGIN
+CREATE TRIGGER search_document_update AFTER UPDATE ON search_documents
+WHEN new.title IS NOT old.title OR new.body IS NOT old.body BEGIN
  INSERT INTO search_dirty SELECT old.rowid WHERE NOT EXISTS(SELECT 1 FROM search_dirty WHERE rowid=old.rowid);
  INSERT INTO search_dirty SELECT new.rowid WHERE NOT EXISTS(SELECT 1 FROM search_dirty WHERE rowid=new.rowid);
  DELETE FROM search_jobs WHERE document_id=old.rowid;

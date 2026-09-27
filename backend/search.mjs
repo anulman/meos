@@ -23,7 +23,7 @@ export function searchOperation(db,owner,name,input,now){
   // Query jobs expire even if no subsequent search is performed.
   db.execute('DELETE FROM search_jobs WHERE owner_id=? AND query IS NOT NULL AND created_at<?',[ownerId,now-3600000])
   const rows=db.query('SELECT id,revision,text,attempts FROM search_jobs WHERE owner_id=? AND embedding IS NULL AND retry_at<=? ORDER BY query IS NULL,id LIMIT ?',[ownerId,now,input.limit??8])
-  // Lease attempts, not payload receipts: crash retries become eligible in 60 seconds.
+  // First lease is 60s; repeated attempts back off exponentially to one hour.
   for(const r of rows)db.execute('UPDATE search_jobs SET attempts=attempts+1,retry_at=? WHERE id=?',[now+Math.min(3600000,60000*2**Math.min(r[3],6)),r[0]])
   return {items:rows.map(r=>({id:r[0],revision:r[1],text:r[2],attempt:r[3]+1})),enabled:true,model:SEARCH_MODEL,dimensions:SEARCH_DIMENSIONS}
  }
@@ -35,7 +35,9 @@ export function searchOperation(db,owner,name,input,now){
   if(row[2]!==null)return {accepted:true}
   if(row[0]!==null){
    const current=db.query('SELECT revision FROM search_documents WHERE rowid=? AND owner_id=?',[row[0],ownerId])[0]
-   if(!current||current[0]!==input.revision)return {accepted:false}
+   // A job keeps the source revision at its text's creation. Metadata-only
+   // source edits retain that job; text edits replace its monotonic ID.
+   if(!current)return {accepted:false}
    db.execute('DELETE FROM search_vectors WHERE rowid=?',[row[0]])
    db.execute('INSERT INTO search_vectors(rowid,embedding) VALUES(?,?)',[row[0],encoded])
   }

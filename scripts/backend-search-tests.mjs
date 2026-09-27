@@ -97,3 +97,21 @@ test('period notes and routine snapshots stay searchable; malformed vectors cann
  f.commands.invoke(f.other,'configure_search',{enabled:true});assert.equal(f.commands.invoke(f.other,'search_index_commit',{id:job.id,revision:job.revision,embedding:vector}).accepted,false)
  }finally{f.db.close()}
 })
+test('completion and schedule edits preserve vectors and leased unchanged-content jobs',()=>{
+ const f=fixture(),a=f.task('Stable text')
+ try{
+  f.commands.create(f.owner,'tasks',a);f.call('configure_search',{enabled:true})
+  const job=f.call('search_index_batch',{}).items[0]
+  f.commands.update(f.owner,'tasks',{...a,completed:true},1)
+  assert.equal(f.call('search_index_commit',{id:job.id,revision:job.revision,embedding:vector}).accepted,true)
+  assert.equal(f.db.prepare('SELECT count(*) n FROM search_vectors').get().n,1)
+  const scheduled={...a,completed:true,schedule:{date:'2026-09-26',time:'10:00',timezone:'UTC'}}
+  f.commands.update(f.owner,'tasks',scheduled,2)
+  assert.equal(f.db.prepare('SELECT count(*) n FROM search_vectors').get().n,1)
+  assert.equal(f.call('search_index_batch',{}).items.length,0)
+  assert.equal(f.call('search',{query:'Stable text',mode:'keyword'}).items[0].revision,3)
+  f.commands.update(f.owner,'tasks',{...scheduled,title:'New text'},3)
+  assert.equal(f.db.prepare('SELECT count(*) n FROM search_vectors').get().n,0)
+  assert.equal(f.call('search_index_commit',{id:job.id,revision:job.revision,embedding:vector}).accepted,false)
+ }finally{f.db.close()}
+})
