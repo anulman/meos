@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { DomainError, canonical, uuid, date, timezone, validatePreferences, validateResource } from './domain.mjs'
 import {addDays,localDay,scheduledInstant,horizon,occursOn} from './scheduling.mjs'
+import {delegatedPrincipal} from './delegation.mjs'
 import {operations,validateSchema} from './contract.mjs'
 
 const tables={projects:'projects',tasks:'tasks',routines:'routines',occurrences:'occurrences',outcomes:'outcomes',periodNotes:'period_notes'}
@@ -96,6 +97,7 @@ export function createCommands({begin,now=()=>Date.now()}) {
     if(n!==1)throw new DomainError('conflict','Record changed')
    })
   },
+  mcpGrant(identity){return tx(db=>{const grant=delegatedPrincipal(db,blob(identity),now());if(!grant)return null;const h=Array.from(grant.owner,b=>b.toString(16).padStart(2,'0')).join('');return {...grant,owner:h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20)}})},
   agentGrant(agent){return tx(db=>{const row=db.query('SELECT owner_id,scopes,expires_at,revoked FROM _meos_agent_grants WHERE agent_id=?',[blob(agent)])[0];if(!row)return null;const h=Array.from(row[0],b=>b.toString(16).padStart(2,'0')).join('');return {owner:h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20),scopes:JSON.parse(row[1]),active:!Number(row[3])&&Number(row[2])>now()}})},
   invoke(owner,name,input){
    const spec=Object.hasOwn(operations,name)?operations[name]:undefined;if(!spec)throw new DomainError('validation','Unknown operation')
@@ -103,13 +105,14 @@ export function createCommands({begin,now=()=>Date.now()}) {
    return tx(db=>{
     if(spec.write){const old=db.query('SELECT operation,payload,result FROM command_receipts WHERE owner_id=? AND command_key=?',[blob(owner),input.idempotencyKey])[0];if(old){if(old[0]!==name||old[1]!==canonical(input))throw new DomainError('conflict','Idempotency key payload mismatch');return JSON.parse(old[2])}}
     let result
-    if(name==='calendar_inventory')result=api.list(owner,input.kind,{cursor:input.cursor,limit:250})
+    if(name==='get_command_receipt'){const row=db.query('SELECT operation,payload,result FROM command_receipts WHERE owner_id=? AND command_key=?',[blob(owner),input.key])[0];result=row?{found:true,operation:row[0],input:JSON.parse(row[1]),result:JSON.parse(row[2])}:{found:false}}
+    else if(name==='calendar_inventory')result=api.list(owner,input.kind,{cursor:input.cursor,limit:250})
     else if(name==='calendar_changes'){
      const rows=db.query("SELECT sequence,kind,entity_id,revision,operation FROM sync_outbox WHERE owner_id=? AND sequence>? AND kind IN ('tasks','occurrences') ORDER BY sequence LIMIT 100",[blob(owner),input.cursor]);
      result={items:rows.map(r=>({sequence:r[0],kind:r[1],id:r[2],revision:r[3],deleted:r[4]==='delete'})),cursor:rows.at(-1)?.[0]??input.cursor}
-    }else if(name==='calendar_current'){
+    }else if(name==='calendar_current'||name==='get_current'){
      const row=owned(db,input.kind,owner,input.id);const tombstone=db.query('SELECT revision FROM deletion_tombstones WHERE owner_id=? AND kind=? AND entity_id=?',[blob(owner),input.kind,input.id])[0];
-     if(!row&&!tombstone)throw new DomainError('not_found','Sync entity not found');result={record:row?envelope(row):null,deleted:!row,revision:row?Number(row[1]):Number(tombstone[0])}
+     if(!row&&!tombstone)throw new DomainError('not_found','Sync entity not found');result={record:row?envelope(row):null,deleted:!row,revision:row?Number(row[1]):Number(tombstone[0])};if(name==='get_current'){const value=result.record?.value;result.scheduledAt=value?.schedule?new Date(scheduledInstant(value.schedule)).toISOString():null}
     }else if(name==='calendar_apply'){
      const old=envelope(requireOwned(db,input.kind,owner,input.id));if(old.revision!==input.expectedRevision)throw new DomainError('conflict','Local event changed');
      const value={...old.value};if(input.schedule===null)delete value.schedule;else value.schedule=input.schedule;
