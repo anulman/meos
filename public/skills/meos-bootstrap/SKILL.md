@@ -11,16 +11,18 @@ A user's bootstrap request covers the necessary supported installation and confi
 
 ## Installation target
 
-This guide targets the **post-production-cutover MeOS release**: install the persistent application first, then configure its agent. Prefer Docker Compose for a single host; use Helm when the user already operates a compatible Kubernetes cluster or explicitly chooses one. Do not introduce a cluster merely to run MeOS. Use an existing verified deployment when available.
-
-All `REPLACE_WITH_...` values below are explicit placeholders for artifacts and settings obtained from the selected release's maintained installation manifest. They are not shipped artifact names, chart coordinates, configuration keys, or endpoints. Resolve them before executing commands; equivalent supported host tools are fine.
-
-> Maintainer note: this guide assumes production cutover is complete; it is not evidence of current deployment. At authoring, this branch's Compose file remains a demo-only nginx preview, and production Compose/Helm coordinates have not been supplied here. Release maintainers must publish verified persistent deployment artifacts and their configuration/compatibility contract. Do not select the preview as the production artifact.
+Use an existing verified persistent deployment when available. The shipped path is
+native backend + protected web adapter under Linux/systemd, with Docker for the
+native runtime; see the [pinned host/MCP runbook](host-mcp.md). Select an exact
+reviewed commit and artifact manifest, not an implicit latest release. The demo
+Compose preview is not this stack. Compose or Helm is an alternative only when
+the selected release actually supplies qualified persistent artifacts; do not
+invent a chart or introduce a cluster solely for MeOS.
 
 ## Stage 1 — Discover the host and select a release
 
-1. Determine whether this is a fresh install or an existing MeOS instance. Inspect existing services, versions, data ownership, and configuration before changing anything; never initialize over existing data. Discover available host-management tools and the host OS, architecture, resources, storage, network constraints, and Docker/Compose availability. A local shell is optional if supported remote/host tools provide the required operations.
-2. Select a pinned, verified, supported release and read its maintained installation manifest, prerequisite matrix, deployment instructions, migration and recovery instructions. Verify provenance/checksums using the release's documented mechanism. Resolve the production Compose artifact or Helm chart, image digests, application/configuration versions, supported Docker/Compose or Kubernetes/Helm versions, required data services, and resource/storage requirements. Confirm the bundle includes the persistent backend, authentication, and web application. Record exactly what is available and any missing component.
+1. Determine whether this is a fresh install or an existing MeOS instance. Inspect existing services, versions, data ownership, and configuration before changing anything; never initialize over existing data. Discover available host-management tools and the host OS, architecture, resources, storage, network constraints, and the selected path’s prerequisites. A local shell is optional if supported remote/host tools provide the required operations.
+2. Select a pinned, verified, supported release and read its maintained installation manifest, prerequisite matrix, deployment instructions, migration and recovery instructions. Verify provenance/checksums using the release's documented mechanism. Resolve the native image digest, immutable web/runtime manifest, systemd templates and private socket contract (or verified alternative packaging), application/configuration versions, required data services, and resource/storage requirements. Confirm the bundle includes the persistent backend, authentication, and web application. Record exactly what is available and any missing component.
 3. Reuse known preferences and ask only for materially missing choices: instance/data owner, local timezone, desired domain, private versus public access, storage location, and necessary installation authority. Do not assume a friend's host should become publicly accessible. Check disk capacity and ownership and resolve conflicting ports or an existing deployment before proceeding.
 
 ## Stage 2 — Configure and install the application
@@ -33,61 +35,14 @@ Prepare a concrete plan using the selected release's actual schema: pinned artif
 - Bind services narrowly by default. Configure private networking or a reverse proxy and TLS only as required by the selected exposure and release instructions. Keep internal backend/data ports private. Validate the actual authentication/bootstrap-owner procedure; do not expose an unauthenticated setup flow publicly.
 - Build or fetch verified artifacts, run only documented initialization/migrations, and start the actual supported stack. Capture service/resource IDs and failures without leaking secrets. Stop and report missing packaging or unsupported prerequisites rather than ad-lib production infrastructure.
 
-### Docker Compose — single host
+### Native Linux host
 
-Verify Docker Engine and the Compose plugin are supported by the release (`docker version`, `docker compose version`) and the daemon is reachable. Check host architecture, free disk/memory, persistent mount ownership, and the intended port/proxy setup. Download and verify the pinned production release bundle through its documented distribution channel; keep a versioned copy for recovery. If the release requires building, follow its maintained build procedure rather than the preview build.
-
-Populate the release's configuration template using its actual keys, secret-file references, storage paths/volume definitions, image pins, auth owner setup, and external URL. Store any environment file privately (mode `0600` on POSIX, equivalent restrictive ACL elsewhere); prefer release-supported secret references for credentials. Public client configuration must contain no secrets. Use a stable Compose project name, and record which named volumes or bind mounts contain persistent data.
-
-Command templates after substituting verified paths and chosen project name:
-
-```sh
-MEOS_COMPOSE_FILE='REPLACE_WITH_VERIFIED_PRODUCTION_COMPOSE_PATH'
-MEOS_PRIVATE_ENV='REPLACE_WITH_PRIVATE_RELEASE_ENV_PATH'
-MEOS_COMPOSE_PROJECT='REPLACE_WITH_STABLE_PROJECT_NAME'
-
-docker compose --project-name "$MEOS_COMPOSE_PROJECT" --env-file "$MEOS_PRIVATE_ENV" -f "$MEOS_COMPOSE_FILE" config --quiet
-docker compose --project-name "$MEOS_COMPOSE_PROJECT" --env-file "$MEOS_PRIVATE_ENV" -f "$MEOS_COMPOSE_FILE" pull
-docker compose --project-name "$MEOS_COMPOSE_PROJECT" --env-file "$MEOS_PRIVATE_ENV" -f "$MEOS_COMPOSE_FILE" up -d
-docker compose --project-name "$MEOS_COMPOSE_PROJECT" --env-file "$MEOS_PRIVATE_ENV" -f "$MEOS_COMPOSE_FILE" ps
-```
-
-Use `pull` when the release supplies images; use the documented build step instead when it supplies a supported source-build artifact. Apply any required release-specific initialization/migration at the documented point, not an invented command. Validate without printing a fully interpolated configuration. Configure the actual proxy/TLS or private access path; keep data-service ports internal. Inspect release-defined health/readiness and perform Stage 3 even if all containers are running.
-
-For diagnosis, request bounded logs from the actual failing service and redact them before sharing:
-
-```sh
-MEOS_COMPOSE_SERVICE='REPLACE_WITH_ACTUAL_SERVICE_NAME'
-docker compose --project-name "$MEOS_COMPOSE_PROJECT" --env-file "$MEOS_PRIVATE_ENV" -f "$MEOS_COMPOSE_FILE" logs --tail 100 "$MEOS_COMPOSE_SERVICE"
-```
-
-For an authorized controlled restart, use the same project/file/env selection with `restart` and the verified service name; do not restart every data service casually. For upgrades, verify the new release, preserve the prior bundle and private configuration securely, take the release-required recovery checkpoint, review migration compatibility, then repeat validation and the documented upgrade procedure. A prior image is not necessarily compatible with a migrated database: rollback only through the supported recovery path. Pause with the same selection and `stop` when requested. Uninstall only after identifying owned resources and retention requirements; never include `down --volumes`, volume pruning, or data deletion by default.
-
-### Helm — later or existing Kubernetes deployment
-
-Verify the selected cluster and namespace, Kubernetes/Helm compatibility, identity/RBAC, available resources, storage class and volume retention, ingress/private-network route, and TLS/certificate mechanism. Confirm the current context before any mutation; a familiar namespace name is not proof of cluster identity. Do not install cluster-wide controllers or broaden RBAC without authority.
-
-Discover the release's real chart coordinates and pinned chart version. Verify provenance/digests using its supported mechanism. Read that version's values schema/defaults and migration instructions before preparing overrides. Use actual chart keys for persistent storage, image pins, resource requests/limits, secret references, auth, and routing; do not invent `values.yaml` fields. Prefer references to pre-created secrets or a supported secret manager. Treat private values files and Helm release metadata as potentially sensitive; do not pass passwords via `--set` or dump values into chat.
-
-```sh
-MEOS_KUBE_CONTEXT='REPLACE_WITH_VERIFIED_CLUSTER_CONTEXT'
-MEOS_HELM_RELEASE='REPLACE_WITH_STABLE_RELEASE_NAME'
-MEOS_NAMESPACE='REPLACE_WITH_TARGET_NAMESPACE'
-MEOS_CHART='REPLACE_WITH_RELEASE_SUPPLIED_CHART_COORDINATE'
-MEOS_CHART_VERSION='REPLACE_WITH_PINNED_CHART_VERSION'
-MEOS_PRIVATE_VALUES='REPLACE_WITH_PRIVATE_VALIDATED_VALUES_PATH'
-MEOS_ROLLOUT_TIMEOUT='REPLACE_WITH_RELEASE_APPROPRIATE_DURATION'
-
-kubectl config current-context
-kubectl --context "$MEOS_KUBE_CONTEXT" cluster-info
-helm show values "$MEOS_CHART" --version "$MEOS_CHART_VERSION"
-helm upgrade --install "$MEOS_HELM_RELEASE" "$MEOS_CHART" --version "$MEOS_CHART_VERSION" --kube-context "$MEOS_KUBE_CONTEXT" --namespace "$MEOS_NAMESPACE" --create-namespace --values "$MEOS_PRIVATE_VALUES" --wait --timeout "$MEOS_ROLLOUT_TIMEOUT"
-helm status "$MEOS_HELM_RELEASE" --kube-context "$MEOS_KUBE_CONTEXT" --namespace "$MEOS_NAMESPACE"
-```
-
-Chart repository registration or OCI authentication, if needed, must follow the actual release instructions with credentials entered through supported private tooling. Validate the private values against the chart schema and its documented checks before installation. Avoid sharing rendered manifests or dry-run output containing Secrets. Do not use automatic rollback flags blindly when migrations may be irreversible. `--wait` confirms Helm's supported readiness checks, not persistence, successful login, or every application dependency; run Stage 3 and any release-defined migration-job checks separately.
-
-Inspect only actual release-owned resources using the manifest's resource names/labels; avoid broad secret/configuration dumps. An authorized restart can use `kubectl rollout restart` and `kubectl rollout status` for the actual supported workload type/name, never an invented deployment name or indiscriminate data-service restart. Record release revision and previous artifact/version. Before upgrading, verify storage recovery and migration compatibility; review the new chart/schema and apply the validated values with the pinned new chart. `helm rollback` does not undo database migrations or restore external data: use it only when the release's compatibility rules permit it. Before uninstalling, inspect PVC retention, chart deletion hooks and external resource ownership; preserve data by default and do not delete the namespace as a shortcut.
+Follow the [host/MCP runbook](host-mcp.md) against the selected checkout. Keep
+artifact qualification, release admission, rendering and activation separate.
+Existing renderer assumptions are host-specific: a different host needs reviewed
+configuration support, not copied personal identifiers or disabled checks.
+For a genuinely supplied Compose/Helm release, use its own maintained instructions
+and the same identity, persistence, authority and recovery gates above.
 
 ## Recovery planning and verification
 
@@ -218,6 +173,24 @@ Connect MCP using the release's supported authentication procedure on behalf of 
 
 Prefer a local Unix socket when the release supports one, using a supported stdio MCP adapter if the agent host requires stdio. Socket permissions restrict connection access; they do not replace application authentication unless the release explicitly supports that mechanism. HTTP can be preferable across hosts, across container boundaries without a shared socket, or for managed/remote MCP clients that do not support local stdio/socket access. Use the release's actual HTTP transport, supported authentication and TLS appropriate to exposure; do not add public routing or a new auth server merely because HTTP is available. Verify endpoint/adapter capabilities rather than assuming a backend socket or HTTP API already speaks MCP.
 
+Track MCP readiness as separate receipts, in order:
+
+1. **Installed:** pinned bridge, private configuration and persistent registration.
+2. **Doctor/protocol:** host probe, authenticated initialization/tool discovery,
+   effective identity/workspace and a harmless direct-protocol read.
+3. **Personal runtime:** the actual personal agent invokes a discovered harmless
+   MeOS tool; retain its tool-call/result evidence, not an assistant assertion.
+4. **Scheduled runtime:** a restricted one-shot isolated/scheduled agent invokes
+   a harmless tool with delivery disabled. Do not run real morning/evening/review
+   rituals as installation tests or permit planner/calendar/messaging writes.
+
+Use [the runbook’s catalog-refresh continuation](host-mcp.md#catalog-refresh-and-recovery)
+when new tools are absent from the current turn. Persist the exact missing proof,
+obtain an accepted fresh-turn owner through supported host controls, and configure
+its result-delivery route before yielding. An installed registration, queued job,
+or saved checklist is not active execution. Do not restart a healthy gateway or
+wait for the user to prompt “And?” merely to refresh a turn’s tool catalog.
+
 A missing connection is setup work when the supported procedure and authority are available, not a reason to stop at discovery. If the release requires a separate principal but the user chose delegated identity, report an implementation capability mismatch and route authorized coding work to an owner; do not provision against that decision. If MCP or an event API is unavailable, distinguish missing configuration, an exact missing grant, and an unsupported capability; apply the continuation rule above and proceed with compatible parts of agent setup. Never substitute an unrelated service's credential to bypass a missing grant.
 
 ## Stage 4 — Configure the operating agent
@@ -280,6 +253,10 @@ or recreate jobs, recipients, registrations or seed data merely to rerun this sk
 - **Resume partial setup:** reconcile actual effects with the ledger before
   retrying. Reuse completed resources; do not replay an uncertain external or
   destructive action. Record the next safe step and exact unresolved effect.
+  Reconcile persisted mint/refresh intents and native session state; reuse the
+  live private rotating credential file, never restore an obsolete issuance copy
+  or remint blindly. Record the runtime owner/run ID, verified state, last
+  progress, next action and configured delivery route; resume only missing steps.
 - **Keep planning independent:** installation maintenance must not reset
   planning state or overwrite operating skills. Pin bootstrap independently;
   update planning skills only when requested. Coordinate changes to shared
@@ -403,7 +380,20 @@ Where the host/protocol supports them, use safe synthetic events and a non-mutat
 
 Report application installation/login/persistence separately from optional integrations, MCP access, operating jobs, and event delivery. State what is configured, what is verified running, the next scheduled executions, and exact blocked/unverified parts. Include the installation record location or resource ID, non-secret access instructions, and how to inspect, pause, update, and uninstall. Do not declare the entire bootstrap complete while a requested component remains blocked, and never call a demo preview a persistent installation.
 
-For MCP readiness, include authenticated discovery and harmless-read evidence for the intended identity and workspace. For event readiness, include an actual event's durable queue handoff and supervised worker processing, plus the required restart/replay proof; installed services or synthetic qualification alone are not live end-to-end evidence. Report which dependencies were completed under existing bootstrap authority, and separate configured components from verified operation and any remaining permission or implementation blocker.
+For MCP readiness, include all four Stage 3 receipts for the intended identity and workspace; doctor/direct protocol success is not personal or scheduled model-tool evidence. For event readiness, include an actual event's durable queue handoff and supervised worker processing, plus the required restart/replay proof; installed services or synthetic qualification alone are not live end-to-end evidence. Report which dependencies were completed under existing bootstrap authority, and separate configured components from verified operation and any remaining permission or implementation blocker.
+
+### Learning and delivery closeout
+
+For evidenced setup defects, record the failure, concrete upstream correction
+and regression proof; link the source commit/PR rather than leaving a local
+workaround as the lesson. Repository-owned bootstrap/template fixes go through
+repository review, not an installed-skill workshop. Preserve unrelated content
+and authorization gates. Distinguish source fixed, PR published, release admitted,
+and runtime installed/verified; a merged document does not update a live host.
+Record unperformed proofs explicitly (for example, forced live expiry or full
+backend/socket rebind). Deliver the bounded result through the user’s actual
+channel and retain its send receipt separately from saved completion. A saved
+report or child completion is not confirmed user-facing delivery.
 
 ## Maintain or remove
 
