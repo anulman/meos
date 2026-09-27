@@ -7,10 +7,11 @@ info=admission.lstat();assert stat.S_ISREG(info.st_mode) and info.st_uid==0 and 
 assert json.loads(admission.read_text())['calendarCacheHelperSHA256']==hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest()
 c=runpy.run_path(str(repo/'scripts/notification-acceptance.py'))
 request,db,verify,save=[c[k] for k in ['request','db','verify','save']]
-agent,other=c['agent'],c['other'];verify()
+agent,other=c['agent'],c['bridge'];verify()
 with db() as conn:
  conn.execute('UPDATE _meos_agent_grants SET scopes=? WHERE agent_id=?',(json.dumps(['sync:read','sync:write','agenda:read']),uuid.UUID(agent['id']).bytes))
- conn.execute('INSERT INTO _meos_agent_grants VALUES(?,?,?,?,0)',(uuid.UUID(other['id']).bytes,uuid.UUID(other['id']).bytes,json.dumps(['agenda:read']),int(time.time()*1000)+3600000))
+ # The bridge has no agent grant; bind it once to the second synthetic owner.
+ conn.execute('INSERT INTO _meos_agent_grants VALUES(?,?,?,?,0)',(uuid.UUID(other['id']).bytes,uuid.UUID(c['other']['id']).bytes,json.dumps(['agenda:read']),int(time.time()*1000)+3600000))
 at=c['login_native'](agent);ot=c['login_native'](other)
 def call(name,args,token=at,error=False):
  code,body,_=request('server.sock','POST','/api/meos/v1/mcp',json.dumps({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':name,'arguments':args}}),{'Authorization':'Bearer '+token['auth_token'],'Content-Type':'application/json','Accept':'application/json, text/event-stream'})
