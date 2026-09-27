@@ -4,7 +4,7 @@ Retains old container, cold data copy, state and units for rollback. Leaves web
 stopped until independently reviewed web/Calendar activation completes. All
 arguments are non-secret paths. Interrupted transitions require reconciliation.
 """
-import argparse,hashlib,importlib.util,http.client,json,os,pathlib,re,shutil,socket,sqlite3,stat,subprocess,sys,time
+import atexit,argparse,hashlib,importlib.util,http.client,json,os,pathlib,re,shutil,socket,sqlite3,stat,subprocess,sys,time
 assert os.geteuid()==0
 p=argparse.ArgumentParser();p.add_argument('--state',required=True);p.add_argument('--release',required=True);p.add_argument('--admission',required=True);p.add_argument('--output',required=True);p.add_argument('--runtime',required=True);a=p.parse_args()
 clean={'PATH':'/usr/bin:/bin'}
@@ -38,6 +38,13 @@ name='meos-'+state['environment']+'-'+run;assert state['volume']==name+'-data';r
 out=pathlib.Path(a.output).absolute();assert str(out)==admission['output'] and not out.exists(),'Existing transition: reconcile, never retry automatically'
 for parent in out.parents:
  i=parent.lstat();assert stat.S_ISDIR(i.st_mode) and i.st_uid==0 and not i.st_mode&0o022
+# No transition directory or runtime mutation before the optional backup gate.
+backup_path=pathlib.Path(__file__).resolve().parents[1]/'tools/backup/meos-backup.py'
+assert admission['backupToolSHA256']==hashlib.sha256(backup_path.read_bytes()).hexdigest()
+backup_spec=importlib.util.spec_from_file_location('meos_backup',backup_path);backup_tool=importlib.util.module_from_spec(backup_spec);backup_spec.loader.exec_module(backup_tool)
+backup_guard=backup_tool.upgrade_guard();backup_guard.__enter__()
+# Hold the same backup lock throughout the transition, including failure exits.
+atexit.register(backup_guard.__exit__,None,None,None)
 out.mkdir(mode=0o700)
 def command(*args):
  r=subprocess.run(args,env=clean,capture_output=True,timeout=90);assert r.returncode==0,'Operation failed; reconcile retained transition state';return r.stdout

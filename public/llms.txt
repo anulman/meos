@@ -4,7 +4,7 @@
 
 ## Operating skills
 
-- [Install and bootstrap](skills/meos-bootstrap/SKILL.md): Install a post-cutover production release (Compose first, Helm later), plan and verify recovery, then configure agent schedules, per-install planning authority and event long-polling.
+- [Install and bootstrap](skills/meos-bootstrap/SKILL.md): Install a post-cutover production release (Compose first, Helm later), install optional backup encryption from pinned source or an admitted runtime, plan and verify recovery, then configure agent schedules, per-install planning authority and event long-polling.
 
 - [Shared operating contract](skills/contract.md): Required authority, tentative/target-day planning, Google-wins reconciliation, evidence-aware actuals, weekly reflection, tool discovery and delivery rules.
 - [Weekly review + 14-day look-ahead](skills/meos-weekly-review/SKILL.md): Review priorities and capacity across the next 14 days when the user requests weekly planning or a configured weekly review fires; composes board decisions and schedules only within existing authority.
