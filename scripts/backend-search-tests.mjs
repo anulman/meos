@@ -14,7 +14,7 @@ function fixture(){
  const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON; CREATE TABLE _user(id BLOB PRIMARY KEY) STRICT;')
  const owner=randomUUID(),other=randomUUID(),bytes=id=>Buffer.from(id.replaceAll('-',''),'hex')
  for(const id of [owner,other])db.prepare('INSERT INTO _user VALUES(?)').run(bytes(id))
- for(const n of ['0800__planner','0803__bridge','0805__scheduling_contract','0811__search']){
+ for(const n of ['0800__planner','0803__bridge','0805__scheduling_contract','0812__search']){
   let sql=readFileSync(new URL('../backend/migrations/U179038'+n+'.sql',import.meta.url),'utf8')
   // Unit adapter only: exact-image migration proof separately exercises native vec0.
   sql=sql.replace('CREATE VIRTUAL TABLE search_vectors USING vec0(embedding float[1536] distance_metric=cosine);','CREATE TABLE search_vectors(rowid INTEGER PRIMARY KEY,embedding TEXT);')

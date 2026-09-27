@@ -20,12 +20,14 @@ Suggested participation: 20–30 minutes. Use for strategic weekly reconciliatio
 
 Before making the planning decisions above:
 
-- Check all-day events overlapping the next 14 days through a discoverable, authorized
-  host calendar read capability, if available. The Today day view hides these
-  events; neither screen visibility nor MeOS `calendar_inventory` (tasks,
-  occurrences and routines) establishes provider all-day coverage. If no such
-  read is available, disclose missing coverage rather than reporting no events;
-  do not invent an MCP method or borrow owner/sync credentials.
+- Read cached Calendar context for the next 14 days through `list_calendar_events`
+  with the planning period and owner's timezone (`agenda:read` scope), following
+  `nextCursor`. Include all-day context even though Today hides those cards;
+  linked events are context, not duplicate commitments. If this operation or
+  scope is unavailable, disclose missing coverage; do not borrow sync credentials.
+- Check `status`, `lastSyncAt` and recurrence `windowStart`/`windowEnd`. Stale
+  context is provisional. Unavailable data or dates outside the expansion window
+  are not an empty calendar. `calendar_inventory` is not a provider-events read.
 - Include events spanning the window: an all-day start date is inclusive and
   its end date is exclusive. Preserve the source dates and timezone context;
   do not turn date-only events into midnight timed commitments.

@@ -43,6 +43,7 @@ function createHttpFlow({commands,weather,bridge,origin,basePath='/api/meos/v1'}
    }
    if(bridge?.ownerFor(user.id))throw new DomainError('forbidden','Bridge identity cannot access planner resources')
    if(commands.agentGrant(user.id))throw new DomainError('forbidden','Agent identity cannot access browser APIs')
+   if(parts.length===1&&parts[0]==='calendar-cache'&&method==='GET')return response(commands.calendarCache(user.id))
    if(parts.length===2&&parts[0]==='operations'&&method==='POST')return response(commands.invoke(user.id,parts[1],body))
    if(parts[0]==='resources'&&resources.has(parts[1])) {
     const kind=parts[1],id=parts[2]

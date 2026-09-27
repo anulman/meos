@@ -55,7 +55,7 @@ test('opt-in update ingestion replays independently of boundaries; scoped denial
 })
 test('update enqueue/cursor crash rolls back; embedding commits and notification ack do not recurse or finish pending jobs',()=>{
  const f=fixture();try{
-  let sql=readFileSync(new URL('../backend/migrations/U1790380811__search.sql',import.meta.url),'utf8').replace('CREATE VIRTUAL TABLE search_vectors USING vec0(embedding float[1536] distance_metric=cosine);','CREATE TABLE search_vectors(rowid INTEGER PRIMARY KEY,embedding TEXT);');f.db.exec(sql)
+  let sql=readFileSync(new URL('../backend/migrations/U1790380812__search.sql',import.meta.url),'utf8').replace('CREATE VIRTUAL TABLE search_vectors USING vec0(embedding float[1536] distance_metric=cosine);','CREATE TABLE search_vectors(rowid INTEGER PRIMARY KEY,embedding TEXT);');f.db.exec(sql)
   f.db.prepare('UPDATE _meos_agent_grants SET scopes=? WHERE agent_id=?').run('["notifications:consume","search:index"]',blob(f.agent))
   f.notifications.invoke(f.agent,{op:'configure',consumer,preferences:{recordUpdates:true}})
   const a=task(f.time);f.commands.create(f.owner,'tasks',a)
