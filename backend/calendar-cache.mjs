@@ -40,23 +40,58 @@ export function publishCalendarCache(db,owner,input){
  db.execute('UPDATE calendar_cache_state SET sequence=?,metadata=? WHERE owner_id=?',[sequence,canonical({...metadata,generation,drafts:all.flatMap(p=>p.drafts),planner:{plannerLastSyncAt:metadata.plannerLastSyncAt,conflicts:all.flatMap(p=>p.conflicts)}}),id]);
  return {sequence,committed:true};
 }
-export function readCalendarCache(db,owner,now){
+function calendarMetadata(db,owner,now){
  const id=blob(owner),row=db.query('SELECT sequence,metadata FROM calendar_cache_state WHERE owner_id=?',[id])[0];
  const metadata=row?.[0]>0?JSON.parse(row[1]):{available:false,state:'unavailable',syncActive:false,lastSyncAt:null,plannerLastSyncAt:null,windowStart:null,windowEnd:null,drafts:[],planner:{plannerLastSyncAt:null,conflicts:[]}};
- const items=db.query('SELECT doc FROM calendar_cache_events WHERE owner_id=? ORDER BY event_key',[id]).map(r=>JSON.parse(r[0]));
  const fresh=metadata.available&&metadata.state==='connected'&&metadata.syncActive&&metadata.lastSyncAt!==null&&now-metadata.lastSyncAt<180000;
- return {id:'calendar',items,...metadata,sequence:row?.[0]??0,status:!metadata.available?'unavailable':fresh?'fresh':'stale'};
+ return {id:'calendar',...metadata,sequence:row?.[0]??0,status:!metadata.available?'unavailable':fresh?'fresh':'stale'};
 }
-export function listCalendarCache(db,owner,input,now){
+export function readCalendarCache(db,owner,now){
+ return {...calendarMetadata(db,owner,now),items:db.query('SELECT doc FROM calendar_cache_events WHERE owner_id=? ORDER BY event_key',[blob(owner)]).map(r=>JSON.parse(r[0]))};
+}
+function rangeItems(db,owner,input){
+ const end=addDays(input.period.end,1),limit=input.limit??250;
+ // SQLite discards unrelated documents before crossing the WASM/JS boundary.
+ // A two-day UTC margin covers every supported civil offset, including DST.
+ // Exact local-day overlap is checked below; all-day ends remain exclusive.
+ const lower=Date.parse(input.period.start+'T00:00:00Z')-172800000,upper=Date.parse(end+'T00:00:00Z')+172800000;
+ const items=[];let cursor=input.cursor??'';
+ for(;;){
+ const rows=db.query(`SELECT doc,event_key FROM calendar_cache_events WHERE owner_id=? AND event_key>? AND (
+  (json_extract(doc,'$.start.date') < ? AND json_extract(doc,'$.end.date') > ?) OR
+  (julianday(json_extract(doc,'$.start.dateTime')) < julianday(? / 1000.0,'unixepoch') AND julianday(json_extract(doc,'$.end.dateTime')) > julianday(? / 1000.0,'unixepoch'))
+ ) ORDER BY event_key LIMIT 250`,[blob(owner),cursor,end,input.period.start,upper,lower]);
+ for(const row of rows){
+  const event=JSON.parse(row[0]);let overlaps;
+  if(event.start?.date&&event.end?.date)overlaps=event.start.date<end&&event.end.date>input.period.start;
+  else {const start=Date.parse(event.start?.dateTime??''),finish=Date.parse(event.end?.dateTime??'');overlaps=finish>start&&localDay(start,input.timezone)<=input.period.end&&localDay(finish-1,input.timezone)>=input.period.start}
+  if(overlaps)items.push(event);
+  if(items.length>limit)break;
+ }
+ if(items.length>limit||rows.length<250)break;
+ cursor=rows.at(-1)[1];
+ }
+ return {items:items.slice(0,limit),...(items.length>limit?{nextCursor:items[limit-1].role+':'+items[limit-1].id}:{})};
+}
+function validateRange(input){
  date(input.period.start);date(input.period.end);timezone(input.timezone);
  if(input.period.end<input.period.start||input.period.end>addDays(input.period.start,92))throw new DomainError('validation','Calendar range must be at most 93 days');
- const cache=readCalendarCache(db,owner,now),end=addDays(input.period.end,1),limit=input.limit??100;
- const items=cache.items.filter(e=>{
-  if(e.start?.date&&e.end?.date)return e.start.date<end&&e.end.date>input.period.start;
-  if(!e.start?.dateTime||!e.end?.dateTime)return false;
-  const start=Date.parse(e.start.dateTime),finish=Date.parse(e.end.dateTime);
-  return finish>start&&localDay(start,input.timezone)<=input.period.end&&localDay(finish-1,input.timezone)>=input.period.start;
- }).filter(e=>e.role+':'+e.id>(input.cursor??''));
- const {items:ignored,id:ignoredId,...metadata}=cache;
- return {...metadata,items:items.slice(0,limit),...(items.length>limit?{nextCursor:items[limit-1].role+':'+items[limit-1].id}:{})};
+ // Validate the zone/rules even for empty and all-day-only calendars.
+ localDay(Date.parse(input.period.start+'T12:00:00Z'),input.timezone);localDay(Date.parse(input.period.end+'T12:00:00Z'),input.timezone);
+ if(input.limit!==undefined&&(!Number.isSafeInteger(input.limit)||input.limit<1||input.limit>250))throw new DomainError('validation','Invalid Calendar page limit');
+ if(input.cursor!==undefined&&(typeof input.cursor!=='string'||!input.cursor.length||input.cursor.length>1100))throw new DomainError('validation','Invalid Calendar cursor');
+}
+export function listCalendarCache(db,owner,input,now){
+ validateRange(input);
+ const {id,...metadata}=calendarMetadata(db,owner,now);
+ return {...metadata,...rangeItems(db,owner,{...input,limit:input.limit??100})};
+}
+/** Browser window: sequence checks avoid event reads on unchanged polls and fence pages. */
+export function readCalendarWindow(db,owner,input,now){
+ validateRange(input);
+ if(input.sequence!==undefined&&(!Number.isSafeInteger(input.sequence)||input.sequence<0))throw new DomainError('validation','Invalid Calendar sequence');
+ const metadata=calendarMetadata(db,owner,now);
+ if(input.cursor&&input.sequence!==metadata.sequence)throw new DomainError('conflict','Calendar changed while paging; reload this period');
+ if(!input.cursor&&input.sequence===metadata.sequence)return {...metadata,items:[],unchanged:true};
+ return {...metadata,...rangeItems(db,owner,input),unchanged:false};
 }

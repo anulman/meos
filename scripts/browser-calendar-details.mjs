@@ -10,8 +10,8 @@ const event={id:'fixture',role:'primary',summary:'Cached appointment',location:'
 const source=`import React,{useState} from 'react';import{createRoot}from'react-dom/client';import{CalendarEventDetails}from'/src/components/CalendarEventDetails.tsx';import{CalendarAgenda}from'/src/components/CalendarAgenda.tsx';import'/src/styles.css';function App(){const[e,setE]=useState(null),[agenda,setAgenda]=useState(false);window.showEvent=setE;window.mountAgenda=()=>setAgenda(true);if(agenda)return React.createElement(CalendarAgenda,{period:{start:'2026-09-26',end:'2026-09-27'}});return React.createElement(React.Fragment,null,React.createElement('button',{id:'open',onClick:()=>setE(${JSON.stringify(event)})},'Open fixture'),e&&React.createElement(CalendarEventDetails,{event:e,timezone:'America/Toronto',onClose:()=>setE(null),onEdit:()=>window.editCalls=(window.editCalls||0)+1}))}createRoot(document.getElementById('root')).render(React.createElement(App));`
 const mocks={
  '../lib/backend/session':`export const transport={request:async(path)=>{throw Error('Unexpected RPC '+path)}};`,
- '../lib/store':`export const queryClient={invalidateQueries:async()=>{}},calendarCacheCollection={};`,
- '@tanstack/react-db':`import {useEffect,useState} from 'react';export function useLiveQuery(){const[,set]=useState(0);useEffect(()=>{const changed=()=>set(n=>n+1);window.addEventListener('fixture-cache',changed);return()=>window.removeEventListener('fixture-cache',changed)},[]);return {data:window.calendarData?[window.calendarData]:[],isLoading:false,isError:false}}`,
+ '../lib/store':`export const queryClient={invalidateQueries:async()=>{}};`,
+ '../lib/calendar-window':`import {useEffect,useState} from 'react';export function useCalendarWindow(){const[,set]=useState(0);useEffect(()=>{const changed=()=>set(n=>n+1);window.addEventListener('fixture-cache',changed);return()=>window.removeEventListener('fixture-cache',changed)},[]);return {data:window.calendarData,isPending:false,isError:false}}`,
  '../lib/config':`export const getConfig=()=>({demo:false});`,
  '../lib/planner-clock':`export const usePlannerClock=()=>({preferences:{timezone:'America/Toronto'}});`
 }

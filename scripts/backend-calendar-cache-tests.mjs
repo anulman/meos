@@ -82,3 +82,42 @@ test('existing service poll mirrors its durable snapshot, removals, drafts and p
 });
 
 test('first partial publication stays a schema-valid unavailable cache',t=>{const f=fixture(t);f.publish(page(1,[event('pending')],{pages:2}));const cache=f.read();assert.equal(cache.status,'unavailable');assert.deepEqual(cache.items,[]);validateSchema(schemas.CalendarCache,cache)});
+
+test('browser windows: exact exclusive overlap, timezone changes, DST and validation',t=>{
+ const f=fixture(t);f.publish(page(1,[
+  event('all-day',{start:{date:'2026-09-27'},end:{date:'2026-09-28'}}),
+  event('ended',{start:{dateTime:'2026-09-26T23:00:00-04:00'},end:{dateTime:'2026-09-27T00:00:00-04:00'}}),
+  event('overnight',{start:{dateTime:'2026-09-26T23:30:00-04:00'},end:{dateTime:'2026-09-27T00:30:00-04:00'}}),
+  event('later',{start:{dateTime:'2026-09-28T00:00:00-04:00'},end:{dateTime:'2026-09-28T01:00:00-04:00'}}),
+  event('fold',{start:{dateTime:'2026-11-01T01:30:00-04:00'},end:{dateTime:'2026-11-01T01:30:00-05:00'}}),
+  event('gap',{start:{dateTime:'2026-03-08T01:30:00-05:00'},end:{dateTime:'2026-03-08T03:30:00-04:00'}})
+ ]));
+ const input={period:{start:'2026-09-27',end:'2026-09-27'},timezone:'America/Montreal'};
+ const read=input=>f.commands.calendarWindow(f.owner,input);
+ assert.deepEqual(read(input).items.map(x=>x.id),['all-day','overnight']);
+ assert.deepEqual(read({...input,timezone:'Asia/Tokyo'}).items.map(x=>x.id),['all-day','ended','overnight']);
+ for(const [day,id]of [['2026-11-01','fold'],['2026-03-08','gap']])assert.deepEqual(read({...input,period:{start:day,end:day}}).items.map(x=>x.id),[id]);
+ assert.deepEqual(f.commands.calendarWindow(f.other,input).items,[]);
+ for(const invalid of [{timezone:'Invalid/Zone'},{sequence:-1},{period:{start:'2026-09-28',end:'2026-09-27'}},{period:{start:'2026-01-01',end:'2026-12-31'}}])assert.throws(()=>read({...input,...invalid}),{code:'validation'});
+});
+test('unchanged polls skip event query, refresh freshness, and fence pages across publications',t=>{
+ const f=fixture(t),input={period:{start:'2026-09-27',end:'2026-09-27'},timezone:'UTC'};
+ f.publish(page(1,Array.from({length:250},(_,i)=>event('a-'+String(i).padStart(3,'0'))),{pages:2}));
+ f.publish(page(1,[event('last')],{page:1,pages:2,metadata:undefined}));
+ const first=f.commands.calendarWindow(f.owner,input);validateSchema(schemas.CalendarWindow,first);assert.equal(first.items.length,250);assert.ok(first.nextCursor);
+ const last=f.commands.calendarWindow(f.owner,{...input,cursor:first.nextCursor,sequence:first.sequence});assert.equal(last.items.length,1);assert.equal(last.nextCursor,undefined);
+ const unchanged=f.commands.calendarWindow(f.owner,{...input,sequence:1});assert.equal(unchanged.unchanged,true);assert.deepEqual(unchanged.items,[]);
+ f.setTime(f.now()+180001);assert.equal(f.commands.calendarWindow(f.owner,{...input,sequence:1}).status,'stale');
+ f.publish(page(2,[]));assert.throws(()=>f.commands.calendarWindow(f.owner,{...input,cursor:first.nextCursor,sequence:1}),{code:'conflict'});
+ const changed=f.commands.calendarWindow(f.owner,{...input,sequence:1});assert.equal(changed.unchanged,false);assert.deepEqual(changed.items,[]);assert.equal(changed.sequence,2);
+});
+test('browser window route retains identity boundary and rejects malformed query',async t=>{
+ const f=fixture(t),origin='https://fixture.invalid',http=createHttpHandler({commands:f.commands,origin});
+ const url=origin+'/api/meos/v1/calendar-window?start=2026-09-27&end=2026-09-27&timezone=UTC';
+ assert.equal((await http(new Request(url),null)).status,401);
+ assert.equal((await http(new Request(url),{id:f.owner})).status,200);
+ f.db.prepare('INSERT INTO _meos_agent_grants VALUES(?,?,?,?,0)').run(blob(f.agent),blob(f.owner),JSON.stringify(['agenda:read']),f.now()+100000);
+ assert.equal((await http(new Request(url),{id:f.agent})).status,403);
+ for(const suffix of ['&timezone=UTC','&unexpected=x','&sequence=bad'])assert.equal((await http(new Request(url+suffix),{id:f.owner})).status,422);
+ assert.equal((await http(new Request(origin+'/api/meos/v1/calendar-window'),{id:f.owner})).status,422);
+});
