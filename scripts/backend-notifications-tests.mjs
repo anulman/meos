@@ -16,7 +16,7 @@ function fixture(){
  const directory=mkdtempSync(tmpdir()+'/meos-notification-'),file=directory+'/db',owner=randomUUID(),agent=randomUUID(),other=randomUUID();let time=Date.parse('2026-09-26T12:00:00Z'),db
  function open(){db=new DatabaseSync(file);db.exec('PRAGMA foreign_keys=ON')}
  open();db.exec('CREATE TABLE _user(id BLOB PRIMARY KEY) STRICT');for(const id of [owner,agent,other])db.prepare('INSERT INTO _user VALUES(?)').run(blob(id))
- for(const name of ['U1790380800__planner.sql','U1790380805__scheduling_contract.sql','U1790380806__notifications.sql'])db.exec(readFileSync(new URL('../backend/migrations/'+name,import.meta.url),'utf8'))
+ for(const name of ['U1790380800__planner.sql','U1790380805__scheduling_contract.sql','U1790380806__notifications.sql','U1790380810__record_update_notifications.sql'])db.exec(readFileSync(new URL('../backend/migrations/'+name,import.meta.url),'utf8'))
  db.prepare('INSERT INTO _meos_agent_grants VALUES(?,?,?,?,0)').run(blob(agent),blob(owner),'["notifications:consume"]',time+30*86400000)
  const port={now:()=>time,begin(){db.exec('BEGIN IMMEDIATE');return {query:(s,p)=>db.prepare(s).all(...p).map(Object.values),execute:(s,p)=>db.prepare(s).run(...p).changes,commit:()=>db.exec('COMMIT'),rollback:()=>db.exec('ROLLBACK')}}}
  const notifications=createNotifications(port),commands=createCommands(port)
@@ -38,3 +38,33 @@ test('same-owner second agent cannot ack original token; revoked ack fails',()=>
 
 test('completion does not cancel scheduled start/end machine signals',()=>{const f=fixture();try{const value=task(f.time+60000,{completed:true});f.commands.create(f.owner,'tasks',value);f.poll();f.time+=60000;const start=f.poll();assert.equal(start.items[0].starts[0].completed,true);f.ack(start.ackToken);f.time+=30*60000;assert.equal(f.poll().items[0].ends[0].id,value.id)}finally{f.close()}})
 test('archived template does not cancel independently scheduled materialized instance',()=>{const f=fixture();try{const routine={id:randomUUID(),title:'Template',notes:{type:'doc'},weekdays:[6],timezone:'UTC',durationMinutes:30};f.commands.create(f.owner,'routines',routine);const occurrence={id:randomUUID(),routineId:routine.id,date:'2026-09-26',completed:false,schedule:task(f.time+60000).schedule};f.commands.create(f.owner,'occurrences',occurrence);f.poll();f.commands.update(f.owner,'routines',{...routine,archived:true},1);f.time+=60000;assert(f.poll().items.some(v=>v.starts.some(x=>x.id===occurrence.id)))}finally{f.close()}})
+
+test('opt-in update ingestion replays independently of boundaries; scoped denial and disable suppress updates',()=>{
+ const f=fixture();try{
+  const configure=preferences=>f.notifications.invoke(f.agent,{op:'configure',consumer,preferences})
+  assert.throws(()=>configure({recordUpdates:true}),{code:'forbidden'})
+  const before=task(f.time);f.commands.create(f.owner,'tasks',before)
+  f.db.prepare('UPDATE _meos_agent_grants SET scopes=? WHERE agent_id=?').run('["notifications:consume","search:index"]',blob(f.agent))
+  configure({recordUpdates:true});assert(!f.poll().items.some(v=>v.type==='record.updated'))
+  const a=task(f.time);f.commands.create(f.owner,'tasks',a)
+  const p=f.poll(),event=p.items.find(v=>v.type==='record.updated');assert(event);assert.match(event.id,/^[a-f0-9]{48}$/);assert.equal(event.source.id,a.id);assert.equal(event.source.operation,'upsert');assert.equal(event.source.title,undefined)
+  assert(p.items.some(v=>v.type==='boundary'));f.reopen();assert(f.poll().items.some(v=>v.id===event.id))
+  f.db.prepare('UPDATE _meos_agent_grants SET scopes=? WHERE agent_id=?').run('["notifications:consume"]',blob(f.agent));assert(!f.poll().items.some(v=>v.type==='record.updated'));assert(f.poll().items.some(v=>v.type==='boundary'))
+  configure({recordUpdates:false});assert(!f.poll().items.some(v=>v.type==='record.updated'))
+ }finally{f.close()}
+})
+test('update enqueue/cursor crash rolls back; embedding commits and notification ack do not recurse or finish pending jobs',()=>{
+ const f=fixture();try{
+  let sql=readFileSync(new URL('../backend/migrations/U1790380807__search.sql',import.meta.url),'utf8').replace('CREATE VIRTUAL TABLE search_vectors USING vec0(embedding float[1536] distance_metric=cosine);','CREATE TABLE search_vectors(rowid INTEGER PRIMARY KEY,embedding TEXT);');f.db.exec(sql)
+  f.db.prepare('UPDATE _meos_agent_grants SET scopes=? WHERE agent_id=?').run('["notifications:consume","search:index"]',blob(f.agent))
+  f.notifications.invoke(f.agent,{op:'configure',consumer,preferences:{recordUpdates:true}})
+  const a=task(f.time);f.commands.create(f.owner,'tasks',a)
+  f.db.exec("CREATE TRIGGER fail_cursor BEFORE UPDATE OF update_cursor ON notification_consumers BEGIN SELECT RAISE(ABORT,'synthetic failure'); END")
+  assert.throws(()=>f.poll());assert.equal(f.db.prepare("SELECT count(*) n FROM notification_events WHERE json_extract(payload,'$.type')='record.updated'").get().n,0)
+  f.db.exec('DROP TRIGGER fail_cursor');const p=f.poll();assert.equal(p.items.filter(v=>v.type==='record.updated').length,1);f.ack(p.ackToken)
+  const call=(name,args)=>f.commands.invoke(f.owner,name,args);call('configure_search',{enabled:true});assert.equal(call('search_index_status',{}).pending,1)
+  const job=call('search_index_batch',{source:{kind:'tasks',id:a.id}}).items[0],input=Object.fromEntries(['id','revision','model','dimensions','indexVersion','inputVersion','inputHash'].map(k=>[k,job[k]]));input.embedding=Array.from({length:1536},(_,i)=>i?0:1)
+  const counts=()=>[f.db.prepare('SELECT revision FROM tasks').get().revision,f.db.prepare('SELECT count(*) n FROM sync_outbox').get().n,f.db.prepare('SELECT count(*) n FROM notification_events').get().n]
+  const before=counts();assert(call('search_index_commit',input).accepted);assert(call('search_index_commit',input).accepted);assert.deepEqual(counts(),before);assert.equal(f.poll().items.length,0)
+ }finally{f.close()}
+})

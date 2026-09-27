@@ -35,10 +35,10 @@ def copy(source,relative,digest):
  assert source.is_file() and not source.is_symlink();data=source.read_bytes();assert hashlib.sha256(data).hexdigest()==digest
  target=out/relative;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data);os.chmod(target,0o555 if relative=='runtime/node/bin/node' else 0o444);files[relative]=digest
 for relative,digest in qualification['clientFiles'].items():copy(source/'dist/client'/relative,'client/'+relative,digest)
-closure=['access-owner','node-web-server','protected-proxy','body','domain','contract','timezones','scheduling','timezone-rules','calendar-routes','calendar-rpc','calendar-service','calendar-oauth','calendar-polling','calendar-events','calendar-snapshot-store','calendar-planner','calendar-planner-client','calendar-durable-store','calendar-google-broker','calendar-pinned-fetch','search-client','search-worker']
-for relative in ['backend/'+name+'.mjs' for name in closure]+['scripts/serve-real.mjs','scripts/serve-calendar.mjs','scripts/search-worker.mjs','deployment/meos-search.service','deployment/meos-search.timer','deployment/search.env.schema']:
+closure=['access-owner','node-web-server','protected-proxy','body','domain','contract','timezones','scheduling','timezone-rules','calendar-routes','calendar-rpc','calendar-service','calendar-oauth','calendar-polling','calendar-events','calendar-snapshot-store','calendar-planner','calendar-planner-client','calendar-durable-store','calendar-google-broker','calendar-pinned-fetch']
+for relative in ['backend/'+name+'.mjs' for name in closure]+['scripts/serve-real.mjs','scripts/serve-calendar.mjs']:
  copy(source/relative,relative,qualification['sourceFiles'][relative])
-helpers=['production-ready.py','production-web-exec.py','production-uid-check.py','production-access-keys.py','calendar-uid-check.py','install-search-worker.sh']
+helpers=['production-ready.py','production-web-exec.py','production-uid-check.py','production-access-keys.py','calendar-uid-check.py']
 assert set(admission['helperFiles'])=={'scripts/'+name for name in helpers}|{'tools/backup/meos-backup.py'}
 for relative,digest in admission['helperFiles'].items():copy(repo/relative,relative,digest)
 # The runtime binary and its full distributed notices need explicit independent

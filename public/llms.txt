@@ -17,3 +17,5 @@
 - [Walk the board](skills/meos-walk-board/SKILL.md): Review active work, waiting-for items, commitments and backlog to make deliberate next-action and capacity decisions; used on demand or by weekly review, not as a status recital.
 
 - [Search supporting context](skills/search.md): Keyword and optional semantic retrieval, bounded pending-query handling and source verification.
+
+- [On event updated](skills/meos-on-event-updated/SKILL.md): Opt-in record.updated handler; externally generated, identity-bound embeddings without recursive source events.

@@ -372,3 +372,7 @@ Report application installation/login/persistence separately from optional integ
 - **Uninstall:** distinguish removing agent setup from uninstalling MeOS. Remove only resources owned by this installation within the requested scope; preserve application data and volumes by default. Data deletion requires explicit separate authority. Restore shared settings only when safe and unchanged by others. Follow the user's retention policy for the ledger and receipts. Verify removal and disclose anything left behind.
 
 Repeated bootstrap, pause, update, or uninstall requests should converge on the requested state without duplicate jobs, consumers, or effects.
+
+## Optional update-driven retrieval
+
+After explicitly enabling external embedding work, a notification principal with both `notifications:consume` and `search:index` can configure `recordUpdates:true`. Route only `record.updated` to [meos-on-event-updated](../meos-on-event-updated/SKILL.md) in the durable host dispatcher; keep timed-boundary routing unchanged. The installed long-poller alone does not install that routing. Use a separate executor grant and an already-authorized matching embedding capability. No capability is a normal no-op. Reconcile pending jobs in bounded batches at explicit setup/startup or retention gaps; notification acknowledgement is not embedding completion. See [search](../search.md) for interactive query embeddings.

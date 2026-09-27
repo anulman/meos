@@ -104,7 +104,7 @@ export function createCommands({begin,now=()=>Date.now()}) {
    return tx(db=>{
     if(spec.write){const old=db.query('SELECT operation,payload,result FROM command_receipts WHERE owner_id=? AND command_key=?',[blob(owner),input.idempotencyKey])[0];if(old){if(old[0]!==name||old[1]!==canonical(input))throw new DomainError('conflict','Idempotency key payload mismatch');return JSON.parse(old[2])}}
     let result
-    if(['search','configure_search','search_index_status','search_index_batch','search_index_commit'].includes(name))result=searchOperation(db,owner,name,input,now())
+    if(['search','configure_search','search_index_status','search_index_batch','search_index_commit','search_query_commit'].includes(name))result=searchOperation(db,owner,name,input,now())
     else if(name==='calendar_inventory')result=api.list(owner,input.kind,{cursor:input.cursor,limit:250})
     else if(name==='calendar_changes'){
      const rows=db.query("SELECT sequence,kind,entity_id,revision,operation FROM sync_outbox WHERE owner_id=? AND sequence>? AND kind IN ('tasks','occurrences') ORDER BY sequence LIMIT 100",[blob(owner),input.cursor]);

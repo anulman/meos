@@ -2,11 +2,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {DatabaseSync} from 'node:sqlite'
-import {randomUUID} from 'node:crypto'
+import {createHash,randomUUID} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {createCommands} from '../backend/commands.mjs'
 import {createEmbeddingProvider,runEmbeddingBatch} from '../backend/search-worker.mjs'
 import {createMcpHandler} from '../backend/mcp.mjs'
+import {embeddingInput} from '../backend/embedding-input.mjs'
+const commit=(job,embedding)=>Object.fromEntries([...['id','revision','model','dimensions','indexVersion','inputVersion','inputHash'].map(k=>[k,job[k]]),['embedding',embedding]])
 const vector=Array.from({length:1536},(_,i)=>i===0?1:0)
 function fixture(){
  const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON; CREATE TABLE _user(id BLOB PRIMARY KEY) STRICT;')
@@ -46,13 +48,13 @@ test('revision jobs reject stale commits; leases retry; semantic cache is owner-
   f.commands.create(f.owner,'tasks',a);f.call('configure_search',{enabled:true})
   const old=f.call('search_index_batch',{}).items[0];assert.equal(f.call('search_index_batch',{}).items.length,0)
   f.commands.update(f.owner,'tasks',{...a,title:'Orange'},1)
-  assert.deepEqual(f.call('search_index_commit',{id:old.id,revision:old.revision,embedding:vector}),{accepted:false})
+  assert.deepEqual(f.call('search_index_commit',commit(old,vector)),{accepted:false})
   const current=f.call('search_index_batch',{}).items[0];f.tick(60001)
   assert.equal(f.call('search_index_batch',{}).items[0].attempt,2)
-  assert.equal(f.call('search_index_commit',{id:current.id,revision:current.revision,embedding:vector}).accepted,true)
-  assert.equal(f.call('search_index_commit',{id:current.id,revision:current.revision,embedding:vector}).accepted,true)
+  assert.equal(f.call('search_index_commit',commit(current,vector)).accepted,true)
+  assert.equal(f.call('search_index_commit',commit(current,vector)).accepted,true)
   assert.equal(f.call('search',{query:'fruit'}).semantic,'pending')
-  const q=f.call('search_index_batch',{}).items[0];f.call('search_index_commit',{id:q.id,revision:q.revision,embedding:vector})
+  const q=f.call('search_index_batch',{}).items[0];f.call('search_index_commit',commit(q,vector))
   const result=f.call('search',{query:'fruit'});assert.equal(result.semantic,'ready');assert.equal(result.items[0].id,a.id)
   assert.equal(f.commands.invoke(f.other,'search',{query:'fruit'}).items.length,0)
   f.tick(3600001);assert.equal(f.call('search',{query:'fruit'}).semantic,'pending')
@@ -92,9 +94,9 @@ test('period notes and routine snapshots stay searchable; malformed vectors cann
  assert.equal(f.call('search',{query:'Reflection',kinds:['periodNotes']}).items.length,1)
  assert.equal(f.call('search',{query:'Focused'}).items.length,2)
  f.call('configure_search',{enabled:true});const job=f.call('search_index_batch',{}).items[0]
- assert.throws(()=>f.call('search_index_commit',{id:job.id,revision:job.revision,embedding:[1]}),{code:'validation'})
- assert.throws(()=>f.call('search_index_commit',{id:job.id,revision:job.revision,embedding:Array(1536).fill(0)}),{code:'validation'})
- f.commands.invoke(f.other,'configure_search',{enabled:true});assert.equal(f.commands.invoke(f.other,'search_index_commit',{id:job.id,revision:job.revision,embedding:vector}).accepted,false)
+ assert.throws(()=>f.call('search_index_commit',commit(job,[1])),{code:'validation'})
+ assert.throws(()=>f.call('search_index_commit',commit(job,Array(1536).fill(0))),{code:'validation'})
+ f.commands.invoke(f.other,'configure_search',{enabled:true});assert.equal(f.commands.invoke(f.other,'search_index_commit',commit(job,vector)).accepted,false)
  }finally{f.db.close()}
 })
 test('completion and schedule edits preserve vectors and leased unchanged-content jobs',()=>{
@@ -103,7 +105,7 @@ test('completion and schedule edits preserve vectors and leased unchanged-conten
   f.commands.create(f.owner,'tasks',a);f.call('configure_search',{enabled:true})
   const job=f.call('search_index_batch',{}).items[0]
   f.commands.update(f.owner,'tasks',{...a,completed:true},1)
-  assert.equal(f.call('search_index_commit',{id:job.id,revision:job.revision,embedding:vector}).accepted,true)
+  assert.equal(f.call('search_index_commit',commit(job,vector)).accepted,true)
   assert.equal(f.db.prepare('SELECT count(*) n FROM search_vectors').get().n,1)
   const scheduled={...a,completed:true,schedule:{date:'2026-09-26',time:'10:00',timezone:'UTC'}}
   f.commands.update(f.owner,'tasks',scheduled,2)
@@ -112,6 +114,41 @@ test('completion and schedule edits preserve vectors and leased unchanged-conten
   assert.equal(f.call('search',{query:'Stable text',mode:'keyword'}).items[0].revision,3)
   f.commands.update(f.owner,'tasks',{...scheduled,title:'New text'},3)
   assert.equal(f.db.prepare('SELECT count(*) n FROM search_vectors').get().n,0)
-  assert.equal(f.call('search_index_commit',{id:job.id,revision:job.revision,embedding:vector}).accepted,false)
+  assert.equal(f.call('search_index_commit',commit(job,vector)).accepted,false)
+ }finally{f.db.close()}
+})
+
+test('canonical input SHA256 preserves Unicode/BOM and truncates once at 6000 UTF8 bytes',()=>{
+ for(const text of ['', 'abc', '\ufeffhello', '🍎'.repeat(2000), 'a'.repeat(5999)+'🍎']){
+  const input=embeddingInput(text),bytes=Buffer.from(input.text)
+  assert(bytes.length<=6000);assert(!input.text.endsWith('\ufffd'))
+  assert.equal(input.inputHash,createHash('sha256').update(bytes).digest('hex'))
+ }
+ assert.equal(embeddingInput('a'.repeat(5999)+'🍎').text.length,5999)
+})
+test('full identity is checked before replay; targeted claims and query commits are owner/type scoped',()=>{
+ const f=fixture();try{
+  f.call('configure_search',{enabled:true});const a=f.task('Immutable'),b=f.task('Other');f.commands.create(f.owner,'tasks',a);f.commands.create(f.owner,'tasks',b)
+  const job=f.call('search_index_batch',{source:{kind:'tasks',id:a.id},limit:1}).items[0]
+  assert.equal(job.source.id,a.id);assert.equal(job.type,'document')
+  assert.equal(f.call('search_query_commit',commit(job,vector)).accepted,false)
+  for(const [key,value]of Object.entries({model:'other',dimensions:4,indexVersion:'v2',inputVersion:'v2',inputHash:'0'.repeat(64),revision:999}))assert.equal(f.call('search_index_commit',{...commit(job,vector),[key]:value}).accepted,false)
+  const outbox=f.db.prepare('SELECT count(*) n FROM sync_outbox').get().n
+  assert.equal(f.call('search_index_commit',commit(job,vector)).accepted,true)
+  assert.equal(f.call('search_index_commit',{...commit(job,vector),inputHash:'0'.repeat(64)}).accepted,false)
+  assert.equal(f.db.prepare('SELECT count(*) n FROM sync_outbox').get().n,outbox)
+  const q=f.call('search',{query:'related'}).queryJob;assert.equal(q.type,'query');assert.equal(q.source,undefined)
+  assert.equal(f.call('search_query_commit',commit(q,vector)).accepted,true)
+  assert.equal(f.call('search',{query:'related'}).semantic,'ready')
+  f.tick(3600001);assert.equal(f.call('search_query_commit',commit(q,vector)).accepted,false)
+ }finally{f.db.close()}
+})
+test('search-read MCP principal can commit its query but not a document descriptor',async()=>{
+ const f=fixture();try{
+  f.call('configure_search',{enabled:true});f.commands.create(f.owner,'tasks',f.task('Document'))
+  const d=f.call('search_index_batch',{}).items[0],q=f.call('search',{query:'Query'}).queryJob
+  const handle=createMcpHandler({commands:{...f.commands,agentGrant:()=>({active:true,owner:f.owner,scopes:['search:read']})},origin:'https://example.test',readText:r=>r.bodyText})
+  const call=async job=>(await handle({method:'POST',headers:new Headers({Authorization:'Bearer synthetic',Accept:'application/json, text/event-stream','Content-Type':'application/json'}),bodyText:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'search_query_commit',arguments:commit(job,vector)}})},{id:randomUUID()}).json()).result
+  assert.equal((await call(d)).structuredContent.accepted,false);assert.equal((await call(q)).structuredContent.accepted,true)
  }finally{f.db.close()}
 })
