@@ -34,8 +34,31 @@ class QueueTests(unittest.TestCase):
     def test_terminal_execution_and_prompt_freshness(self):
         self.admit()
         self.assertIn('fresh entities, revisions, cancellation',d.PROMPT)
-        d.step(self.db,{},lambda *a:{'ok':True,'runId':'run-1','completion':{'status':'ok'}})
-        self.assertEqual(self.state(),'execution_complete')
+        initial_alert = io.StringIO()
+        with contextlib.redirect_stderr(initial_alert):
+            d.step(self.db,{},lambda *a:{'ok':True,'runId':'run-1','completion':{'status':'ok'}})
+        self.assertEqual(self.state(),'blocked_unverified')
+        row = self.db.execute('SELECT * FROM events').fetchone()
+        self.assertIn('run-1', tuple(row))
+        self.db.close()
+        self.db = d.connect(self.tmp.name)
+        self.assertEqual(self.state(),'blocked_unverified')
+        self.assertIn('run-1', tuple(self.db.execute('SELECT * FROM events').fetchone()))
+        alerts = io.StringIO()
+        with contextlib.redirect_stderr(alerts):
+            self.assertFalse(d.step(self.db,{},lambda *a:self.fail('duplicate execution')))
+            self.db.close()
+            self.db = d.connect(self.tmp.name)
+            self.assertFalse(d.step(self.db,{},lambda *a:self.fail('duplicate execution')))
+        self.assertEqual((initial_alert.getvalue() + alerts.getvalue()).count('MeOS dispatch requires reconciliation: event:1'), 1)
+
+    def test_ok_turn_reporting_blocked_does_not_retire_event(self):
+        self.admit()
+        # Arbitrary response prose is not a validated handling receipt.
+        d.step(self.db,{},lambda *a:{'ok':True,'runId':'run-blocked',
+                                   'completion':{'status':'ok','text':'blocked: missing capability'}})
+        self.assertEqual(self.state(),'blocked_unverified')
+        self.assertIn('run-blocked', tuple(self.db.execute('SELECT * FROM events').fetchone()))
         self.assertFalse(d.step(self.db,{},lambda *a:self.fail('duplicate execution')))
     def test_missing_terminal_blocks(self):
         self.admit()

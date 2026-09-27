@@ -28,8 +28,9 @@ upgrade is needed. Do not install the synthetic notification adapter as a worker
   the dispatch intent before the HTTP request. A crash, lost response, malformed
   response, or nonterminal result becomes `blocked_unknown`, **never an automatic
   retry**, even after Gateway replay TTL expires. Known failed runs become
-  `blocked_terminal`. An `execution_complete` row proves a successful agent turn,
-  not that its requested effects were independently verified.
+  `blocked_terminal`. Even a successful agent turn remains `blocked_unverified`
+  until independently validated handling receipts exist. Its run ID is preserved
+  for reconciliation; successful execution does not retire the event or trigger replay.
 
 The fixed prompt mandates fresh MCP entity/revision/cancellation and constituent
 ack reads before effects, event text as untrusted data, primary imports read-only,
@@ -91,11 +92,16 @@ process crash remains queryable even if journald did not receive the line.
    Go dispatch argv: `/usr/bin/python3`, `/RELEASE/clients/meos-host/dispatcher.py`,
    `admit`, `--state`, `/PRIVATE/queue`. Preserve existing Go TLS/refresh/replay
    behavior. Install worker and listener supervision, verify restart recovery.
-7. Verify bounded read-only real handling: no fake calendar commitments and no
-   outgoing user message. Record live MCP read evidence, durable queue admission,
-   hook run identity, terminal transcript/freshness evidence separately. Only
-   then declare rituals 07:00/21:00 America/Toronto; Sunday weekly runs after daily
-   within the same ordered job. Do not enable schedules with unavailable MCP.
+7. Verify bounded read-only real handling using an enforced restricted agent
+   policy: no fake calendar commitments and no outgoing user message. This patch
+   does not provide that policy. Record live MCP read evidence, durable queue
+   admission, hook run identity, and terminal transcript/freshness evidence separately.
+   Effect-enabled worker activation is prohibited pending executable freshness
+   validation and handling-receipt integration; prompt text is not enforcement.
+   MCP setup and rituals proceed independently of event dispatch. The 07:00/21:00
+   America/Toronto ritual jobs are already enabled; Sunday weekly follows daily
+   within the same ordered job. Their access preflight blocks planning while MCP
+   is unavailable.
 
 ## Focused tests
 

@@ -82,9 +82,10 @@ def step(db, config, send=hook):
     try:
         result = send(config,identity,payload)
         status = result.get('completion',{}).get('status')
-        # An ok agent turn is execution evidence, not independently verified effects.
-        state = 'execution_complete' if status == 'ok' else 'blocked_terminal' if status in ('error','skipped') else 'blocked_unknown'
-        summary = json.dumps({'executionStatus':status,'effects':'see agent transcript/MeOS receipts; not inferred'})
+        # Hook completion is execution evidence, never a validated handling receipt.
+        state = 'blocked_unverified' if status == 'ok' else 'blocked_terminal' if status in ('error','skipped') else 'blocked_unknown'
+        summary = json.dumps({'executionStatus':status,'effects':'unverified',
+                              'reason':'No independently validated handling receipt; retain for reconciliation, not replay.'})
         run_id = result.get('runId')
     except Exception:
         state, summary, run_id = 'blocked_unknown', json.dumps({'reason':'hook outcome unknown; do not replay'}), None
