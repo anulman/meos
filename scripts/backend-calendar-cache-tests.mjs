@@ -13,7 +13,7 @@ const blob=id=>Buffer.from(id.replaceAll('-',''),'hex');
 function fixture(t){
  const db=new DatabaseSync(':memory:');t.after(()=>db.close());db.exec('PRAGMA foreign_keys=ON; CREATE TABLE _user(id BLOB PRIMARY KEY) STRICT');
  const owner=randomUUID(),other=randomUUID(),agent=randomUUID();for(const id of [owner,other,agent])db.prepare('INSERT INTO _user VALUES(?)').run(blob(id));
- for(const name of ['U1790380800__planner.sql','U1790380805__scheduling_contract.sql','U1790380811__calendar_cache.sql'])db.exec(readFileSync(new URL('../backend/migrations/'+name,import.meta.url),'utf8'));
+ for(const name of ['U1790380800__planner.sql','U1790380803__bridge.sql','U1790380805__scheduling_contract.sql','U1790380811__calendar_cache.sql'])db.exec(readFileSync(new URL('../backend/migrations/'+name,import.meta.url),'utf8'));
  let time=Date.parse('2026-09-27T16:00Z');const commands=createCommands({now:()=>time,begin(){db.exec('BEGIN IMMEDIATE');return {query:(s,p)=>db.prepare(s).all(...p).map(Object.values),execute:(s,p)=>Number(db.prepare(s).run(...p).changes),commit:()=>db.exec('COMMIT'),rollback:()=>db.exec('ROLLBACK')}}});
  const publish=input=>commands.invoke(owner,'calendar_cache_publish',JSON.parse(JSON.stringify(input))),read=()=>commands.calendarCache(owner);
  return {db,owner,other,agent,commands,publish,read,now:()=>time,setTime:v=>time=v};

@@ -76,7 +76,7 @@ if cp.exists():
  assert stat.S_IMODE(cp.stat().st_mode)==0o600
  state=json.loads(cp.read_text());assert state['runId']==run
 else:
- state={'schema':1,'runId':run,'users':[{'email':role+'-'+run+'@example.invalid','password':secrets.token_urlsafe(32)+'!aA1','provisioned':False} for role in ['owner','other','bridge','agent','notification']]}
+ state={'schema':1,'runId':run,'users':[{'email':role+'-'+run+'@example.invalid','password':secrets.token_urlsafe(32)+'!aA1','provisioned':False} for role in ['owner','other','bridge','agent','notification','readonly']]}
  save('synthetic-credentials.json',state,True)
 class UDS(http.client.HTTPConnection):
  def __init__(self,path):super().__init__('meos.aidans.computer',timeout=15);self.path=path
@@ -126,7 +126,7 @@ with db() as conn:
   row=conn.execute('SELECT id,admin,unverified_email FROM _user WHERE email=?',(user['email'],)).fetchone();assert row==(uuid.UUID(user['id']).bytes,0,None)
   now=int(time.time()*1000);defaults={'timezone':'UTC','weekStartsOn':1,'weather':{'enabled':False,'source':'latest','units':'celsius'}}
   conn.execute('INSERT INTO preferences(owner_id,doc,revision,created_at,updated_at) VALUES(?,?,1,?,?) ON CONFLICT DO NOTHING',(uuid.UUID(user['id']).bytes,json.dumps(defaults,separators=(',',':')),now,now))
- owner,other,bridge,agent,notification=state['users']
+ owner,other,bridge,agent,notification,readonly=state['users']
  owner_id=uuid.UUID(owner['id']).bytes;bridge_id=uuid.UUID(bridge['id']).bytes;agent_id=uuid.UUID(agent['id']).bytes
  bound=conn.execute('SELECT owner_id FROM _meos_bridge_binding WHERE bridge_id=?',(bridge_id,)).fetchone()
  if bound is None:conn.execute('INSERT INTO _meos_bridge_binding VALUES(?,?)',(bridge_id,owner_id))
@@ -156,7 +156,7 @@ assert code==403;checks['nativeRegistrationDisabled']=True
 logs=docker('logs',name).decode(errors='replace')
 assert 'Created new admin user' not in logs and 'password:' not in logs.lower()
 assert all(u['password'] not in logs for u in state['users'])
-checks.update(noCredentialLogs=True,noBootstrapAdminAfterRestart=True,verifiedOrdinaryUsers=5,noEmailBranch='source verified:true guard; runtime network none',runtimeEnvironment='production',physicalEnvironment='acceptance',runId=run,image=candidate['image'])
+checks.update(noCredentialLogs=True,noBootstrapAdminAfterRestart=True,verifiedOrdinaryUsers=6,noEmailBranch='source verified:true guard; runtime network none',runtimeEnvironment='production',physicalEnvironment='acceptance',runId=run,image=candidate['image'])
 if (q/'bootstrap-checks.json').exists():
  previous=json.loads((q/'bootstrap-checks.json').read_text());assert previous['runId']==run;checks={**previous,**checks,'repeatBootstrapNoPasswordReset':not pending}
 save('bootstrap-checks.json',checks)
@@ -184,10 +184,11 @@ def invoke(op,extra=None,headers=None):
  code,body,_=request('server.sock','POST','/api/meos/v1/notifications',json.dumps({'consumer':consumer,'op':op,**(extra or {})}),nh if headers is None else headers)
  return code,json.loads(body) if body else None
 assert invoke('poll')[0]==200
-assert invoke('poll',headers={'Authorization':'Bearer '+ot['auth_token'],'Content-Type':'application/json'})[0]==403
+assert invoke('poll',headers={'Authorization':'Bearer '+ot['auth_token'],'Content-Type':'application/json'})[0]==200
+native['delegatedOwnerPollAccepted']=True
 assert invoke('poll',headers={'Cookie':'auth_token='+nt['auth_token'],'Content-Type':'application/json'})[0]==401
 assert invoke('poll',headers={'__context':json.dumps({'kind':'Http','user':{'id':notification['id'],'csrf_token':'a'*20}}),'Content-Type':'application/json'})[0]==401
-native['ownerCookieAndContextForgeryDenied']=True
+native['cookieAndContextForgeryDenied']=True
 code,_,_=request('server.sock','GET','/api/meos/v1/resources/tasks',headers=nh);assert code==403
 native['notificationPrincipalCannotReadBrowserAPI']=True
 claims=json.loads(base64.urlsafe_b64decode(ot['auth_token'].split('.')[1]+'==='))

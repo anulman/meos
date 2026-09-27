@@ -22,13 +22,24 @@ try{
  await server.listen();const base=server.resolvedUrls.local[0]
  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium-browser',headless:true,args:['--no-sandbox']})
  for(const width of [390,1280]){
- const page=await browser.newPage({viewport:{width,height:800},timezoneId:'Asia/Tokyo'});const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(base+'fixture');const trigger=page.getByRole('button',{name:'Open fixture'});await trigger.focus();await page.keyboard.press('Enter');const dialog=page.getByRole('dialog',{name:event.summary});await dialog.waitFor()
+ const page=await browser.newPage({viewport:{width,height:800},hasTouch:true,timezoneId:'Asia/Tokyo'});const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(base+'fixture');const trigger=page.getByRole('button',{name:'Open fixture'});await trigger.focus();await page.keyboard.press('Enter');const dialog=page.getByRole('dialog',{name:event.summary});await dialog.waitFor()
  assert.match(await dialog.innerText(),/Sep 26, 2026, 9:30 PM/);assert.match(await dialog.innerText(),/America\/Toronto/)
  assert.equal(await dialog.locator('input,textarea,select').count(),0);assert.equal(await dialog.getByRole('button').count(),1);assert.equal(await dialog.locator('script').count(),0);assert.equal(await page.evaluate(()=>window.injected),undefined)
  assert.equal(await dialog.getByRole('link').count(),2);assert.match(await dialog.innerText(),/<script>/)
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false)
  await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>!!document.activeElement.closest('dialog')),true)
  await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});assert.equal(await trigger.evaluate(el=>el===document.activeElement),true)
+ // Native dialog backdrops retarget events to the dialog; its padding does too.
+ // Require both ends of the gesture outside, and restore the opening control.
+ await trigger.click();await dialog.waitFor();const bounds=await dialog.boundingBox();assert.ok(bounds)
+ const inside={x:bounds.x+8,y:bounds.y+8},outside={x:2,y:2}
+ assert.equal(await dialog.evaluate((el,p)=>document.elementFromPoint(p.x,p.y)===el,inside),true)
+ await page.mouse.click(inside.x,inside.y);assert.equal(await dialog.isVisible(),true)
+ await page.mouse.move(inside.x,inside.y);await page.mouse.down();await page.mouse.move(outside.x,outside.y);await page.mouse.up();assert.equal(await dialog.isVisible(),true)
+ await page.mouse.move(outside.x,outside.y);await page.mouse.down();await page.mouse.move(inside.x,inside.y);await page.mouse.up();assert.equal(await dialog.isVisible(),true)
+ await page.mouse.click(outside.x,outside.y);await dialog.waitFor({state:'hidden'});assert.equal(await trigger.evaluate(el=>el===document.activeElement),true)
+ await trigger.click();await dialog.waitFor();await page.touchscreen.tap(inside.x,inside.y);assert.equal(await dialog.isVisible(),true)
+ await page.touchscreen.tap(outside.x,outside.y);await dialog.waitFor({state:'hidden'});assert.equal(await trigger.evaluate(el=>el===document.activeElement),true)
  await page.evaluate(e=>window.showEvent({...e,start:{date:'2026-09-27'},end:{date:'2026-09-30'},location:'',description:''}),event);await dialog.waitFor();assert.match(await dialog.innerText(),/All day · 2026-09-27 – 2026-09-29/);assert.equal(await dialog.getByRole('heading',{name:'Location'}).count(),0);await page.keyboard.press('Escape')
  await page.evaluate(e=>window.showEvent({...e,role:'managed'}),event);await dialog.getByRole('button',{name:'Edit calendar event'}).click();assert.equal(await page.evaluate(()=>window.editCalls),1);await page.keyboard.press('Escape')
  await page.evaluate(e=>window.showEvent({...e,role:'managed',linked:true}),event);assert.equal(await dialog.getByRole('button',{name:'Edit calendar event'}).count(),0);await page.keyboard.press('Escape')
@@ -40,5 +51,5 @@ try{
  await page.evaluate(()=>{window.calendarData.items=[]});await page.evaluate(()=>window.dispatchEvent(new Event('fixture-cache')));await dialog.waitFor({state:'hidden'})
  assert.deepEqual(errors,[]);await page.close()
  }
- console.log('PASS cached calendar details: read-only primary, managed edit, linked guard, safe text/links, date/time zones, exclusive all-day end, keyboard focus/Escape, empty fields, mobile/desktop')
+ console.log('PASS cached calendar details: read-only primary, managed edit, linked guard, safe text/links, date/time zones, exclusive all-day end, keyboard focus/Escape, mouse/touch backdrop dismissal, padding/drag protection, empty fields, mobile/desktop')
 }finally{await browser?.close();await server.close();await rm(cacheDir,{recursive:true,force:true})}
