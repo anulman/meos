@@ -105,7 +105,7 @@ func TestNoShellInterpolationAndExplicitReceipt(t *testing.T) {
 	c.cfg.Dispatch = []string{os.Args[0], "-test.run=TestDispatcherHelper", "--", eventID}
 	c.dispatch = c.runDispatch
 	var i item
-	if e := json.Unmarshal([]byte(fmt.Sprintf(`{"id":%q,"title":"$(touch /tmp/MEOS_PWN)"}`, eventID)), &i); e != nil {
+	if e := json.Unmarshal([]byte(fmt.Sprintf(`{"id":%q,"title":"$(touch /tmp/MEOS_PWN)","type":"record.updated","source":{"kind":"tasks","revision":2}}`, eventID)), &i); e != nil {
 		t.Fatal(e)
 	}
 	if e := c.runDispatch(context.Background(), i); e != nil {
@@ -124,7 +124,7 @@ func TestDispatcherHelper(t *testing.T) {
 	if json.NewDecoder(os.Stdin).Decode(&v) != nil {
 		os.Exit(3)
 	}
-	if v["title"] != "$(touch /tmp/MEOS_PWN)" {
+	if v["title"] != "$(touch /tmp/MEOS_PWN)" || v["type"] != "record.updated" || v["source"].(map[string]any)["revision"] != float64(2) {
 		os.Exit(4)
 	}
 	fmt.Printf(`{"id":%q,"accepted":true}`, os.Args[len(os.Args)-1])

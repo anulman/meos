@@ -4,6 +4,7 @@ import {addDays,localDay,scheduledInstant,horizon,occursOn} from './scheduling.m
 import {publishCalendarCache,readCalendarCache,listCalendarCache} from './calendar-cache.mjs'
 import {delegatedPrincipal} from './delegation.mjs'
 import {operations,validateSchema} from './contract.mjs'
+import {searchOperation,flushSearchIndex} from './search.mjs'
 
 const tables={projects:'projects',tasks:'tasks',routines:'routines',occurrences:'occurrences',outcomes:'outcomes',periodNotes:'period_notes'}
 const table = kind => {const value=tables[kind];if(!value)throw new DomainError('validation','Unsupported resource');return value}
@@ -21,7 +22,7 @@ export function createCommands({begin,now=()=>Date.now()}) {
  function tx(operation) {
   if(activeDb)return operation(activeDb)
   const transaction=begin();activeDb=transaction
-  try {const result=operation(transaction);transaction.commit();return result}
+  try {const result=operation(transaction);if(transaction.query("SELECT 1 FROM sqlite_master WHERE name='search_dirty'",[]).length)flushSearchIndex(transaction);transaction.commit();return result}
   catch(error){try{transaction.rollback()}catch{};throw error}
   finally{activeDb=undefined}
  }
@@ -109,7 +110,8 @@ export function createCommands({begin,now=()=>Date.now()}) {
     if(name==='list_calendar_events'){const result=listCalendarCache(db,owner,input,now());validateSchema(spec.output,result);return result}
     if(spec.write){const old=db.query('SELECT operation,payload,result FROM command_receipts WHERE owner_id=? AND command_key=?',[blob(owner),input.idempotencyKey])[0];if(old){if(old[0]!==name||old[1]!==canonical(input))throw new DomainError('conflict','Idempotency key payload mismatch');return JSON.parse(old[2])}}
     let result
-    if(name==='get_command_receipt'){const row=db.query('SELECT operation,payload,result FROM command_receipts WHERE owner_id=? AND command_key=?',[blob(owner),input.key])[0];result=row?{found:true,operation:row[0],input:JSON.parse(row[1]),result:JSON.parse(row[2])}:{found:false}}
+    if(['search','configure_search','search_index_status','search_index_batch','search_index_commit','search_query_commit'].includes(name))result=searchOperation(db,owner,name,input,now())
+    else if(name==='get_command_receipt'){const row=db.query('SELECT operation,payload,result FROM command_receipts WHERE owner_id=? AND command_key=?',[blob(owner),input.key])[0];result=row?{found:true,operation:row[0],input:JSON.parse(row[1]),result:JSON.parse(row[2])}:{found:false}}
     else if(name==='calendar_inventory')result=api.list(owner,input.kind,{cursor:input.cursor,limit:250})
     else if(name==='calendar_changes'){
      const rows=db.query("SELECT sequence,kind,entity_id,revision,operation FROM sync_outbox WHERE owner_id=? AND sequence>? AND kind IN ('tasks','occurrences') ORDER BY sequence LIMIT 100",[blob(owner),input.cursor]);

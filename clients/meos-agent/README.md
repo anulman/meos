@@ -135,3 +135,9 @@ gate without building archives, or `--release` only for private qualification
 fixtures. Never execute tests with production
 credentials or access. Deployment and actual release publication are separate
 gates. Cross-compilation is not evidence of execution on macOS/arm64.
+
+## Optional record updates
+
+`recordUpdates:true` notification preferences opt into committed source-update envelopes. Both `notifications:consume` and `search:index` are required; boundary-only subscriptions remain unchanged. Enabling starts from current outbox high water, so backfill comes from pending search jobs. `record.updated` contains `source:{kind,id,revision,operation}` and `sequence`; event IDs remain 48 hex characters. The durable client forwards the envelope unchanged, with no token in child environment. Configure a host dispatcher to select `meos-on-event-updated`; the client does not install a skill router. Keep timed-boundary handling unchanged.
+
+Durable accepted receipt and ack mean admission, not embedding completion. Missing provider capability is a normal no-op. Pending jobs survive ack/failure for bounded existing-pipeline reconciliation; lease expiry does not execute a worker. Commit writes derived search tables only and cannot produce another update notification. The seven-day retention/gap contract also applies to updates; reconciliation must inspect pending jobs as well as agenda state.

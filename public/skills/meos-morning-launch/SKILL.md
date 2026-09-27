@@ -40,3 +40,7 @@ Before making the planning decisions above:
 Read the [learning-loop reference](../learning-loop.md) and relevant prior notes through authorized tools, if exposed. Reuse settled answers; check only material changes to scope, dependencies and capacity. Consider an applicable experiment when choosing the first action, without repeating weekly review. A budget is not a completion forecast. If notes are inaccessible, report the missing context. Label a reflection unsaved when no write was attempted; if a write may have succeeded, report persistence as unverified until readback resolves it. A note is not a target-day commitment receipt.
 
 **Result:** a compact view of today, its essential outcome, first action and main risk. Do not recite the backlog or ask again for decisions already saved.
+
+## Search supporting context
+
+Use the [search reference](../search.md) when related work or prior reflections could change a decision. Search is supporting evidence, not a replacement for exact agenda or Calendar reads.

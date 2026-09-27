@@ -8,8 +8,9 @@ const fail=(code,message)=>{throw new DomainError(code,message)}
 const day=86400000,retention=7*day,leaseMs=120000
 const offsets=value=>{if(!Array.isArray(value)||value.length>32||value.some(x=>!Number.isFinite(x)||x<=0||x>10080||!Number.isSafeInteger(x*60000)))fail('validation','Invalid pre-offsets');return [...new Set(value)].sort((a,b)=>a-b)}
 export function notificationPreferences(value){
- if(!value||Array.isArray(value)||typeof value!=='object'||Object.keys(value).some(k=>!['preMinutes','instances','routines'].includes(k)))fail('validation','Invalid preferences')
- const result={};if(value.preMinutes!==undefined)result.preMinutes=offsets(value.preMinutes)
+ if(!value||Array.isArray(value)||typeof value!=='object'||Object.keys(value).some(k=>!['preMinutes','instances','routines','recordUpdates'].includes(k)))fail('validation','Invalid preferences')
+ const result={};if(value.recordUpdates!==undefined){if(typeof value.recordUpdates!=='boolean')fail('validation','Invalid update subscription');result.recordUpdates=value.recordUpdates}
+ if(value.preMinutes!==undefined)result.preMinutes=offsets(value.preMinutes)
  for(const key of ['instances','routines'])if(value[key]!==undefined){if(!value[key]||typeof value[key]!=='object'||Array.isArray(value[key])||Object.keys(value[key]).length>1000)fail('validation','Invalid overrides');result[key]={};for(const [id,v]of Object.entries(value[key]))result[key][uuid(id)]=offsets(v)}
  return result
 }
@@ -22,16 +23,32 @@ export function createNotifications({begin,now=Date.now}){
   try{
    const grant=delegatedPrincipal(db,aid,time)
    if(!grant?.active||!grant.scopes.includes('notifications:consume'))fail('forbidden','Notification access denied')
-   const owner=grant.owner
-   let state=db.query('SELECT consumer,fence,lease_until,planned_at,preferences,gap FROM notification_consumers WHERE agent_id=?',[aid])[0]
-   if(!state){db.execute('INSERT INTO notification_consumers(agent_id,consumer,fence,lease_until,planned_at) VALUES(?,?,1,?,?)',[aid,input.consumer,time+leaseMs,time]);state=[input.consumer,1,time+leaseMs,time,'{}',0]}
+   const owner=grant.owner,canIndex=grant.scopes.includes('search:index')
+   let state=db.query('SELECT consumer,fence,lease_until,planned_at,preferences,gap,update_cursor FROM notification_consumers WHERE agent_id=?',[aid])[0]
+   if(!state){db.execute('INSERT INTO notification_consumers(agent_id,consumer,fence,lease_until,planned_at) VALUES(?,?,1,?,?)',[aid,input.consumer,time+leaseMs,time]);state=[input.consumer,1,time+leaseMs,time,'{}',0,null]}
    if(state[0]!==input.consumer&&state[2]>time)fail('conflict','Consumer lease held')
    if(state[0]!==input.consumer||state[2]<=time){state[1]++;db.execute('UPDATE notification_consumers SET consumer=?,fence=? WHERE agent_id=?',[input.consumer,state[1],aid])}
    db.execute('UPDATE notification_consumers SET lease_until=? WHERE agent_id=?',[time+leaseMs,aid])
    if(input.op==='configure'){
-    state[4]=canonical(notificationPreferences(input.preferences));db.execute('UPDATE notification_consumers SET preferences=? WHERE agent_id=?',[state[4],aid])
+    const next=notificationPreferences(input.preferences)
+    if(next.recordUpdates&&!canIndex)fail('forbidden','Record updates require search:index')
+    if(next.recordUpdates&&!JSON.parse(state[4]).recordUpdates){state[6]=db.query('SELECT COALESCE(max(sequence),0) FROM sync_outbox WHERE owner_id=?',[owner])[0][0];db.execute('UPDATE notification_consumers SET update_cursor=? WHERE agent_id=?',[state[6],aid])}
+    state[4]=canonical(next);db.execute('UPDATE notification_consumers SET preferences=? WHERE agent_id=?',[state[4],aid])
    }
    const preferences=JSON.parse(state[4]),buckets=new Map()
+   // Scope loss suppresses update delivery without disabling boundary notifications.
+   const updates=preferences.recordUpdates&&canIndex
+   db.execute("UPDATE notification_events SET active=? WHERE agent_id=? AND json_extract(payload,'$.type')='record.updated'",[updates?1:0,aid])
+   if(updates){
+    const changes=db.query('SELECT sequence,kind,entity_id,revision,operation,created_at FROM sync_outbox WHERE owner_id=? AND sequence>? ORDER BY sequence LIMIT 100',[owner,state[6]??0])
+    for(const [sequence,kind,id,revision,operation,createdAt]of changes){
+     if(['tasks','projects','routines','occurrences','periodNotes'].includes(kind)){
+      const payload=canonical({type:'record.updated',at:createdAt,source:{kind,id,revision,operation},sequence})
+      db.execute('INSERT INTO notification_events(agent_id,bucket,due,payload) VALUES(?,?,?,?) ON CONFLICT(agent_id,bucket) DO NOTHING',[aid,'record.updated:'+sequence,createdAt,payload])
+     }
+    }
+    if(changes.length)db.execute('UPDATE notification_consumers SET update_cursor=? WHERE agent_id=?',[changes.at(-1)[0],aid])
+   }
    // Full authorized snapshot coalesces shared instants, never per-change append.
    // Only explicitly timed planner records with an explicit duration emit signals.
    const rows=db.query("SELECT 'tasks',doc,revision FROM tasks WHERE owner_id=? AND json_type(doc,'$.schedule')='object' UNION ALL SELECT 'occurrences',doc,revision FROM occurrences WHERE owner_id=? AND json_type(doc,'$.schedule')='object' LIMIT 5001",[owner,owner])
@@ -47,7 +64,7 @@ export function createNotifications({begin,now=Date.now}){
     for(const m of pre)add(start-m*60000,'pre')
    }
    const previousBuckets=new Set(db.query('SELECT due,payload FROM notification_events WHERE agent_id=? AND active=1 AND acked=0',[aid]).map(([due,payload])=>String(due)+':'+JSON.parse(payload).type))
-   db.execute('UPDATE notification_events SET active=0 WHERE agent_id=?',[aid])
+   db.execute("UPDATE notification_events SET active=0 WHERE agent_id=? AND json_extract(payload,'$.type') IN ('pre','boundary')",[aid])
    for(const b of buckets.values()){
     for(const k of ['starts','ends','upcoming'])b[k].sort((a,z)=>(a.kind+':'+a.id).localeCompare(z.kind+':'+z.id))
     const payload=canonical(b),bucket=payload

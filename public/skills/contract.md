@@ -66,3 +66,7 @@ Follow the [learning-loop reference](learning-loop.md) for small qualitative ref
 ## Bounded result
 
 Report: reviewed scope; authorized changes verified; important decisions/deferrals; unresolved choices or capability blockers; next concrete action. Quiet-mode results may be recorded without a message unless an actionable exception exists. Do not claim a timer, reminder, integration or recurring ritual is enabled without a verified receipt from the platform or host that owns it.
+
+## Search supporting context
+
+Use the [search reference](search.md) when related work or prior reflections could change a decision. Search is supporting evidence, not a replacement for exact agenda or Calendar reads.

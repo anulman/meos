@@ -15,3 +15,7 @@
 - [Rescue the day](skills/meos-rescue-day/SKILL.md): Repair a disrupted day after lateness, an overrun, low energy or a new commitment; preserves fixed/protected time and moves the smallest authorized set of flexible blocks.
 - [Clean the board](skills/meos-clean-board/SKILL.md): Perform bounded task-board hygiene when captures, duplicates, stale entries or missing fields obstruct planning; reconciles evidenced state but does not silently reprioritize, delete or declare completion.
 - [Walk the board](skills/meos-walk-board/SKILL.md): Review active work, waiting-for items, commitments and backlog to make deliberate next-action and capacity decisions; used on demand or by weekly review, not as a status recital.
+
+- [Search supporting context](skills/search.md): Keyword and optional semantic retrieval, bounded pending-query handling and source verification.
+
+- [On event updated](skills/meos-on-event-updated/SKILL.md): Opt-in record.updated handler; externally generated, identity-bound embeddings without recursive source events.

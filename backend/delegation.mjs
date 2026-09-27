@@ -6,5 +6,5 @@ export function delegatedPrincipal(db, identity, time) {
  // A revoked/expired service identity must never fall through to owner access.
  if(row)return {owner:row[0],scopes:JSON.parse(row[1]),active:!Number(row[3])&&Number(row[2])>time,delegated:false}
  if(!db.query('SELECT 1 FROM _user WHERE id=?',[identity]).length)return null
- return {owner:identity,scopes:['agenda:read','planning:read','tasks:write','routines:write','occurrences:write','schedule:read','schedule:write','notifications:consume'],active:true,delegated:true}
+ return {owner:identity,scopes:['agenda:read','planning:read','tasks:write','routines:write','occurrences:write','schedule:read','schedule:write','notifications:consume','search:read','search:index'],active:true,delegated:true}
 }
