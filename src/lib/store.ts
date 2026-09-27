@@ -2,8 +2,6 @@ import { createCollection } from '@tanstack/react-db'
 import { queryCollectionOptions } from '@tanstack/query-db-collection'
 import { QueryClient } from '@tanstack/react-query'
 import { getConfig } from './config'
-import type {CalendarCache} from './backend/generated'
-import {schemas,validateSchema} from '../../backend/contract.mjs'
 import type { Task, Project, Routine, Occurrence } from './contracts'
 import type { WeeklyOutcome, PeriodNote } from './planner-contracts'
 export const queryClient=new QueryClient({defaultOptions:{queries:{retry:false,refetchOnWindowFocus:false}}})
@@ -50,17 +48,3 @@ export async function removeOutcome(id:string) {
  await request(`/outcomes/${encodeURIComponent(id)}`,{method:'DELETE'})
  await queryClient.invalidateQueries({queryKey:['outcomes']})
 }
-
-/** One app-local cached projection, loaded alongside the planner collections. */
-export const calendarCacheCollection=createCollection(queryCollectionOptions<CalendarCache>({
- id:'calendar-cache',queryKey:['calendar-cache'],queryClient,getKey:cache=>cache.id,refetchInterval:15000,
- queryFn:async()=>{
-  if(getConfig().demo)return []
-  const {transport}=await import('./backend/session')
-  const cache=await transport.request('/calendar-cache',value=>{validateSchema(schemas.CalendarCache,value);return value as CalendarCache})
-  const previous=queryClient.getQueryData<CalendarCache[]>(['calendar-cache'])?.[0]
-  if(previous?.planner.plannerLastSyncAt!==cache.planner.plannerLastSyncAt){void queryClient.invalidateQueries({queryKey:['tasks']});void queryClient.invalidateQueries({queryKey:['occurrences']})}
-  return [cache]
- }
-}))
-export async function preloadPlanner(){await Promise.allSettled([tasksCollection.preload(),routinesCollection.preload(),occurrencesCollection.preload(),calendarCacheCollection.preload()])}

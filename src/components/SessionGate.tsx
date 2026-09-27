@@ -3,11 +3,11 @@ import {useEffect,useState,type ReactNode} from 'react'
 import {getConfig} from '../lib/config'
 import {loadSession,fenceSession,session,announceSessionChange} from '../lib/backend/session'
 import {clearRepository,getPreferences} from '../lib/backend/ui-repository'
-import {queryClient,preloadPlanner} from '../lib/store'
+import {queryClient} from '../lib/store'
 import {PlannerClockProvider} from '../lib/planner-clock'
 export function SessionGate({children}:{children:ReactNode}){
  const [state,setState]=useState<'loading'|'login'|'ready'>('loading'),[error,setError]=useState(''),[preferences,setPreferences]=useState({timezone:getConfig().timezone,weekStartsOn:1 as 0|1})
- async function boot(){try{const current=await loadSession();if(!current){setState('login');return}const [prefs]=await Promise.all([getPreferences(),preloadPlanner()]);setPreferences({...prefs,weekStartsOn:prefs.weekStartsOn as 0|1});setState('ready')}catch(e){setError(String(e));setState('login')}}
+ async function boot(){try{const current=await loadSession();if(!current){setState('login');return}const prefs=await getPreferences();setPreferences({...prefs,weekStartsOn:prefs.weekStartsOn as 0|1});setState('ready')}catch(e){setError(String(e));setState('login')}}
  useEffect(()=>{if(getConfig().demo){setState('ready');return}void(async()=>{const registrations=await navigator.serviceWorker?.getRegistrations()??[];if(registrations.length){await Promise.all(registrations.map(registration=>registration.unregister()));window.location.reload();return}await boot()})().catch(e=>{setError(String(e));setState('login')});const ended=()=>{fenceSession();clearRepository();void queryClient.cancelQueries();queryClient.clear();window.location.reload()};const verify=()=>{if(session)void loadSession().catch(()=>{})};window.addEventListener('focus',verify);window.addEventListener('meos-session-ended',ended);return()=>{window.removeEventListener('focus',verify);window.removeEventListener('meos-session-ended',ended)}},[])
  if(state==='loading')return <p role="status">Opening your space…</p>
  if(state==='login'&&getConfig().accessGated)return <main className="settings-card"><h1>Connecting to MeOS</h1><p role="alert">Your access is verified outside MeOS. The app connection is temporarily unavailable.</p><button onClick={()=>void boot()}>Retry connection</button></main>

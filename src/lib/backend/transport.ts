@@ -17,7 +17,7 @@ export class JsonTransport {
  /** Invoke before clearing collections on logout/identity transition. Rejects even late successful responses. */
  invalidateSession(): void { this.generation++; this.controller.abort(); this.controller = new AbortController() }
  async request<T>(path: string, decode: (value: unknown) => T, options: { method?: 'GET'|'POST'|'PUT'|'DELETE'; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
-  if (!/^\/[A-Za-z0-9/_?=&%-]*$/.test(path) || path.startsWith('//') || /%2e|%2f|%5c/i.test(path)) throw new RepositoryError('validation', 'Invalid API route')
+  if (!/^\/[A-Za-z0-9/_?=&%-]*$/.test(path) || path.startsWith('//') || /%2e|%2f|%5c/i.test(path.split('?')[0])) throw new RepositoryError('validation', 'Invalid API route')
   const generation = this.generation, identityVersion=this.identityVersion()
   const signal = options.signal ? AbortSignal.any([options.signal, this.controller.signal]) : this.controller.signal
   const method = options.method ?? 'GET'; const headers: Record<string,string> = {Accept: 'application/json'}

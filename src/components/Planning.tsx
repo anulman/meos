@@ -51,13 +51,13 @@ export function WeeklyOutcomes({period}:{period:DatePeriod}) {
  return <>{isLoading?<p role="status">Gathering outcomes…</p>:isError?<p role="alert">Could not load outcomes.</p>:!rows.length?<p className="empty-state">Choose a few things that would make this week feel good.</p>:rows.map(o=><div className="outcome-row" key={o.id}><TaskRows tasks={[tasks.find(t=>t.id===o.taskId)!]} compact showSchedule/><button className="quiet-action" aria-label={`Remove ${tasks.find(t=>t.id===o.taskId)!.title} from week`} onClick={async()=>{try{await removeOutcome(o.id)}catch(e){setError(String(e))}}}>Remove from week</button></div>)}{error&&<p role="alert">{error}</p>}</>
 }
 export function PlannerAgenda({period,compact=false}:{period:DatePeriod;compact?:boolean}) {
- const clock=usePlannerClock();const {data:tasks=[],isLoading,isError}=useLiveQuery(q=>q.from({task:tasksCollection}));const {data:routines=[],isError:routineError}=useLiveQuery(q=>q.from({routine:routinesCollection}));const {data:occurrences=[],isError:occurrenceError}=useLiveQuery(q=>q.from({occurrence:occurrencesCollection}));const [error,setError]=useState('')
+ const clock=usePlannerClock();const {data:tasks=[],isLoading,isError}=useLiveQuery(q=>q.from({task:tasksCollection}));const {data:routines=[],isLoading:routinesLoading,isError:routineError}=useLiveQuery(q=>q.from({routine:routinesCollection}));const {data:occurrences=[],isLoading:occurrencesLoading,isError:occurrenceError}=useLiveQuery(q=>q.from({occurrence:occurrencesCollection}));const [error,setError]=useState('')
  const projectedTasks=projectScheduledTasks(tasks,period,clock.preferences.timezone)
  const [selectedInstance,setSelectedInstance]=useState<Occurrence|null>(null)
  useEffect(()=>{if(!getConfig().demo)void queryClient.invalidateQueries({queryKey:['occurrences']})},[clock.today])
  const projectedRoutines=getConfig().demo?projectRoutineOccurrences(routines,occurrences,period,clock.preferences.timezone):projectScheduledTasks(occurrences.filter(o=>!o.skipped),period,clock.preferences.timezone).map(({task:o,displayDate,instant})=>({routine:{...routines.find(r=>r.id===o.routineId)!,title:o.title??'Routine instance',durationMinutes:o.durationMinutes},date:o.date,displayDate,instant,completed:o.completed}))
  const items=[...projectedTasks.map(t=>({...t,kind:'task' as const,key:t.task.id})),...projectedRoutines.map(r=>({...r,kind:'routine' as const,key:r.routine.id+r.date}))].sort((a,b)=>a.displayDate.localeCompare(b.displayDate)||(a.instant??-Infinity)-(b.instant??-Infinity))
- if(isLoading)return <p role="status">Gathering your day…</p>
+ if(isLoading||routinesLoading||occurrencesLoading)return <p role="status">Gathering your day…</p>
  if(isError||routineError||occurrenceError)return <p role="alert">Could not load the planner. Please reload to try again.</p>
  const completed=items.filter(item=>item.kind==='task'&&item.task.completed)
  const active=compact?items.filter(item=>item.kind!=='task'||!item.task.completed):items

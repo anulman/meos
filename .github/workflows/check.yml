@@ -16,6 +16,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: node scripts/generate-contract.mjs --check
+      - run: node --test scripts/backend-calendar-cache-tests.mjs scripts/backend-calendar-overlap-tests.mjs scripts/backend-calendar-polling-tests.mjs scripts/backend-http-tests.mjs scripts/backend-proxy-tests.mjs scripts/backend-tests.mjs
+      - run: node scripts/calendar-window-benchmark.mjs
       - run: pnpm run licenses
       - run: pnpm build
       - run: pnpm typecheck

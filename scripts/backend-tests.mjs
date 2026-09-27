@@ -139,3 +139,11 @@ test('cross-tab identity epoch fences late success even before queued storage ev
  await new Promise(resolve=>setImmediate(resolve));epoch='owner-b';release({private:'previous owner'})
  await assert.rejects(pending,{code:'aborted'})
 })
+
+// Encoded values belong to query parameters, not the route path.
+test('transport allows encoded timezone/cursor query values but rejects encoded path separators',async()=>{
+ let calls=0;const transport=new JsonTransport('/api',()=>undefined,async()=>{calls++;return Response.json({ok:true})});
+ await transport.request('/calendar-window?timezone=America%2FMontreal&cursor=primary%3Aevent%20id',x=>x);assert.equal(calls,1);
+ for(const path of ['/calendar%2Fwindow?timezone=UTC','/%2e%2e/calendar-window','/calendar%5Cwindow'])await assert.rejects(transport.request(path,x=>x),{code:'validation'});
+ assert.equal(calls,1);
+});

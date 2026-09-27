@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { DomainError, canonical, uuid, date, timezone, validatePreferences, validateResource } from './domain.mjs'
 import {addDays,localDay,scheduledInstant,horizon,occursOn} from './scheduling.mjs'
-import {publishCalendarCache,readCalendarCache,listCalendarCache} from './calendar-cache.mjs'
+import {publishCalendarCache,readCalendarCache,listCalendarCache,readCalendarWindow} from './calendar-cache.mjs'
 import {delegatedPrincipal} from './delegation.mjs'
 import {operations,validateSchema} from './contract.mjs'
 import {searchOperation,flushSearchIndex} from './search.mjs'
@@ -55,6 +55,7 @@ export function createCommands({begin,now=()=>Date.now()}) {
  }
  function checkTombstone(db,kind,owner,id){if(db.query('SELECT 1 FROM deletion_tombstones WHERE owner_id=? AND kind=? AND entity_id=?',[blob(owner),kind,id]).length)throw new DomainError('conflict','Deleted identity cannot be reused')}
  const api={
+  calendarWindow(owner,input){return tx(db=>readCalendarWindow(db,owner,input,now()))},
   calendarCache(owner){return tx(db=>readCalendarCache(db,owner,now()))},
   get(owner,kind,id){return tx(db=>envelope(requireOwned(db,kind,owner,id)))},
   list(owner,kind,{cursor,limit=100}={}) {
