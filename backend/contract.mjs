@@ -35,6 +35,8 @@ const genericEnvelope={anyOf:['Task','Occurrence'].map(x=>ref(x+'Envelope'))}
 const scheduleResult=obj({items:array(genericEnvelope),applied:bool})
 const op=(description,input,output,scope,write=false)=>({description,input,output,scope,write})
 export const operations={
+ get_current:op('Read the current task or occurrence, including a retained deletion tombstone, before handling a boundary.',obj({kind:{enum:['tasks','occurrences']},id}),obj({record:{anyOf:[genericEnvelope,{type:'null'}]},deleted:bool,revision:integer(),scheduledAt:{anyOf:[{type:'string',format:'date-time'},{type:'null'}]}}),'planning:read'),
+ get_command_receipt:op('Read the persisted result of one owner command idempotency key; this is not a delivery receipt.',obj({key}),obj({found:bool,operation:str(100),input:{type:'object'},result:{type:'object'}},['found']),'planning:read'),
  calendar_inventory:op('Read owner-scoped Calendar-sync entities; never other resources.',obj({kind:{enum:['tasks','occurrences','routines']},cursor:id},['kind']),obj({items:array({anyOf:[ref('TaskEnvelope'),ref('OccurrenceEnvelope'),ref('RoutineEnvelope')]},250),nextCursor:id},['items']),'sync:read'),
  calendar_changes:op('Read committed task/instance outbox changes; cursor advances only after durable sync receipts.',obj({cursor:integer(0)}),obj({items:array(obj({sequence:integer(),kind:{enum:['tasks','occurrences']},id,revision:integer(),deleted:bool}),100),cursor:integer(0)}),'sync:read'),
  calendar_current:op('Read current sync entity or retained tombstone.',obj({kind:{enum:['tasks','occurrences']},id}),obj({record:{anyOf:[genericEnvelope,{type:'null'}]},deleted:bool,revision:integer()}),'sync:read'),

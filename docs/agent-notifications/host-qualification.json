@@ -1,0 +1,47 @@
+{
+  "scope": "Source qualification only; no native rebuild, production installation or delivery performed",
+  "backend": {
+    "passed": 184,
+    "failed": 0,
+    "exitCode": 0,
+    "isolation": "trusted systemd private network/protected paths, env-i and exclusive zero-capability UID61001 with backend-UID proc decoy denial",
+    "logSHA256": "05f39feafaea08cf254a5fc4a66c75bee1f21ba1aeb2e8e5468faf88df41807d"
+  },
+  "host": {
+    "passed": 23,
+    "failed": 0,
+    "exitCode": 0,
+    "isolation": "systemd private network, protected paths, env-i, exclusive zero-capability UID61007",
+    "logSHA256": "bfd663235853299b13b175c3cf9bc29281078179e2e3df9c285491565877c6c2"
+  },
+  "review": {
+    "owner": "activation_review",
+    "method": "Independent read-only diff and exact-source receipt review; actual imac-review and imac-voice-and-tone loaded",
+    "findings": "Worker credential sandbox and DST-fold handling repaired; re-review found no blocking or major findings"
+  },
+  "sourceSHA256": {
+    "backend/delegation.mjs": "90062cd06042bc10c42c1b6c39039f8dec80fcc0eebeddfe4075859bc1f46d29",
+    "backend/commands.mjs": "d0a4359090d291b2ffb25f1dff3400331a9db1e4adc690e8b6bced4ae17f9dac",
+    "backend/contract.mjs": "5205433292224067bdd18b3858bdf19e1a06256b6557a913ade25d20995ed37e",
+    "backend/mcp.mjs": "3a405f2099933bbed69f5c13254b517b4031d4acb6c696879448477b702a2716",
+    "backend/notifications.mjs": "6c3ef764603e4682715bed5d6642e7002c853cea56746f5b99ee3b2705b5511c",
+    "backend/migrations/U1790380807__delegated_notifications.sql": "10937787b3ef0d1b5498c0f250c34378b630fd06c2c9eda4492bd49967cc965f",
+    "scripts/delegated-session.py": "1fc1eec1d45f530722e1c1dc9324b6fdc508041e0a45d433a4cbfa22d14e0e5f",
+    "scripts/production-ready.py": "0620931ed192492cd1e724dd5693bed89475a88e023d24e5840315b447aa9efd"
+  },
+  "hostSourceSHA256": {
+    "dispatcher.py": "80d1d4eea4c4961a24b961ad8d084ebbe1c8e5d7d92f9119aedaa8ab1f1861f6",
+    "handling.py": "5acbf7b020ebc03b09b33b7cc7af0ac3b983b20869350c9c44e1eb9416311d7e",
+    "mcp_bridge.py": "ee0cc44b7db25fcf2bae4e8c45159f61d61c0112ee47dd7190410d6c64c73faf",
+    "test_handling.py": "2e3ceaf6980cd7751d78ec59baaf5528b73576e70767a6f36ab562bd98c7157d",
+    "test_host.py": "038c31d57e9a00d19885891875983732257651411fa8b81a78c4b5496c37e1b1"
+  },
+  "deploymentGates": [
+    "Rebuilt native guest and preserving migration in admitted disposable fixture",
+    "Existing-owner mint and independent refresh sessions",
+    "Socket-proxy backend restart rebind and access denials",
+    "Drafting-agent effective read/propose-only tool policy",
+    "Private TLS listener and actual gateway/provider receipt compatibility",
+    "Human merge/release/deployment approval"
+  ]
+}
