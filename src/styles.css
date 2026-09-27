@@ -76,3 +76,7 @@
 .timezone-empty{font-size:13px;padding:12px;color:var(--muted)}
 
 .timezone-empty:empty{display:none}
+
+.calendar-detail-dialog .calendar-detail-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;margin-top:8px}
+.calendar-detail-dialog .resource-top h2{overflow-wrap:anywhere;min-width:0}
+.calendar-detail-dialog .resource-top button{flex-shrink:0}
