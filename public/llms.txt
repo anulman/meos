@@ -7,6 +7,7 @@
 - [Install and bootstrap](skills/meos-bootstrap/SKILL.md): Install a post-cutover production release (Compose first, Helm later), install optional backup encryption from pinned source or an admitted runtime, plan and verify recovery, then configure agent schedules, per-install planning authority and event long-polling.
 
 - [Shared operating contract](skills/contract.md): Required authority, tentative/target-day planning, Google-wins reconciliation, evidence-aware actuals, weekly reflection, tool discovery and delivery rules.
+- [Learning-loop reference](skills/learning-loop.md): Small qualitative reflections using available context and authorized notes; explicit unsaved fallback when note tools are unavailable.
 - [Weekly review + 14-day look-ahead](skills/meos-weekly-review/SKILL.md): Review priorities and capacity across the next 14 days when the user requests weekly planning or a configured weekly review fires; composes board decisions and schedules only within existing authority.
 - [Morning launch](skills/meos-morning-launch/SKILL.md): Prepare today and the first concrete action when the user asks for a morning plan or a configured morning launch fires; reuses last evening’s decisions and highlights changes rather than the entire backlog.
 - [Evening close + tomorrow prep](skills/meos-evening-close/SKILL.md): Reconcile today and prepare tomorrow when the user requests shutdown or a configured evening close fires; captures actuals and gives unfinished work explicit dispositions without automatic rollover.

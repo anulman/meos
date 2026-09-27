@@ -15,4 +15,8 @@ Use for data hygiene, not priority decisions. Start with an explicit scope or a 
 4. Do not silently change priorities or schedules, mark work complete, delete captures, or edit routine templates. Route substantive “does this still matter?” decisions to [Walk the board](../meos-walk-board/SKILL.md).
 5. Verify mutations, persist unresolved issues and a resume checkpoint, and state what was intentionally left untouched. Avoid repeating the same unresolved question across rituals.
 
+## Preserve learning evidence
+
+Follow the [learning-loop reference](../learning-loop.md). Preserve existing requests, estimates, answers, source references and user prose during authorized cleanup. Similar titles do not prove duplicate work; a missing actual is not zero. Propose ambiguous repairs instead of merging away evidence. Route consequential questions to walk/weekly review rather than asking about every empty field. Read or edit reflection notes only through an exposed, authorized capability; otherwise disclose the limit.
+
 **Result:** reviewed scope, verified hygiene changes, unresolved candidates and excluded/unreviewed work. A clean-looking board is not proof that all work was reviewed.

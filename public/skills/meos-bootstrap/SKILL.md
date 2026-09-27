@@ -287,6 +287,10 @@ state, intended changes, completed effects and unresolved steps. Keep secret
 references, never secret contents. An unchanged run records a no-change result
 without rewriting managed resources.
 
+### Reflection capability
+
+Read the [learning-loop reference](../learning-loop.md) and verify which authorized context and notes capabilities this installation exposes. Current MeOS MCP has no generic period-note read/write operations; owner HTTP endpoints do not grant a scoped agent access. If an authorized host/application notes capability is unavailable, record reflection persistence as unsupported and deliver reflections unsaved. Do not substitute occurrence edits or calendar scopes, borrow owner credentials, or install a sandbox, learning service or schema to satisfy this skill. Verify saved-note readback separately from planning and notification readiness.
+
 ## Configure the event long-poller
 
 First discover and verify an actual authenticated event API and its protocol. MCP access alone does not prove such an API exists. Obtain its documented endpoint/tool, authentication mechanism, event types, cursor and acknowledgment semantics, retention/replay limits, and supported wait duration. Do not invent endpoints, MCP operations, cursor formats, or delivery guarantees.

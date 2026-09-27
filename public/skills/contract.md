@@ -43,6 +43,8 @@ Keep **intended**, **travelling**, and **settled/engaged** distinct. “Heading 
 
 Capture outcomes and observed timing during the day/evening without overwriting original estimates or planned history. Reflect on **estimates versus actuals weekly** to improve future planning; evening reflection is only for urgent actionable issues, not a recurring estimation critique. Ordinary outcome capture and tomorrow preparation still happen nightly. Media capture remains deferred until the core workflow is stable; these skills do not implement it. A separate evaluation-suite project is not part of these rituals.
 
+Follow the [learning-loop reference](learning-loop.md) for small qualitative reflections, selective questions and at most one contextual experiment. Retrieve it before performing learning capture or analysis; if unavailable, continue other supported ritual work but report learning as limited. Current MCP does not expose generic period-note reads/writes. Use an actually exposed, authorized host/application notes capability or deliver an explicitly unsaved reflection; do not claim persistence or cross-run reuse.
+
 ## Shared execution sequence
 
 1. Discover tools; load relevant live state, freshness and existing durable review progress. Identify the user's local timezone from authoritative preferences. If unavailable, ask before time-dependent writes.

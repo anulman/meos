@@ -19,4 +19,8 @@ Use for an individual event transition. The platform, not this skill, schedules 
 
 **Limits:** tentative status alone neither requires nor suppresses a user message; use recorded preferences and judgment without changing platform event delivery. Google-wins reconciliation governs sync conflicts; imported commitments remain read-only, and moving/overlapping them is a suggestion requiring authorization, not an autonomous repair. Future start/end wakeups stay within a rolling seven days even when the plan spans 14 days. The platform must own invalidation, replenishment and revision checks; absent capabilities are blockers, not an invitation to implement an agent polling loop.
 
+## Capture a meaningful surprise
+
+Follow the [learning-loop reference](../learning-loop.md). Read the expected outcome and accessible prior answers; capture only a useful surprise, success, scope change or blocker. Use the verified occurrence and source-event references, not an arbitrary occurrence of the task. An event's duration is not focused effort; every boundary need not become an interview. Save only through an authorized notes capability, otherwise label the reflection unsaved. Note saving, boundary acknowledgment and message delivery are separate effects; reconcile each before retrying.
+
 **Result:** preparation/next step or captured outcome, any verified adjustment, and durable boundary handling state. Not every agent boundary event deserves a user interruption.

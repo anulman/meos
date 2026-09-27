@@ -16,4 +16,8 @@ Use on a meaningful disruption or an explicit “help me recover today” reques
 5. Preview, apply and verify authorized revision-checked changes. Preserve estimates versus actuals and occurrence history. Reconcile uncertain writes before retrying.
 6. Save the revised first action and dispositions so the next boundary, evening close and morning launch reuse them.
 
+## Diagnose before resizing
+
+Use the [learning-loop reference](../learning-loop.md) to distinguish changed scope, interruptions, dependencies and priorities before asking a decision-changing question. Elapsed time does not identify a cause, and resizing a block does not revise the original forecast. Choose the smallest authorized repair; learning notes do not make imported commitments writable. Preserve the reason through authorized notes if available, otherwise deliver it unsaved without claiming cross-run memory.
+
 **Result:** a workable next action plus a concise change summary and explicit deferrals. No promise of new notifications without verified platform support/receipts.
