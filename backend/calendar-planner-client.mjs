@@ -17,7 +17,7 @@ export function createCalendarPlannerClient({upstream,origin,credentials,saveCre
   if(!raw)throw Error('planner_auth');accept(raw.split(';')[0].slice(11));
  }
  return {async invoke(name,input){
-  if(!['calendar_inventory','calendar_changes','calendar_current','calendar_apply','calendar_materialize'].includes(name))throw Error('planner_operation');
+  if(!['calendar_cache_publish','calendar_inventory','calendar_changes','calendar_current','calendar_apply','calendar_materialize'].includes(name))throw Error('planner_operation');
   for(let attempt=0;attempt<2;attempt++){
    if(!token||expires<=now()+30000)await login();
    const r=await upstream(new Request(origin+'/api/meos/v1/mcp',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json',Accept:'application/json, text/event-stream','MCP-Protocol-Version':'2025-03-26'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:input}})}));

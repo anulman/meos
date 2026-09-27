@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { DomainError, canonical, uuid, date, timezone, validatePreferences, validateResource } from './domain.mjs'
 import {addDays,localDay,scheduledInstant,horizon,occursOn} from './scheduling.mjs'
+import {publishCalendarCache,readCalendarCache,listCalendarCache} from './calendar-cache.mjs'
 import {delegatedPrincipal} from './delegation.mjs'
 import {operations,validateSchema} from './contract.mjs'
 
@@ -53,6 +54,7 @@ export function createCommands({begin,now=()=>Date.now()}) {
  }
  function checkTombstone(db,kind,owner,id){if(db.query('SELECT 1 FROM deletion_tombstones WHERE owner_id=? AND kind=? AND entity_id=?',[blob(owner),kind,id]).length)throw new DomainError('conflict','Deleted identity cannot be reused')}
  const api={
+  calendarCache(owner){return tx(db=>readCalendarCache(db,owner,now()))},
   get(owner,kind,id){return tx(db=>envelope(requireOwned(db,kind,owner,id)))},
   list(owner,kind,{cursor,limit=100}={}) {
    if(!Number.isSafeInteger(limit)||limit<1||limit>250)throw new DomainError('validation','Invalid page limit')
@@ -103,6 +105,8 @@ export function createCommands({begin,now=()=>Date.now()}) {
    const spec=Object.hasOwn(operations,name)?operations[name]:undefined;if(!spec)throw new DomainError('validation','Unknown operation')
    validateSchema(spec.input,input)
    return tx(db=>{
+    if(name==='calendar_cache_publish'){const result=publishCalendarCache(db,owner,input);validateSchema(spec.output,result);return result}
+    if(name==='list_calendar_events'){const result=listCalendarCache(db,owner,input,now());validateSchema(spec.output,result);return result}
     if(spec.write){const old=db.query('SELECT operation,payload,result FROM command_receipts WHERE owner_id=? AND command_key=?',[blob(owner),input.idempotencyKey])[0];if(old){if(old[0]!==name||old[1]!==canonical(input))throw new DomainError('conflict','Idempotency key payload mismatch');return JSON.parse(old[2])}}
     let result
     if(name==='get_command_receipt'){const row=db.query('SELECT operation,payload,result FROM command_receipts WHERE owner_id=? AND command_key=?',[blob(owner),input.key])[0];result=row?{found:true,operation:row[0],input:JSON.parse(row[1]),result:JSON.parse(row[2])}:{found:false}}
