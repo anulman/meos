@@ -29,14 +29,14 @@ export function createCalendarService({config,store,broker,planner,now=Date.now}
  const events=createCalendarEvents({store,connection,broker,accessToken,now});
  const bridge=createCalendarPlanner({store,planner,broker,connection,accessToken,now});
  const polling=createCalendarPolling({store,broker,connection,connectionKey,accessToken,now,flush:async context=>{await events.flush(context);await bridge.sync(context)},initialize:()=>service.initializeManagedCalendar()});
- const mirror=createCalendarMirror({store,planner,connection,snapshot(){
+ const mirror=createCalendarMirror({store,planner,connection,now,snapshot(){
   const c=connection(),primary=store.get('snapshot:primary'),managed=store.get('snapshot:managed'),available=!!primary&&!!managed;
   const data=events.list(),status=polling.status(c),plan=bridge.status();
   return {items:available?data.items:[],drafts:data.drafts,conflicts:plan.conflicts,metadata:{available,state:c.state,syncActive:status.syncActive,lastSyncAt:store.get('poll-state')?.lastSuccess??null,plannerLastSyncAt:plan.plannerLastSyncAt,windowStart:primary?.windowStart&&managed?.windowStart?[primary.windowStart,managed.windowStart].sort().at(-1):null,windowEnd:primary?.windowEnd&&managed?.windowEnd?[primary.windowEnd,managed.windowEnd].sort()[0]:null}};
  }});
  const lifecycle=async operation=>{try{return await operation()}finally{try{await mirror.publish()}catch{/* The existing worker retries projection; never undo accepted OAuth/state changes. */}}};
  const service={
-  async status({ownerId}){check(ownerId);const c=connection();return {state:c.state,...polling.status(c),...bridge.status()}},
+  async status({ownerId}){check(ownerId);const c=connection();const status={state:c.state,...polling.status(c),...bridge.status()},native=planner?.status?.();return native?.syncError?{...status,syncActive:false,plannerActive:false,syncError:native.syncError,nextSyncAt:native.nextSyncAt}:status},
   async poll(){try{return await polling.poll()}finally{await mirror.publish()}},
   async events({ownerId}){check(ownerId);return {...events.list(),planner:bridge.status()}},
   async editEvent({ownerId,...input}){check(ownerId);return lifecycle(()=>events.mutate(input))},

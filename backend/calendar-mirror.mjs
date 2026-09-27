@@ -2,10 +2,10 @@
 // Piggybacks on the existing sync worker. SQLite snapshots remain the durable
 // provider authority; this is only a credential-free projection into app storage.
 import {createHash} from 'node:crypto';
-export function createCalendarMirror({store,planner,snapshot,connection}){
+export function createCalendarMirror({store,planner,snapshot,connection,now=Date.now}){
  let queue=Promise.resolve(),published;
  async function publish(){
-  if(!planner)return;
+  if(!planner||(planner.status?.().nextSyncAt??0)>now())return; // No snapshot/sequence churn during native-auth backoff.
   const value=snapshot(),generation=connection().generation;
   const fingerprint=createHash('sha256').update(JSON.stringify({generation,...value})).digest('hex');
   if(fingerprint===published)return;

@@ -37,7 +37,7 @@ test('calendar status is owner-authenticated and response excludes secrets', asy
   const { route, calls } = fixture();
   const response = await route(request('status', { headers: { authorization: 'Bearer forged', 'x-owner-id': 'forged' } }));
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { state: 'connected', primary: { direction: 'import_only' }, managed: { direction: 'bidirectional' }, syncActive: true,plannerActive:false,lastSyncAt:null });
+  assert.deepEqual(await response.json(), { state: 'connected', primary: { direction: 'import_only' }, managed: { direction: 'bidirectional' }, syncActive: true,syncError:null,plannerActive:false,lastSyncAt:null });
   assert.equal(calls[0][1].url, origin + '/api/meos/v1/session');
   assert.deepEqual([...calls[0][1].headers], [['cookie', 'synthetic=session']]);
   assert.deepEqual(calls[1], ['status', { ownerId }]);
@@ -135,3 +135,11 @@ test('Google callback never bypasses external Access',async()=>{
  await handler(req,res);assert.equal(res.status,403);assert.equal(reached,false);
 });
 test('removed Google notification URL has no route and never bypasses Access',async()=>{const f=fixture();assert.equal(await f.route(request('/api/calendar/google/notifications')),undefined);let reached=false;const handler=createNodeWebHandler({origin,root:'/tmp',upstream:f.upstream,accessOwner:{check:()=>new Response(null,{status:403})},calendarRoutes:async()=>{reached=true}});assert.equal((await hostCall(handler,'/api/calendar/google/notifications','POST')).status,403);assert.equal(reached,false)});
+
+test('Calendar status exposes only safe native-session health, never raw failures',async()=>{
+ for(const error of ['session_expired','retrying','secret provider detail']){
+  const {route}=fixture({service:{status:async()=>({state:'connected',syncActive:false,syncError:error,accessToken:'secret-token'})}});
+  const result=await (await route(request('status'))).json();
+  assert.equal(result.syncError,error==='secret provider detail'?null:error);assert.ok(!JSON.stringify(result).includes('secret'));
+ }
+});

@@ -67,5 +67,13 @@ if not credential_path.exists():
  save('planner-credentials.json',{'agentId':plan['agentId'],'ownerId':plan['ownerId'],'scopes':scopes,'authToken':tokens['auth_token'],'refreshToken':tokens['refresh_token']});del tokens,claims
 else:
  credentials=json.loads(secure(credential_path).read_text());assert credentials['agentId']==plan['agentId'] and credentials['ownerId']==plan['ownerId'] and credentials['scopes']==scopes
+# Native v0.33.22 CLI mint uses a fixed12h refresh lifetime. A worker session
+# follows the existing sync grant deadline, not an unrelated CLI bootstrap TTL.
+credentials=json.loads(secure(credential_path).read_text())
+with sqlite3.connect(verify().with_name('session.db')) as sessions:
+ rows=sessions.execute('SELECT id,expires FROM _session WHERE user=? AND refresh_token=?',(agent,credentials['refreshToken'])).fetchall()
+ assert len(rows)==1 and rows[0][1]>time.time(),'Expired/unknown issuance; use reviewed existing-session recovery'
+ sessions.execute('UPDATE _session SET expires=? WHERE id=? AND user=? AND refresh_token=?',(plan['expiresAt']//1000,rows[0][0],agent,credentials['refreshToken']))
+sessions.close();del credentials
 save('receipt.json',{'status':'principal-provisioned-not-activated','environment':state['environment'],'instanceId':run,'agentId':plan['agentId'],'ownerId':plan['ownerId'],'scopes':scopes,'expiresAt':plan['expiresAt'],'passwordless':True,'ownerUnchanged':True,'admissionSHA256':hashlib.sha256(admission_path.read_bytes()).hexdigest()})
 print(json.dumps({'status':'principal-provisioned-not-activated','receipt':str(out/'receipt.json')}))
