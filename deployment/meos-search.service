@@ -1,0 +1,17 @@
+[Unit]
+Description=MeOS bounded embedding indexing
+After=network-online.target
+[Service]
+Type=oneshot
+User=meos-search
+WorkingDirectory=/opt/meos/current
+EnvironmentFile=/etc/meos/search.env
+ExecStart=/usr/bin/node scripts/search-worker.mjs
+TimeoutStartSec=240
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictAddressFamilies=AF_INET AF_INET6
+[Install]
+WantedBy=multi-user.target

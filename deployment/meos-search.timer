@@ -1,0 +1,8 @@
+[Unit]
+Description=Run optional MeOS embedding worker
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=15s
+Unit=meos-search.service
+[Install]
+WantedBy=timers.target
