@@ -7,6 +7,8 @@ description: Install or maintain MeOS from a verified supported release; enable 
 
 Use when a user's agent should install MeOS from scratch or finish configuring an existing installation, including its operating skills. Reading this document alone authorizes no installation or side effects. Use supported host tools within existing authority; do not add a MeOS callback framework or invent deployment or MCP operations.
 
+A user's bootstrap request covers the necessary supported installation and configuration dependencies of the requested setup, within that user's existing authority and standing constraints. Reconcile working components, then complete missing scoped MCP access, event listener and durable dispatcher/worker setup when included in that scope; discovery alone is not completion. Do not ask again for authority already granted. For a genuinely missing grant or decision, prepare the concrete supported changes first and ask only for that exact permission or choice, stating why it is required. Missing packaging or implementation is not a permission question: report the concrete capability gap and, when coding is authorized, assign an implementation owner instead of inventing production infrastructure. Preserve independent qualification and human-only release gates.
+
 ## Installation target
 
 This guide targets the **post-production-cutover MeOS release**: install the persistent application first, then configure its agent. Prefer Docker Compose for a single host; use Helm when the user already operates a compatible Kubernetes cluster or explicitly chooses one. Do not introduce a cluster merely to run MeOS. Use an existing verified deployment when available.
@@ -212,7 +214,7 @@ Within installation authority, create a clearly labeled disposable item, retriev
 
 Treat provider integrations as optional separate components. For Calendar/OAuth, use the release's real supported provider setup and consent flow, exact registered redirect URI and requested scopes, and user-controlled secret entry. Confirm connection state and supported behavior with safe, authorized checks. Missing consent or an unqualified integration must not masquerade as active sync or prevent truthful reporting of an otherwise working core installation.
 
-Create or connect a scoped agent identity using the release's actual auth/MCP procedure. Verify authenticated discovery and a harmless read against the intended workspace/account. Record granted scopes; do not reuse an unrestricted owner credential by default. If MCP or an event API is unavailable, record that separate blocker before proceeding to the compatible parts of agent setup.
+Create or connect a scoped agent identity using the release's actual auth/MCP procedure. Verify authenticated discovery and a harmless read against the intended workspace/account. Record granted scopes; do not reuse an unrestricted owner credential by default. A missing connection is setup work when the supported procedure and authority are available, not a reason to stop at discovery. If MCP or an event API is unavailable, distinguish missing configuration, an exact missing grant, and an unsupported capability; apply the continuation rule above and proceed with compatible parts of agent setup. Never substitute another service's credential to bypass the missing grant.
 
 ## Stage 4 — Configure the operating agent
 
@@ -344,7 +346,7 @@ or external-communication authority.
 - Let the platform maintain its seven-day future boundary window; do not recreate that scheduler in the host or confuse it with the 14-day planning horizon.
 - Configure startup/restart recovery, observable health and last-success state, and an authorized destination for actionable failure reports. Record service ownership and how to stop it.
 
-If the API, supervision, durable state, or necessary permissions are unavailable, record the exact blocker and leave the dependent event component uninstalled or explicitly paused. Install compatible manual/scheduled pieces independently when authorized. Do not silently substitute periodic polling for a requested long-poller, or claim event updates are live.
+If the API, supervision, durable state, or necessary permissions are unavailable, first reconcile and complete supported setup within existing authority. For unresolved dependencies, record the exact blocker and leave the dependent event component uninstalled or explicitly paused; request an exact missing grant or route authorized implementation work to an owner as described above. Record that owner's scope, current state and completion-delivery route; do not present an unowned next step as work in progress. Install compatible manual/scheduled pieces independently when authorized. Do not silently substitute periodic polling for a requested long-poller, or claim event updates are live.
 
 ## Verify and hand off
 
@@ -363,6 +365,8 @@ host cases as unverified rather than claiming all five paths passed.
 Where the host/protocol supports them, use safe synthetic events and a non-mutating test target to verify receipt, actionable wake-up, cursor persistence, restart recovery, replay deduplication, stale/canceled-event handling, and health reporting. Do not mutate a real calendar, send messages, print, or trigger other external effects merely to prove installation. If a proof is unavailable, report it as unverified instead of manufacturing evidence. Enabled configuration is not evidence that the long-poller is connected and processing correctly.
 
 Report application installation/login/persistence separately from optional integrations, MCP access, operating jobs, and event delivery. State what is configured, what is verified running, the next scheduled executions, and exact blocked/unverified parts. Include the installation record location or resource ID, non-secret access instructions, and how to inspect, pause, update, and uninstall. Do not declare the entire bootstrap complete while a requested component remains blocked, and never call a demo preview a persistent installation.
+
+For MCP readiness, include authenticated discovery and harmless-read evidence for the intended identity and workspace. For event readiness, include an actual event's durable queue handoff and supervised worker processing, plus the required restart/replay proof; installed services or synthetic qualification alone are not live end-to-end evidence. Report which dependencies were completed under existing bootstrap authority, and separate configured components from verified operation and any remaining permission or implementation blocker.
 
 ## Maintain or remove
 
