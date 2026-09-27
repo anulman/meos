@@ -14,7 +14,7 @@ function fixture(){
  const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON; CREATE TABLE _user(id BLOB PRIMARY KEY) STRICT;')
  const owner=randomUUID(),other=randomUUID(),bytes=id=>Buffer.from(id.replaceAll('-',''),'hex')
  for(const id of [owner,other])db.prepare('INSERT INTO _user VALUES(?)').run(bytes(id))
- for(const n of ['0800__planner','0805__scheduling_contract','0807__search']){
+ for(const n of ['0800__planner','0803__bridge','0805__scheduling_contract','0811__search']){
   let sql=readFileSync(new URL('../backend/migrations/U179038'+n+'.sql',import.meta.url),'utf8')
   // Unit adapter only: exact-image migration proof separately exercises native vec0.
   sql=sql.replace('CREATE VIRTUAL TABLE search_vectors USING vec0(embedding float[1536] distance_metric=cosine);','CREATE TABLE search_vectors(rowid INTEGER PRIMARY KEY,embedding TEXT);')
@@ -76,7 +76,7 @@ test('provider request is fixed-origin, no redirects, validated model/dimension'
 })
 test('search:read cannot lease/index; sync:read cannot search; MCP returns serialized contract',async()=>{
  const f=fixture(),origin='https://example.test',user={id:randomUUID()}
- try{let scopes=['search:read'];const commands={...f.commands,agentGrant:()=>({active:true,owner:f.owner,scopes})}
+ try{let scopes=['search:read'];const commands={...f.commands,mcpGrant:()=>({active:true,owner:f.owner,scopes})}
  const handle=createMcpHandler({commands,origin,readText:r=>r.bodyText})
  function req(name,args){return {method:'POST',headers:new Headers({Authorization:'Bearer synthetic',Accept:'application/json, text/event-stream','Content-Type':'application/json'}),bodyText:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:args}})}}
  assert.equal((await handle(req('search_index_batch',{}),user).json()).result.isError,true)
@@ -147,8 +147,20 @@ test('search-read MCP principal can commit its query but not a document descript
  const f=fixture();try{
   f.call('configure_search',{enabled:true});f.commands.create(f.owner,'tasks',f.task('Document'))
   const d=f.call('search_index_batch',{}).items[0],q=f.call('search',{query:'Query'}).queryJob
-  const handle=createMcpHandler({commands:{...f.commands,agentGrant:()=>({active:true,owner:f.owner,scopes:['search:read']})},origin:'https://example.test',readText:r=>r.bodyText})
+  const handle=createMcpHandler({commands:{...f.commands,mcpGrant:()=>({active:true,owner:f.owner,scopes:['search:read']})},origin:'https://example.test',readText:r=>r.bodyText})
   const call=async job=>(await handle({method:'POST',headers:new Headers({Authorization:'Bearer synthetic',Accept:'application/json, text/event-stream','Content-Type':'application/json'}),bodyText:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'search_query_commit',arguments:commit(job,vector)}})},{id:randomUUID()}).json()).result
   assert.equal((await call(d)).structuredContent.accepted,false);assert.equal((await call(q)).structuredContent.accepted,true)
+ }finally{f.db.close()}
+})
+
+test('delegated owner search needs no service identity and cannot read another owner',async()=>{
+ const f=fixture();try{
+  const task=f.task('Private orchard');f.commands.create(f.owner,'tasks',task)
+  const handle=createMcpHandler({commands:f.commands,origin:'https://example.test',readText:r=>r.bodyText})
+  const call=async(owner,name,args)=>(await handle({method:'POST',headers:new Headers({Authorization:'Bearer synthetic',Accept:'application/json, text/event-stream','Content-Type':'application/json'}),bodyText:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:args}})},{id:owner}).json()).result
+  assert.equal((await call(f.owner,'configure_search',{enabled:true})).structuredContent.enabled,true)
+  assert.equal((await call(f.owner,'search',{query:'orchard'})).structuredContent.items[0].id,task.id)
+  assert.equal((await call(f.other,'search',{query:'orchard'})).structuredContent.items.length,0)
+  assert.equal(f.db.prepare('SELECT count(*) n FROM _meos_agent_grants').get().n,0)
  }finally{f.db.close()}
 })

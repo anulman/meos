@@ -17,6 +17,7 @@ function fixture({now=Date.parse('2026-09-26T15:00:00Z'),upgrade=false}={}){
  const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON; CREATE TABLE _user(id BLOB PRIMARY KEY) STRICT;')
  const owner=id(),other=id(),agent=id();for(const v of [owner,other,agent])db.prepare('INSERT INTO _user VALUES(?)').run(blob(v))
  db.exec(readFileSync(new URL('../backend/migrations/U1790380800__planner.sql',import.meta.url),'utf8'))
+ db.exec(readFileSync(new URL('../backend/migrations/U1790380803__bridge.sql',import.meta.url),'utf8'))
  const begin=()=>{db.exec('BEGIN IMMEDIATE');return {query:(sql,p=[])=>db.prepare(sql).all(...p).map(Object.values),execute:(sql,p=[])=>Number(db.prepare(sql).run(...p).changes),commit:()=>db.exec('COMMIT'),rollback:()=>db.exec('ROLLBACK')}}
  const migrate=()=>db.exec(readFileSync(new URL('../backend/migrations/U1790380805__scheduling_contract.sql',import.meta.url),'utf8'))
  if(!upgrade)migrate()
@@ -145,7 +146,7 @@ test('MCP initialization/discovery/calls use identical domain, owner scopes and 
   const t=task({schedule:schedule()}),args={value:t,idempotencyKey:key()}
   result=await call({jsonrpc:'2.0',id:3,method:'tools/call',params:{name:'create_task',arguments:args}}).json();assert.equal(result.result.structuredContent.value.id,t.id)
   assert.equal(f.commands.list(f.owner,'tasks').items.length,1);assert.equal(f.commands.list(f.agent,'tasks').items.length,0)
-  assert.equal(call({jsonrpc:'2.0',id:4,method:'tools/list'},{user:{id:f.other}}).status,403)
+  assert.equal(call({jsonrpc:'2.0',id:4,method:'tools/list'},{user:{id:f.other}}).status,200)
   assert.equal(call({jsonrpc:'2.0',id:4,method:'tools/list'},{headers:{Cookie:'auth_token=synthetic'}}).status,401)
   assert.equal(call({jsonrpc:'2.0',id:4,method:'tools/list'},{headers:{Origin:'https://evil.invalid'}}).status,403)
   assert.equal((await call({jsonrpc:'2.0',id:4,method:'tools/call',params:{name:'apply_schedule',arguments:{changes:[],idempotencyKey:key()}}}).json()).result.isError,true)
@@ -179,3 +180,30 @@ test('two actual SQLite writers serialize and exactly one revision wins',async()
 test('Calendar sync scope reads owner outbox/current tombstones and applies only revision-checked Calendar fields',()=>{const f=fixture();try{const a=task({schedule:schedule(),durationMinutes:120,location:'Office',durationIntent:'A long working block',actualDurationMinutes:95,notes:{type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'rich',marks:[{type:'strong'}]}]}]}});f.commands.create(f.owner,'tasks',a);f.commands.create(f.other,'tasks',task());const page=f.invoke('calendar_changes',{cursor:0});assert.equal(page.items.length,1);assert.equal(page.items[0].id,a.id);assert.equal(f.invoke('calendar_current',{kind:'tasks',id:a.id}).revision,1);const result=f.invoke('calendar_apply',{kind:'tasks',id:a.id,expectedRevision:1,schedule:schedule('2026-09-27'),title:'Google title',location:'New office',idempotencyKey:key()});assert.equal(result.value.durationIntent,a.durationIntent);assert.equal(result.value.actualDurationMinutes,95);assert.deepEqual(result.value.notes,a.notes);assert.equal(result.value.completed,false);assert.throws(()=>f.invoke('calendar_apply',{kind:'tasks',id:a.id,expectedRevision:1,schedule:null,idempotencyKey:key()}),e=>e.code==='conflict');assert.throws(()=>f.invoke('calendar_apply',{kind:'tasks',id:a.id,expectedRevision:2,schedule:null,completed:true,idempotencyKey:key()}),e=>e.code==='validation');f.invoke('delete_task',{id:a.id,expectedRevision:2,idempotencyKey:key()});assert.deepEqual(f.invoke('calendar_current',{kind:'tasks',id:a.id}),{record:null,deleted:true,revision:3});assert.throws(()=>f.commands.invoke(f.other,'calendar_current',{kind:'tasks',id:a.id}),e=>e.code==='not_found')}finally{f.close()}});
 test('Calendar materialization snapshots location and duration intent without changing siblings',()=>{const f=fixture();try{const r=routine({durationMinutes:120,location:'Studio',durationIntent:'At least two hours'});f.commands.create(f.owner,'routines',r);const rows=materialize(f,r).items;assert.equal(rows[0].value.location,'Studio');assert.equal(rows[0].value.durationIntent,r.durationIntent);f.invoke('calendar_apply',{kind:'occurrences',id:rows[0].value.id,expectedRevision:1,schedule:schedule('2026-09-27','15:00'),location:'Remote',durationMinutes:135,idempotencyKey:key()});assert.equal(f.commands.get(f.owner,'occurrences',rows[1].value.id).value.location,'Studio');assert.equal(f.commands.get(f.owner,'routines',r.id).value.location,'Studio')}finally{f.close()}});
 test('dedicated Calendar sync grant cannot create arbitrary tasks or access browser APIs',async()=>{const f=fixture();try{f.db.prepare('INSERT INTO _meos_agent_grants VALUES(?,?,?,?,0)').run(blob(f.agent),blob(f.owner),JSON.stringify(['sync:read','sync:write']),Date.parse('2027-01-01'));const origin='https://acceptance.invalid',headers=new Headers({Authorization:'Bearer synthetic','Content-Type':'application/json',Accept:'application/json, text/event-stream'});const handle=createMcpHandler({commands:f.commands,origin,readText:r=>r.text});const call=msg=>handle({method:'POST',url:origin+'/api/meos/v1/mcp',headers,text:JSON.stringify({jsonrpc:'2.0',id:1,...msg})},{id:f.agent});const names=(await call({method:'tools/list'}).json()).result.tools.map(t=>t.name);assert(names.includes('calendar_apply'));assert(!names.includes('create_task'));assert.equal((await call({method:'tools/call',params:{name:'create_task',arguments:{value:task(),idempotencyKey:key()}}}).json()).result.isError,true);assert.equal((await createHttpHandler({commands:f.commands,origin})(new Request(origin+'/api/meos/v1/resources/tasks'),{id:f.agent})).status,403)}finally{f.close()}});
+
+test('delegated owner MCP has freshness/receipts without service grants and cannot impersonate another owner',async()=>{
+ const f=fixture();try{
+  const origin='https://acceptance.invalid',handle=createMcpHandler({commands:f.commands,origin,readText:r=>r.text})
+  const call=(user,method,args)=>handle({method:'POST',url:origin+'/api/meos/v1/mcp',headers:new Headers({Authorization:'Bearer synthetic','Content-Type':'application/json',Accept:'application/json, text/event-stream'}),text:JSON.stringify({jsonrpc:'2.0',id:1,method,...args})},{id:user})
+  const tools=(await call(f.owner,'tools/list').json()).result.tools.map(t=>t.name)
+  assert(tools.includes('get_current'));assert(tools.includes('get_command_receipt'));assert(!tools.includes('calendar_apply'))
+  const t=task(),k=key();f.invoke('create_task',{value:t,idempotencyKey:k})
+  assert.equal(f.invoke('get_current',{kind:'tasks',id:t.id}).revision,1)
+  const receipt=f.invoke('get_command_receipt',{key:k});assert.equal(receipt.found,true);assert.equal(receipt.result.value.id,t.id)
+  assert.deepEqual(f.commands.invoke(f.other,'get_command_receipt',{key:k}),{found:false})
+  assert.throws(()=>f.commands.invoke(f.other,'get_current',{kind:'tasks',id:t.id}),{code:'not_found'})
+  f.invoke('delete_task',{id:t.id,expectedRevision:1,idempotencyKey:key()});assert.equal(f.invoke('get_current',{kind:'tasks',id:t.id}).deleted,true)
+  f.db.prepare('INSERT INTO _meos_bridge_binding VALUES(?,?)').run(blob(f.agent),blob(f.owner));assert.equal(call(f.agent,'tools/list').status,403)
+  assert.equal(f.db.prepare('SELECT count(*) n FROM _meos_agent_grants').get().n,0)
+ }finally{f.close()}
+})
+
+test('freshness uses pinned scheduling rules for both DST offsets and case-insensitive timezone names',()=>{
+ const f=fixture();try{for(const offsetMinutes of [-240,-300]){
+  const value=task({schedule:{date:'2026-11-01',time:'01:30',timezone:'america/montreal',offsetMinutes},durationMinutes:30})
+  f.invoke('create_task',{value,idempotencyKey:key()})
+  const current=f.invoke('get_current',{kind:'tasks',id:value.id})
+  assert.equal(Date.parse(current.scheduledAt),scheduledInstant(value.schedule))
+  assert.equal(current.scheduledAt,offsetMinutes===-240?'2026-11-01T05:30:00.000Z':'2026-11-01T06:30:00.000Z')
+ }}finally{f.close()}
+})

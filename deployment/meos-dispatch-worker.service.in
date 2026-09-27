@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+# INERT: independent exact artifact/config/identity admission required.
+[Unit]
+Description=MeOS durable boundary worker
+After=network.target
+[Service]
+User=@WORKER_USER@
+Group=@WORKER_GROUP@
+ExecStart=/usr/bin/python3 @RELEASE@/clients/meos-host/dispatcher.py worker --state @STATE@ --config @CONFIG@
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+ReadWritePaths=@STATE@ @MCP_CREDENTIAL_DIR@
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=localhost
+MemoryMax=128M
+TasksMax=16
+[Install]
+WantedBy=multi-user.target

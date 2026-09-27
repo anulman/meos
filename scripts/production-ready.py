@@ -1,7 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 """Trusted systemd readiness/ACL helper. No credentials, SQL, or repository tests."""
-import http.client,json,os,pathlib,socket,stat,subprocess,time
+import http.client,json,os,pathlib,socket,stat,subprocess,time,pwd,grp
 assert os.geteuid()==0
+# Reserved socket-only relay identity must not alias a human/service account.
+for lookup in [pwd.getpwuid,grp.getgrgid]:
+ try:lookup(61006)
+ except KeyError:pass
+ else:raise AssertionError('Relay UID/GID61006 is already assigned; reconcile before granting socket access')
 config=pathlib.Path('/etc/meos/runtime-state.json');info=config.lstat()
 assert stat.S_ISREG(info.st_mode) and info.st_uid==0 and not info.st_mode&0o022
 state=json.loads(config.read_text());assert set(state)=={'environment','instanceId','image','containerId','volume','origin'}
@@ -39,7 +44,7 @@ while True:
    client.request('GET','/api/meos/v1/instance');response=client.getresponse();body=response.read(8193)
    assert response.status==200 and len(body)<=8192 and json.loads(body)=={'instanceId':run,'environment':'production'}
   finally:client.close()
-  subprocess.run(['/usr/bin/setfacl','-m','u:61002:rw,u:61004:rw',str(sock)],env=clean,check=True)
+  subprocess.run(['/usr/bin/setfacl','-m','u:61002:rw,u:61004:rw,u:61006:rw',str(sock)],env=clean,check=True)
   break
  except (FileNotFoundError,ConnectionRefusedError,TimeoutError):
   if time.monotonic()>=deadline:raise RuntimeError('Backend readiness timeout')

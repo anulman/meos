@@ -10,9 +10,9 @@ export function createMcpHandler({commands,origin,readText}){
   let grant
   try{
    if(request.headers.get('Origin')&&request.headers.get('Origin')!==origin)return json({error:'Invalid origin'},403)
-   if(!user||!/^Bearer [A-Za-z0-9._~-]+$/.test(request.headers.get('Authorization')??'')||request.headers.get('Cookie')!==null)return json({error:'Agent bearer authentication required'},401)
-   grant=commands.agentGrant(user.id)
-   if(!grant?.active)return json({error:'Agent grant denied'},403)
+   if(!user||!/^Bearer [A-Za-z0-9._~-]+$/.test(request.headers.get('Authorization')??'')||request.headers.get('Cookie')!==null)return json({error:'Bearer authentication required'},401)
+   grant=commands.mcpGrant(user.id)
+   if(!grant?.active)return json({error:'Delegated access denied'},403)
    if(request.method!=='POST')return json(null,405)
    const version=request.headers.get('MCP-Protocol-Version')??'2025-03-26'
    if(!versions.includes(version))return json({error:'Unsupported protocol version'},400)

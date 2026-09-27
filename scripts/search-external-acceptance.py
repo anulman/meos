@@ -15,8 +15,7 @@ login=context['login_native'];origin=context['candidate']['origin'];consumer='b'
 verify()
 with db() as conn:
  conn.execute('UPDATE _meos_agent_grants SET scopes=? WHERE agent_id=?',(json.dumps(['search:index','search:read','notifications:consume']),uuid.UUID(agent['id']).bytes))
- conn.execute('INSERT INTO _meos_agent_grants VALUES(?,?,?,?,0)',(uuid.UUID(context['bridge']['id']).bytes,uuid.UUID(other['id']).bytes,json.dumps(['search:index','search:read']),int(time.time()*1000)+3600000))
-at=login(agent);ot=login(context['bridge']);nt=login(notification)
+at=login(agent);ot=login(other);nt=login(notification)
 def headers(token):return {'Authorization':'Bearer '+token['auth_token'],'Content-Type':'application/json','Accept':'application/json, text/event-stream'}
 def call(name,args,token=at):
  code,body,_=request('server.sock','POST','/api/meos/v1/mcp',json.dumps({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':name,'arguments':args}}),headers(token))

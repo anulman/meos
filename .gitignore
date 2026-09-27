@@ -10,3 +10,7 @@ artifacts/
 # Retained qualification evidence stays on the attached volume, never git.
 backend/retained-source.tar.gz
 backend/retained-notices.txt
+
+# Python host tooling caches are not release artifacts.
+__pycache__/
+*.pyc

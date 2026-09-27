@@ -12,7 +12,7 @@ const vector=Array.from({length:1536},(_,i)=>i?0:1)
 test('installed worker doctor and batch use private native socket; scope denial survives transport',async()=>{
  const root=mkdtempSync(join(tmpdir(),'meos-search-socket-')),socket=join(root,'backend.sock'),origin='https://inaccessible-browser.example.invalid'
  let scopes=['search:index'],commits=0,leases=0,publicRequests=0
- const commands={agentGrant:()=>({active:true,owner:'01992ac0-0000-7000-8000-000000000001',scopes}),invoke(owner,name,args){
+ const commands={mcpGrant:()=>({active:true,owner:'01992ac0-0000-7000-8000-000000000001',scopes}),invoke(owner,name,args){
   if(name==='search_index_status')return {enabled:true,model:'text-embedding-3-small',dimensions:1536,pending:1}
   if(name==='search_index_batch'){leases++;return {enabled:true,model:'text-embedding-3-small',dimensions:1536,items:[{id:1,revision:1,text:'Synthetic text',attempt:1,type:'document',model:'text-embedding-3-small',dimensions:1536,indexVersion:'planning-v1',inputVersion:'utf8-prefix-6000-v1',inputHash:'a'.repeat(64)}]}}
   if(name==='search_index_commit'){assert.deepEqual(args.embedding,vector);commits++;return {accepted:true}}

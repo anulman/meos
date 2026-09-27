@@ -6,7 +6,7 @@ image='sha256:616de8c955d6f585be234bd990e2aeec879deb59b712c8fa3b2cf703f9d71c79'
 depot=pathlib.Path(tempfile.mkdtemp(prefix='meos-search-native-'))
 name='meos-search-native-'+uuid.uuid4().hex[:12]
 migrations=depot/'migrations/main';migrations.mkdir(parents=True)
-for filename in ['U1790380800__planner.sql','U1790380805__scheduling_contract.sql','U1790380807__search.sql']:
+for filename in ['U1790380800__planner.sql','U1790380805__scheduling_contract.sql','U1790380811__search.sql']:
  (migrations/filename).write_text((root/'backend/migrations'/filename).read_text())
 owner=uuid.UUID('01992ac0-0000-7000-8000-000000000001');entity=uuid.uuid4()
 vector=json.dumps([1]+[0]*1535)

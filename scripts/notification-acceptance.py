@@ -184,10 +184,10 @@ def invoke(op,extra=None,headers=None):
  code,body,_=request('server.sock','POST','/api/meos/v1/notifications',json.dumps({'consumer':consumer,'op':op,**(extra or {})}),nh if headers is None else headers)
  return code,json.loads(body) if body else None
 assert invoke('poll')[0]==200
-assert invoke('poll',headers={'Authorization':'Bearer '+ot['auth_token'],'Content-Type':'application/json'})[0]==403
+assert invoke('poll',headers={'Authorization':'Bearer '+ot['auth_token'],'Content-Type':'application/json'})[0]==200
 assert invoke('poll',headers={'Cookie':'auth_token='+nt['auth_token'],'Content-Type':'application/json'})[0]==401
 assert invoke('poll',headers={'__context':json.dumps({'kind':'Http','user':{'id':notification['id'],'csrf_token':'a'*20}}),'Content-Type':'application/json'})[0]==401
-native['ownerCookieAndContextForgeryDenied']=True
+native['delegatedOwnerAllowedCookieAndContextForgeryDenied']=True
 code,_,_=request('server.sock','GET','/api/meos/v1/resources/tasks',headers=nh);assert code==403
 native['notificationPrincipalCannotReadBrowserAPI']=True
 claims=json.loads(base64.urlsafe_b64decode(ot['auth_token'].split('.')[1]+'==='))

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+import {delegatedPrincipal} from './delegation.mjs'
 // All authority, planning, leasing, read and ack effects share one DB transaction.
 import {DomainError,uuid,canonical} from './domain.mjs'
 import {scheduledInstant} from './scheduling.mjs'
@@ -20,9 +21,9 @@ export function createNotifications({begin,now=Date.now}){
   const limit=input.limit??50;if(!Number.isInteger(limit)||limit<1||limit>100)fail('validation','Invalid batch limit')
   const db=begin(),time=now(),aid=blob(agent)
   try{
-   const grant=db.query('SELECT owner_id,scopes,expires_at,revoked FROM _meos_agent_grants WHERE agent_id=?',[aid])[0]
-   if(!grant||Number(grant[3])||Number(grant[2])<=time||!JSON.parse(grant[1]).includes('notifications:consume'))fail('forbidden','Notification grant denied')
-   const owner=grant[0],canIndex=JSON.parse(grant[1]).includes('search:index')
+   const grant=delegatedPrincipal(db,aid,time)
+   if(!grant?.active||!grant.scopes.includes('notifications:consume'))fail('forbidden','Notification access denied')
+   const owner=grant.owner,canIndex=grant.scopes.includes('search:index')
    let state=db.query('SELECT consumer,fence,lease_until,planned_at,preferences,gap,update_cursor FROM notification_consumers WHERE agent_id=?',[aid])[0]
    if(!state){db.execute('INSERT INTO notification_consumers(agent_id,consumer,fence,lease_until,planned_at) VALUES(?,?,1,?,?)',[aid,input.consumer,time+leaseMs,time]);state=[input.consumer,1,time+leaseMs,time,'{}',0,null]}
    if(state[0]!==input.consumer&&state[2]>time)fail('conflict','Consumer lease held')
