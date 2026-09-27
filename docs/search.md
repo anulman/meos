@@ -24,7 +24,7 @@ The query cache expires after one hour and retains at most 100 queries per owner
 
 ## Storage and update handling
 
-Migration `0807` backfills canonical search documents and FTS5 from existing records. Ordinary SQL triggers maintain document revisions and embedding jobs on every source create, update and delete. The command transaction flushes dirty FTS/vector entries before commit; search flushes first to reconcile an out-of-band database write. This avoids unsafe virtual-table trigger access under TrailBase's trusted-schema restrictions. Do not disable those restrictions.
+Migration `0812` backfills canonical search documents and FTS5 from existing records. Ordinary SQL triggers maintain document revisions and embedding jobs on every source create, update and delete. The command transaction flushes dirty FTS/vector entries before commit; search flushes first to reconcile an out-of-band database write. This avoids unsafe virtual-table trigger access under TrailBase's trusted-schema restrictions. Do not disable those restrictions.
 
 The admitted host already contains FTS5 and sqlite-vec. Version 1 fixes the embedding identity to OpenAI `text-embedding-3-small`, 1,536 dimensions. Changing either requires a versioned migration/rebuild, not an environment override. Notes contribute at most 16,000 characters to lexical indexing; embeddings use at most the first 6,000 UTF-8 bytes of title plus note text. Source records are unchanged.
 
