@@ -72,7 +72,11 @@ check and server-socket ACL gate. Never grant Docker, admin-socket or depot acce
 
 The socket-only directory is 0755 so the unprivileged bridge can open a directory
 FD; the socket remains gateway-owned 0600. Do not put credentials in that directory
-or make the socket world-readable/writable. Enable the socket as the backend’s
+or make the socket world-readable/writable. `DirectoryMode` controls creation;
+it does not repair an existing 0711 directory. During an authorized upgrade,
+verify the exact directory is socket-only, reconcile its owner/mode through
+supported host controls, and read back the directory and socket permissions.
+Do not recursively chmod a configuration tree. Enable the socket as the backend’s
 dependency through supported host controls. A relay-only restart proves less
 than a full backend/socket rebind: qualify the latter in an isolated fixture,
 and claim live lifecycle proof only when actually authorized and observed.
