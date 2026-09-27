@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+# INERT: exact helper/config/certificate/backend identity admission required.
+[Unit]
+Description=MeOS private machine notification TLS endpoint
+After=meos-backend.service
+Requires=meos-backend.service
+[Service]
+User=@ENDPOINT_USER@
+Group=@ENDPOINT_GROUP@
+ExecStart=@NODE@ @RELEASE@/scripts/serve-agent-tls.mjs @CONFIG@
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=yes
+ProtectHome=read-only
+ProtectSystem=strict
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX AF_INET
+IPAddressDeny=any
+IPAddressAllow=localhost
+MemoryMax=192M
+TasksMax=32
+[Install]
+WantedBy=multi-user.target
