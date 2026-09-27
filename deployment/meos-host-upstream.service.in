@@ -1,0 +1,25 @@
+[Unit]
+Description=MeOS socket-only relay (no database access)
+Requires=@PREFIX@-backend.service
+After=@PREFIX@-backend.service
+PartOf=@PREFIX@-backend.service
+
+[Service]
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd /run/native/backend.sock
+User=61006
+Group=61006
+PrivateNetwork=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+PrivateDevices=yes
+ProtectProc=invisible
+ProcSubset=pid
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX
+TemporaryFileSystem=/run
+BindReadOnlyPaths=@NATIVE_SOCKET@:/run/native/backend.sock
+InaccessiblePaths=/mnt /var/lib
+Restart=on-failure
+RestartSec=2

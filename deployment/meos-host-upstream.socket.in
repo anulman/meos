@@ -1,0 +1,14 @@
+[Unit]
+Description=Private MeOS delegated-owner Unix upstream
+PartOf=@PREFIX@-backend.service
+After=@PREFIX@-backend.service
+
+[Socket]
+ListenStream=/run/meos-host/backend.sock
+SocketUser=@GATEWAY_USER@
+SocketMode=0600
+DirectoryMode=0711
+RemoveOnStop=yes
+
+[Install]
+WantedBy=@PREFIX@-backend.service

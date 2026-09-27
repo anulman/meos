@@ -91,6 +91,17 @@ class BridgeTests(unittest.TestCase):
         with patch.object(m,'private',side_effect=pathlib.Path),patch.object(self.b,'request',side_effect=[self.identity,(401,None)]) as request:
             with self.assertRaises(ValueError):self.b.call({'id':2})
             self.assertEqual(request.call_count,2)
+    def test_systemd_private_credential_mount_allows_lock_and_refresh_only(self):
+        folder=os.environ.get('MEOS_SANDBOX_CREDENTIAL_DIR')
+        if not folder:self.skipTest('requires trusted host sandbox launcher')
+        path=pathlib.Path(folder)/'credentials.json';m.save(path,{'authToken':'old','refreshToken':'synthetic'})
+        b=m.Bridge({**self.b.c,'credentials':str(path)})
+        with patch.object(b,'request',side_effect=[self.identity,(401,None),(200,{'auth_token':'new','refresh_token':'new-refresh'}),(200,{'id':1})]):
+            self.assertEqual(b.call({'id':1}),{'id':1})
+        self.assertEqual(json.loads(path.read_text())['authToken'],'new')
+        self.assertTrue(path.with_name('credentials.json.lock').exists())
+        with self.assertRaises(OSError):pathlib.Path('/fixture/readonly').write_text('forbidden')
+
     def test_private_symlink_rejected(self):
         link=pathlib.Path(self.tmp.name)/'link';link.symlink_to(self.p)
         with self.assertRaises(ValueError):m.private(link)
@@ -114,9 +125,9 @@ class ProcessRecoveryTests(unittest.TestCase):
                 def log_message(self,*args):pass
             server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler)
             thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
-            config=temp/'config';m.save(config,{'hookHost':'127.0.0.1','hookPort':server.server_port,'hookTokenFile':str(token),'agentId':'synthetic'})
-            db=d.connect(state);d.admit(db,{'id':'kill-proof'},'kill-proof');db.close()
-            cmd=[sys.executable,str(pathlib.Path(d.__file__).resolve()),'worker','--state',str(state),'--config',str(config)]
+            config=temp/'config';m.save(config,{'hookHost':'127.0.0.1','hookPort':server.server_port,'hookTokenFile':str(token),'agentId':'synthetic','mode':'notifications'})
+            db=d.connect(state);d.admit(db,{'id':'kill-proof','type':'boundary','at':0,'starts':[{'kind':'tasks','id':'synthetic','revision':1,'start':0,'end':60000}]},'kill-proof');db.close()
+            cmd=[sys.executable,'-c',"import dispatcher,handling;handling.current_reader=lambda c:lambda i:{'scheduledAt':'1970-01-01T00:00:00Z','record':{'revision':1,'value':{'id':'synthetic','schedule':{'date':'1970-01-01','time':'00:00','timezone':'UTC'},'durationMinutes':1}}};dispatcher.main()",'worker','--state',str(state),'--config',str(config)]
             first=subprocess.Popen(cmd,stdout=subprocess.DEVNULL,stderr=None)
             second=None
             try:
@@ -129,7 +140,7 @@ class ProcessRecoveryTests(unittest.TestCase):
                     if row[0]=='blocked_unknown':break
                     time.sleep(.05)
                 self.assertEqual(row[0],'blocked_unknown');self.assertEqual(len(count),1)
-                db=d.connect(state);self.assertTrue(d.admit(db,{'id':'kill-proof'},'kill-proof')['accepted']);db.close()
+                db=d.connect(state);self.assertTrue(d.admit(db,{'id':'kill-proof','type':'boundary','at':0,'starts':[{'kind':'tasks','id':'synthetic','revision':1,'start':0,'end':60000}]},'kill-proof')['accepted']);db.close()
             finally:
                 release.set()
                 if first.poll() is None:first.kill();first.wait()

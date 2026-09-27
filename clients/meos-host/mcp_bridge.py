@@ -31,12 +31,16 @@ class UnixHTTP(http.client.HTTPConnection):
         super().__init__(host, timeout=30); self.path = path
     def connect(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.sock.settimeout(self.timeout); self.sock.connect(self.path)
+        self.sock.settimeout(self.timeout)
+        path = pathlib.Path(self.path)
+        fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try: self.sock.connect('/proc/self/fd/' + str(fd) + '/' + path.name)
+        finally: os.close(fd)
 
 class Bridge:
     def __init__(self, config):
         self.c = config
-        if set(config) != {'origin', 'socket', 'credentials', 'instanceId', 'environment'}:
+        if set(config) - {'outbox'} != {'origin', 'socket', 'credentials', 'instanceId', 'environment'}:
             raise ValueError('invalid config')
         from urllib.parse import urlsplit
         u = urlsplit(config['origin'])
@@ -56,6 +60,13 @@ class Bridge:
             return r.status, json.loads(data) if data else None
         finally: conn.close()
     def call(self, message):
+        if self.c.get('outbox') and message.get('method')=='tools/call' and message.get('params',{}).get('name')=='propose_boundary':
+            import dispatcher, handling
+            args=message['params'].get('arguments',{})
+            db=dispatcher.connect(self.c['outbox'])
+            try: result=handling.propose(db,args.get('eventId'),args.get('capability'),args.get('body'))
+            finally: db.close()
+            return {'jsonrpc':'2.0','id':message.get('id'),'result':{'structuredContent':result,'content':[{'type':'text','text':json.dumps(result)}]}}
         status, identity = self.request('/api/meos/v1/instance')
         if status != 200 or identity.get('instanceId') != self.c['instanceId'] or identity.get('environment') != self.c['environment']:
             raise ValueError('instance mismatch')
@@ -80,6 +91,8 @@ class Bridge:
                 d = os.open(p.parent, os.O_DIRECTORY); os.fsync(d); os.close(d)
                 status, result = self.request('/api/meos/v1/mcp', message, tokens['auth_token'])
             if status not in (200, 202): raise ValueError('upstream rejected')
+            if self.c.get('outbox') and message.get('method')=='tools/list' and isinstance(result,dict) and 'result' in result:
+                result['result']['tools'].append({'name':'propose_boundary','description':'Persist a notification proposal for the exact host-issued event capability. Does not send or change plans.','inputSchema':{'type':'object','properties':{'eventId':{'type':'string'},'capability':{'type':'string'},'body':{'type':'object','properties':{'eventId':{'type':'string'},'message':{'type':'string','maxLength':3500},'constituents':{'type':'array','items':{'type':'string'}}},'required':['eventId','message','constituents'],'additionalProperties':False}},'required':['eventId','capability','body'],'additionalProperties':False}})
             return result
         finally: os.close(fd)
 
