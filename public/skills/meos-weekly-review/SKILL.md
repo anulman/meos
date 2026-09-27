@@ -16,6 +16,24 @@ Suggested participation: 20–30 minutes. Use for strategic weekly reconciliatio
 5. Interpret natural-language routine intent as frequency targets, soft preferred times and explicit hard rules. Build a rough capacity-aware weekly/day arrangement on the dedicated MeOS calendar, protecting rest and fixed commitments and leaving deliberate slack. Experiment/revise within the installation’s standing authority. Future blocks, including tomorrow and week two, default to TENTATIVE; use only supported schema representation or retain an explicit proposal. Explicitly defer or leave unscheduled work that does not fit.
 6. Apply and verify authorized revision-checked changes; do not commit the whole look-ahead. Target-day commitment belongs to the prior-night preparation or day-of launch, with fresh capacity checks. Respect Google-wins reconciliation without losing MeOS-only notes, estimates or history. Planning farther ahead does not authorize notification scheduling beyond seven days.
 
+## All-day context
+
+Before making the planning decisions above:
+
+- Check all-day events overlapping the next 14 days through a discoverable, authorized
+  host calendar read capability, if available. The Today day view hides these
+  events; neither screen visibility nor MeOS `calendar_inventory` (tasks,
+  occurrences and routines) establishes provider all-day coverage. If no such
+  read is available, disclose missing coverage rather than reporting no events;
+  do not invent an MCP method or borrow owner/sync credentials.
+- Include events spanning the window: an all-day start date is inclusive and
+  its end date is exclusive. Preserve the source dates and timezone context;
+  do not turn date-only events into midnight timed commitments.
+- Treat all-day events as date context, not automatic 24-hour busy blocks,
+  elapsed effort or completion evidence. Mention holidays, travel, birthdays
+  or deadlines only when they affect decisions, preparation or capacity—not
+  as an exhaustive recital, and not as automatic task creation.
+
 ## Learning pass
 
 Follow the [learning-loop reference](../learning-loop.md). Review available tasks and notes, including successes, surprises and unfinished work; state the period, reviewed sources and missing evidence. Compare intentions with supported outcomes without treating scheduled time as effort or inferring a universal correction factor. Keep, revise or retire the prior experiment; choose at most one next adjustment. Save the four-field reflection through an authorized notes capability or deliver it explicitly unsaved. Reuse walk/clean decisions; mutable current records do not establish what was known historically.
