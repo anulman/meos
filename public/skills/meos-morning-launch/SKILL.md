@@ -11,7 +11,7 @@ Suggested participation: 3–5 minutes. Use to start the day; use rescue-day for
 
 1. Load last evening's plan and shared progress; read today's commitments, flexible blocks, outstanding decisions and freshness. If the evening close was missed, reconcile only what affects today rather than requiring a separate overdue ritual.
 2. Check changes since the plan: conflicts, preparation/travel, deadlines and available capacity. Ask about energy or constraints only when unknown and material; do not make a repetitive daily questionnaire.
-3. Confirm the essential outcome and identify a concrete, startable first action. Break an unclear action into a small step when useful, without creating an unapproved cascade of tasks.
+3. Confirm the essential outcome and its MeOS project link under the [project-linking policy](../contract.md#link-planning-priorities-to-projects), then identify a concrete, startable first action. Reuse a settled link; ask only if unresolved. Break an unclear action into a small step when useful, without creating an unapproved cascade of tasks.
 4. Reuse the prior-night target-day commitment receipt. If it was missed, automatically commit today’s feasible plan under recorded standing authority after current-revision/capacity checks, using supported transition and idempotency semantics. Do not duplicate or recommit an unchanged plan. Missing commitment support leaves an explicit proposal/blocker. If the day does not fit, repair authorized MeOS blocks or present the smallest material trade-off; never silently commit an infeasible draft or change imported commitments. Reuse [Rescue the day](../meos-rescue-day/SKILL.md) for meaningful changes. Verify applied changes; future-day blocks remain tentative.
 5. Record today's decision and first action for later boundaries and evening close. In quiet mode, send only an actionable exception or an explicitly requested launch prompt.
 
@@ -47,4 +47,4 @@ Use the [search reference](../search.md) when related work or prior reflections 
 
 ## Routine coverage
 
-When this authorized planning operation needs new fixed routine instances, use the [explicit routine planning contract](../contract.md#explicit-routine-planning). Reuse the prior request receipt when coverage is already planned. Ordinary context reads and unchanged plans do not require another materialization command.
+When this authorized planning operation needs new routine instances, use the [explicit routine planning contract](../contract.md#explicit-routine-planning). Reuse the prior request receipt when coverage is already planned. Ordinary context reads and unchanged plans do not require another materialization command.

@@ -2706,7 +2706,7 @@
     "/api/meos/v1/operations/create_routine": {
       "post": {
         "operationId": "create_routine",
-        "description": "Create a routine template without creating occurrences or scheduling events. Time is optional. Repeated idempotency key returns its original result.",
+        "description": "Create a routine template without creating occurrences or scheduling events. Frequency and duration are template intent; exact timing belongs to occurrences. Repeated idempotency key returns its original result.",
         "security": [
           {
             "browserSession": [],
@@ -8171,35 +8171,10 @@
             "type": "string",
             "maxLength": 500
           },
-          "actualDurationMinutes": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10080
-          },
-          "weekdays": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 6
-            },
-            "maxItems": 7,
-            "minItems": 1,
-            "uniqueItems": true
-          },
-          "time": {
-            "type": "string",
-            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
-          },
           "timezone": {
             "type": "string",
             "minLength": 1,
             "maxLength": 100
-          },
-          "durationMinutes": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 1440
           },
           "archived": {
             "type": "boolean"
@@ -8215,7 +8190,7 @@
           "id",
           "title",
           "notes",
-          "weekdays",
+          "recurrenceIntent",
           "timezone"
         ],
         "additionalProperties": false

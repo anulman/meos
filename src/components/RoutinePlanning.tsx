@@ -11,7 +11,7 @@ export function RoutinePlanning({routines}:{routines:Routine[]}){
  const retained=queryClient.getQueryData<Plan>(['pending-routine-plan'])
  const [open,setOpen]=useState(!!retained),[selected,setSelected]=useState<string[]>(retained?.routines.map(r=>r.routineId)??[]),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[uncertain,setUncertain]=useState(!!retained)
  const pending=useRef<Plan|null>(retained??null)
- const eligible=routines.filter(r=>!r.archived&&(!r.recurrenceIntent||r.recurrenceIntent.kind==='fixed'))
+ const eligible=routines.filter(r=>!r.archived&&r.recurrenceIntent.kind==='fixed')
  async function plan(){
   const client=queryClient
   setBusy(true);setMessage('')
@@ -37,5 +37,5 @@ export function RoutinePlanning({routines}:{routines:Routine[]}){
    if(error instanceof RepositoryError&&error.code==='conflict')void client.invalidateQueries({queryKey:['routines']})
   }finally{setBusy(false)}
  }
- return <section className="settings-card"><h3>Plan routine instances</h3><p>Planning creates fixed routine instances once, from today through 14 days ahead in each routine’s timezone. Existing instances—including edits and skips—stay unchanged. Browsing does not create instances.</p>{!open?<button onClick={()=>{setOpen(true);setSelected(eligible.slice(0,100).map(r=>r.id))}}>Choose routines to plan</button>:<><fieldset disabled={busy||uncertain}><legend>Routines for this planning operation (maximum 100)</legend>{eligible.map(r=><label key={r.id}><input type="checkbox" checked={selected.includes(r.id)} onChange={e=>setSelected(ids=>e.target.checked?[...ids,r.id]:ids.filter(id=>id!==r.id))}/>{r.title} · {r.timezone}</label>)}{eligible.length>100&&<p>Select up to 100 routines; the remaining routines are not included automatically.</p>}</fieldset><button disabled={busy||!selected.length||selected.length>100} onClick={()=>void plan()}>{busy?'Planning…':uncertain?'Retry same planning request':'Plan selected routines'}</button></>}{message&&<p role="status">{message}</p>}</section>
+ return <section className="settings-card"><h3>Plan routine instances</h3><p>Planning creates unscheduled instances from fixed frequency intent once, from today through 14 days ahead in each routine’s timezone. Existing instances—including edits and skips—stay unchanged. Browsing does not create instances.</p>{!open?<button onClick={()=>{setOpen(true);setSelected(eligible.slice(0,100).map(r=>r.id))}}>Choose routines to plan</button>:<><fieldset disabled={busy||uncertain}><legend>Routines for this planning operation (maximum 100)</legend>{eligible.map(r=><label key={r.id}><input type="checkbox" checked={selected.includes(r.id)} onChange={e=>setSelected(ids=>e.target.checked?[...ids,r.id]:ids.filter(id=>id!==r.id))}/>{r.title} · {r.timezone}</label>)}{eligible.length>100&&<p>Select up to 100 routines; the remaining routines are not included automatically.</p>}</fieldset><button disabled={busy||!selected.length||selected.length>100} onClick={()=>void plan()}>{busy?'Planning…':uncertain?'Retry same planning request':'Plan selected routines'}</button></>}{message&&<p role="status">{message}</p>}</section>
 }

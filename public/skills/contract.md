@@ -4,7 +4,7 @@ Shared contract for the seven core operating skills and the [install/bootstrap s
 
 ## Tools and truth
 
-Discover the current MeOS MCP and host capabilities and their schemas. Operation names in design documents are examples, not proof a tool exists. Use tools to read tasks, events, routines/occurrences, priorities, actuals, preferences, timezone, revisions and sync freshness; query capacity; persist review progress; ask questions; and send messages. Use only capabilities actually available. Missing reads limit conclusions; missing writes produce an explicit proposal, not a claim of application. Calendar sync and agent notifications may not yet be operational: verify them, never imply readiness from this document.
+Discover the current MeOS MCP and host capabilities and their schemas. Operation names in design documents are examples, not proof a tool exists. Use tools to read tasks, projects, events, routines/occurrences, priorities, actuals, preferences, timezone, revisions and sync freshness; query capacity; persist review progress; ask questions; and send messages. Use only capabilities actually available. Missing reads limit conclusions; missing writes produce an explicit proposal, not a claim of application. Calendar sync and agent notifications may not yet be operational: verify them, never imply readiness from this document.
 
 Run entirely through MCP/resource/host tools. Runtime rituals do not require shell commands, local files, filesystem memory, agent-owned cron processes, polling loops or background agent sleeps. The platform owns boundary timers, its rolling event window and event delivery. The install/bootstrap skill may install a verified supported MeOS release through host deployment tools, then configure supported host schedules and a supervised durable service consuming an actually available event API; the host handles waiting and wakes the agent for actionable work. Bootstrap does not implement missing packaging/platform capabilities, treat a demo as a persistent install, or add lifecycle callbacks. No filesystem or shell access is required when supported host configuration tools suffice. If durable progress, event acknowledgment or necessary host capabilities are unavailable, report the limitation and do not pretend the workflow will resume autonomously.
 
@@ -25,7 +25,7 @@ Respect protected rest, fixed commitments, travel/preparation buffers and delibe
 
 ## Managing-agent planning policy
 
-Translate natural-language routine intent into rough weekly/day plans: distinguish frequency targets (such as three sessions per week), soft preferred times (such as mornings), and explicit hard constraints. Do not turn a preference into a fixed rule or promise every target fits. Use live capacity, travel/preparation, priorities and slack to experiment with arrangements; leave excess work visibly unscheduled.
+Translate natural-language routine intent into rough weekly/day plans: distinguish frequency targets (such as three sessions per week), duration intent (such as roughly half an hour), soft preferred times (such as mornings), and explicit hard constraints. Keep these as template intent; choose exact dates, clock times and durations only for concrete occurrences during capacity-aware planning. Do not turn a preference into a fixed rule or promise every target fits. Use live capacity, travel/preparation, priorities and slack to experiment with arrangements; leave excess work visibly unscheduled.
 
 Record each installation's standing authority. When explicitly granted, the managing agent has full autonomy to create, move, resize, unschedule/remove planning blocks, revise and commit MeOS-owned blocks on the **dedicated MeOS calendar**, subject to user intent and constraints. Removing a planning block does not delete the underlying task or its history. Locking a draft into the target day's execution plan is not marking its tasks complete or making it immutable to later authorized repair. Without that grant, propose changes or use narrower recorded authority; adaptive mode alone is not consent. Imported primary-calendar events remain **read-only**. The agent may suggest moving or overlapping other events—for example, a call during a walk or errand—but must obtain explicit authorization before executing such a change through a supported capability. Do not bypass the read-only import to do it.
 
@@ -36,6 +36,20 @@ These are agent decision semantics, not invented API fields. Inspect actual tool
 Google is the source of truth for synchronized calendar fields: **Google wins sync conflicts**. Respect the integration's reconciliation result and refresh the plan; do not manually replay a stale local version over it. Preserve MeOS-only notes, estimates and history separately. Missing reconciliation capability is a blocker, not permission to invent a merge operation.
 
 Tentative versus committed status does not by itself decide user notifications. Preserve the platform-owned rolling seven-day boundary contract and fresh revision/cancellation checks below; apply recorded delivery preferences and agent judgment. No blanket suppression of tentative notifications is established by this policy.
+
+## Link planning priorities to projects
+
+Every planning priority/outcome must link to an actual MeOS project. Load current
+projects and reuse a verified existing link. Infer a link only when recent MeOS
+context makes one active project obvious; a similar name, external project or
+old conversation alone is insufficient. State the inferred link in the plan.
+Otherwise ask which MeOS project the priority belongs to before creating its
+tasks, and persist the chosen project ID on those tasks through the supported
+schema. If no suitable project is obvious or available, suggest creating one
+with a concrete proposed name; create it only with authority and verify its ID
+before linking work. If project reads/writes are unavailable, keep that priority
+as an explicit unresolved proposal rather than silently creating unlinked tasks.
+Reuse settled links across daily and weekly planning without asking again.
 
 ## Evidence and actuals
 
@@ -77,11 +91,24 @@ Routine instances are created only by an explicit planning operation. Reading
 an agenda, opening a page, refreshing, saving a routine template, and Calendar
 sync do not generate instances. During an authorized planning ritual, discover
 `plan_routines` (`occurrences:write`) and call it once with the selected active
-fixed routines, their current revisions, and explicit routine-local date windows.
+routines whose server-derived `recurrenceIntent` is validated and fixed, their
+current revisions, and explicit routine-local date windows.
 Each window must start today or later and end no later than 14 days after today
 in that routine's timezone. Supply one UUID candidate for every selected date;
-select at most 100 routines with at most 15 dates each. Flexible or unresolved
-intent requires separate scheduling decisions, not automatic expansion.
+select at most 100 routines with at most 15 dates each. This creates **unscheduled
+occurrence snapshots**, not timed blocks: template frequency, duration and time
+preferences are intent, not an exact schedule. Read the resulting occurrences,
+then choose each concrete `schedule` and `durationMinutes` against live capacity
+through supported occurrence/scheduling tools.
+
+For flexible frequency targets, choose dates deliberately and discover a
+supported explicit occurrence-creation capability. Use its actual schema,
+current template and stable IDs; use request keys where supported. Read existing
+instances first so a repeat does not overfill the target. Preserve skips and
+edits; do not manufacture fixed weekdays to make `plan_routines` accept flexible
+intent. Unresolved recurrence needs a decision-changing clarification before
+planning, not a guessed recurrence. If explicit creation is unavailable, report
+flexible coverage as a gap while continuing supported planning.
 
 Retain the complete request, including its idempotency key and slot UUIDs, until
 the result is known. After an uncertain response, replay that identical request

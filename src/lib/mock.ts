@@ -1,3 +1,4 @@
+import { interpretRecurrence } from '../../backend/scheduling.mjs'
 import { validTimezone } from './timezones'
 import { http, HttpResponse } from 'msw'
 import { setupWorker } from 'msw/browser'
@@ -55,8 +56,8 @@ const handlers=(['tasks','projects'] as const).flatMap(kind=>[
 ])
 const seedPeriod=weekPeriod(today,1)
 const planner:{routines:Routine[];occurrences:Occurrence[];outcomes:WeeklyOutcome[];'period-notes':PeriodNote[]}={
- routines:[{id:'routine-morning',title:'Morning care',weekdays:[0,1,2,3,4,5,6],time:'08:00',timezone:config.timezone,durationMinutes:30,notes:{type:'doc'}},{id:'routine-evening',title:'Evening wind-down',weekdays:[0,1,2,3,4,5,6],time:'18:00',timezone:config.timezone,durationMinutes:20,notes:{type:'doc'}}],
- occurrences:[],outcomes:[{id:'seed-outcome',taskId:tasks[0].id,period:seedPeriod,position:0}], 'period-notes':[],
+ routines:[{id:'routine-morning',title:'Morning care',recurrenceIntent:interpretRecurrence('every day',today),timezone:config.timezone,durationIntent:'About 30 minutes',notes:{type:'doc'}},{id:'routine-evening',title:'Evening wind-down',recurrenceIntent:interpretRecurrence('every day',today),timezone:config.timezone,durationIntent:'About 20 minutes',notes:{type:'doc'}}],
+ occurrences:[{id:'seed-morning',routineId:'routine-morning',date:today,title:'Morning care',completed:false,schedule:{date:today,time:'08:00',timezone:config.timezone},durationMinutes:30},{id:'seed-evening',routineId:'routine-evening',date:today,title:'Evening wind-down',completed:false,schedule:{date:today,time:'18:00',timezone:config.timezone},durationMinutes:20}],outcomes:[{id:'seed-outcome',taskId:tasks[0].id,period:seedPeriod,position:0}], 'period-notes':[],
 }
 tasks.push({id:'seed-completed',title:'Water the kitchen plants',completed:true,priority:'none',schedule:{date:today,time:'09:00',timezone:config.timezone},notes:{type:'doc'}})
 tasks.push({id:'seed-archived',title:'Put away the summer blanket',completed:false,priority:'none',archived:true,notes:{type:'doc'}})
@@ -65,10 +66,8 @@ function plannerError(kind:keyof typeof planner,value:any):string|null {
  try {
   if(kind==='routines') {
    if(typeof value.title!=='string'||!value.title.trim())return 'Give this routine a name.'
-   if(!Array.isArray(value.weekdays)||!value.weekdays.length||value.weekdays.some((d:unknown)=>!Number.isInteger(d)||Number(d)<0||Number(d)>6))return 'Choose at least one valid weekday.'
+   value.recurrenceIntent=interpretRecurrence(value.recurrenceIntent?.text,value.recurrenceIntent?.anchorDate)
    if(!validTimezone(value.timezone))return 'Choose a valid IANA timezone.'
-   if(value.time!==undefined&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(value.time))return 'Choose a valid time.'
-   if(value.durationMinutes!==undefined&&(!Number.isInteger(value.durationMinutes)||value.durationMinutes<1||value.durationMinutes>1440))return 'Duration must be 1–1440 minutes.'
   }
   if(kind==='occurrences') {
    assertDate(value.date)

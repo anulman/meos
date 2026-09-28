@@ -1,8 +1,8 @@
 // Node 24 runs this dependency-free TypeScript module directly.
 import assert from 'node:assert/strict';
 import { addDays, addMonths, assertDate, dateInZone, dayPeriod, weekPeriod,
-  zonedInstant, scheduleDisplayDate, millisecondsUntilNextDay, routineDatesInPeriod,
-  routineOccursOn, periodContains } from '../src/lib/dates.ts';
+  zonedInstant, scheduleDisplayDate, millisecondsUntilNextDay,
+  periodContains } from '../src/lib/dates.ts';
 
 for (const invalid of ['2025-02-29', '2024-04-31', '2024-00-01', '2024-13-01', '0000-01-01', '2024-1-01']) {
   assert.throws(() => assertDate(invalid), RangeError);
@@ -42,12 +42,5 @@ assert.equal(millisecondsUntilNextDay(Date.parse('2024-01-01T04:59:59.900Z'), 'A
 assert.equal(millisecondsUntilNextDay(Date.parse('2018-11-04T02:59:59Z'), 'America/Sao_Paulo'), 1000);
 assert.equal(scheduleDisplayDate({ date: '2024-01-01', timezone: 'Asia/Tokyo' }, 'America/Los_Angeles'), '2024-01-01');
 assert.equal(scheduleDisplayDate({ date: '2024-01-01', time: '00:30', timezone: 'Asia/Tokyo' }, 'America/Los_Angeles'), '2023-12-31');
-const routine = { weekdays: [1], time: '00:30', timezone: 'Asia/Tokyo' };
-assert.deepEqual(routineDatesInPeriod(routine, dayPeriod('2023-12-31'), 'America/Los_Angeles'), ['2024-01-01']);
-assert.deepEqual(routineDatesInPeriod(routine, dayPeriod('2024-01-01'), 'America/Los_Angeles'), []);
-assert.deepEqual(routineDatesInPeriod({ weekdays: [1], timezone: 'Asia/Tokyo' }, dayPeriod('2024-01-01'), 'America/Los_Angeles'), ['2024-01-01']);
-assert.deepEqual(routineDatesInPeriod({ weekdays: [0], time: '01:30', timezone: 'America/New_York' }, dayPeriod('2024-11-03'), 'America/New_York'), ['2024-11-03']);
-// The extreme +14/-11 offset pair can project two calendar dates backwards.
-assert.deepEqual(routineDatesInPeriod({ weekdays: [1], time: '00:30', timezone: 'Pacific/Kiritimati' }, dayPeriod('2023-12-30'), 'Pacific/Pago_Pago'), ['2024-01-01']);
-assert.throws(() => routineOccursOn({ weekdays: [7], timezone: 'UTC' }, '2024-01-01'), RangeError);
-console.log('Date helper checks passed: calendar bounds, DST gaps/folds, display projection, recurrence identity, midnight refresh.');
+
+console.log('Date helper checks passed: calendar bounds, DST gaps/folds, display projection, midnight refresh.');

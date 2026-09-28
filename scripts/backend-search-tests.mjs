@@ -88,7 +88,7 @@ test('period notes and routine snapshots stay searchable; malformed vectors cann
  const f=fixture();try{
  const note={id:randomUUID(),kind:'week',period:{start:'2026-09-21',end:'2026-09-27'},notes:{type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'Reflection: protect focus time'}]}]}}
  f.commands.saveNatural(f.owner,'periodNotes',note,0)
- const routine={id:randomUUID(),title:'Focused practice',notes:{type:'doc'},weekdays:[0,1,2,3,4,5,6],timezone:'UTC'}
+ const routine={id:randomUUID(),title:'Focused practice',notes:{type:'doc'},recurrenceIntent:{text:'every day',anchorDate:'2020-01-01'},timezone:'UTC'}
  f.commands.create(f.owner,'routines',routine)
  f.commands.saveNatural(f.owner,'occurrences',{id:randomUUID(),routineId:routine.id,date:'2026-09-26',completed:false},0)
  assert.equal(f.call('search',{query:'Reflection',kinds:['periodNotes']}).items.length,1)

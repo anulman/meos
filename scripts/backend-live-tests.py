@@ -41,7 +41,7 @@ s,j=command('POST','/commands/archive-project/'+p['id'],None,1);check('archive a
 s,j=command('GET','/resources/tasks/'+t['id']);check('archive detaches task',s==200 and 'projectId' not in j['value'] and j['value']['completed'])
 s,j=command('GET','/resources/tasks?limit=1');check('live pagination',s==200 and len(j['items'])==1)
 s,j=command('GET','/preferences');check('default preferences live',s==200 and 'value' in j)
-routine={'id':str(uuid.uuid4()),'title':'Synthetic morning routine','weekdays':[1,3,5],'time':'08:30','timezone':'America/Montreal','notes':{'type':'doc'}}
+routine={'id':str(uuid.uuid4()),'title':'Synthetic morning routine','recurrenceIntent':{'text':'every monday, wednesday, friday','anchorDate':'2020-01-01'},'preferredTime':{'text':'at 08:30'},'timezone':'America/Montreal','notes':{'type':'doc'}}
 s,j=command('POST','/resources/routines',routine);check('routine create live',s==201)
 occurrence={'id':str(uuid.uuid4()),'routineId':routine['id'],'date':'2026-09-28','completed':True}
 s,j=command('POST','/commands/occurrence',occurrence,0);check('occurrence natural create',s==200 and j['revision']==1)

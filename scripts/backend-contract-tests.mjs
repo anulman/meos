@@ -12,7 +12,7 @@ import {scheduledInstant,localDay,interpretPreferredTime,interpretRecurrence} fr
 import {schemas,validateSchema,operations,inlineSchema} from '../backend/contract.mjs'
 const blob=id=>Buffer.from(id.replaceAll('-',''),'hex'),notes={type:'doc'},id=()=>randomUUID()
 const task=(extra={})=>({id:id(),title:'Synthetic',notes,completed:false,priority:'none',...extra})
-const routine=(extra={})=>({id:id(),title:'Routine',notes,weekdays:[0,1,2,3,4,5,6],timezone:'America/Toronto',time:'09:00',...extra})
+const routine=(extra={})=>({id:id(),title:'Routine',notes,recurrenceIntent:{text:'every day',anchorDate:'2020-01-01'},timezone:'America/Toronto',...extra})
 function fixture({now=Date.parse('2026-09-26T15:00:00Z'),upgrade=false}={}){
  const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON; CREATE TABLE _user(id BLOB PRIMARY KEY) STRICT;')
  const owner=id(),other=id(),agent=id();for(const v of [owner,other,agent])db.prepare('INSERT INTO _user VALUES(?)').run(blob(v))
@@ -50,7 +50,7 @@ test('occurrence edits survive template changes and repeated materialization wit
   const rows=materialize(f,r).items,a=rows[0],b=rows[1]
   const moved=f.invoke('move_occurrence',{id:a.value.id,expectedRevision:1,idempotencyKey:key(),schedule:schedule('2026-09-29','11:30'),title:'Independent',skipped:true})
   assert.equal(moved.value.date,'2026-09-26');assert.equal(moved.value.id,a.value.id)
-  f.invoke('update_routine',{value:{...r,title:'New template',time:'15:00'},expectedRevision:1,idempotencyKey:key()})
+  f.invoke('update_routine',{value:{...r,title:'New template',preferredTime:{text:'at 15:00'}},expectedRevision:1,idempotencyKey:key()})
   materialize(f,{...r,title:'New template'})
   assert.deepEqual(f.commands.get(f.owner,'occurrences',a.value.id),moved)
   assert.deepEqual(f.commands.get(f.owner,'occurrences',b.value.id),b)
@@ -178,7 +178,7 @@ test('two actual SQLite writers serialize and exactly one revision wins',async()
  }finally{rmSync(dir,{recursive:true,force:true})}
 })
 test('Calendar sync scope reads owner outbox/current tombstones and applies only revision-checked Calendar fields',()=>{const f=fixture();try{const a=task({schedule:schedule(),durationMinutes:120,location:'Office',durationIntent:'A long working block',actualDurationMinutes:95,notes:{type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'rich',marks:[{type:'strong'}]}]}]}});f.commands.create(f.owner,'tasks',a);f.commands.create(f.other,'tasks',task());const page=f.invoke('calendar_changes',{cursor:0});assert.equal(page.items.length,1);assert.equal(page.items[0].id,a.id);assert.equal(f.invoke('calendar_current',{kind:'tasks',id:a.id}).revision,1);const result=f.invoke('calendar_apply',{kind:'tasks',id:a.id,expectedRevision:1,schedule:schedule('2026-09-27'),title:'Google title',location:'New office',idempotencyKey:key()});assert.equal(result.value.durationIntent,a.durationIntent);assert.equal(result.value.actualDurationMinutes,95);assert.deepEqual(result.value.notes,a.notes);assert.equal(result.value.completed,false);assert.throws(()=>f.invoke('calendar_apply',{kind:'tasks',id:a.id,expectedRevision:1,schedule:null,idempotencyKey:key()}),e=>e.code==='conflict');assert.throws(()=>f.invoke('calendar_apply',{kind:'tasks',id:a.id,expectedRevision:2,schedule:null,completed:true,idempotencyKey:key()}),e=>e.code==='validation');f.invoke('delete_task',{id:a.id,expectedRevision:2,idempotencyKey:key()});assert.deepEqual(f.invoke('calendar_current',{kind:'tasks',id:a.id}),{record:null,deleted:true,revision:3});assert.throws(()=>f.commands.invoke(f.other,'calendar_current',{kind:'tasks',id:a.id}),e=>e.code==='not_found')}finally{f.close()}});
-test('Calendar materialization snapshots location and duration intent without changing siblings',()=>{const f=fixture();try{const r=routine({durationMinutes:120,location:'Studio',durationIntent:'At least two hours'});f.commands.create(f.owner,'routines',r);const rows=materialize(f,r).items;assert.equal(rows[0].value.location,'Studio');assert.equal(rows[0].value.durationIntent,r.durationIntent);f.invoke('calendar_apply',{kind:'occurrences',id:rows[0].value.id,expectedRevision:1,schedule:schedule('2026-09-27','15:00'),location:'Remote',durationMinutes:135,idempotencyKey:key()});assert.equal(f.commands.get(f.owner,'occurrences',rows[1].value.id).value.location,'Studio');assert.equal(f.commands.get(f.owner,'routines',r.id).value.location,'Studio')}finally{f.close()}});
+test('Calendar materialization snapshots location and duration intent without changing siblings',()=>{const f=fixture();try{const r=routine({location:'Studio',durationIntent:'At least two hours'});f.commands.create(f.owner,'routines',r);const rows=materialize(f,r).items;assert.equal(rows[0].value.location,'Studio');assert.equal(rows[0].value.durationIntent,r.durationIntent);assert.equal(rows[0].value.durationMinutes,undefined);assert.equal(rows[0].value.schedule,undefined);f.invoke('calendar_apply',{kind:'occurrences',id:rows[0].value.id,expectedRevision:1,schedule:schedule('2026-09-27','15:00'),location:'Remote',durationMinutes:135,idempotencyKey:key()});assert.equal(f.commands.get(f.owner,'occurrences',rows[1].value.id).value.location,'Studio');assert.equal(f.commands.get(f.owner,'routines',r.id).value.location,'Studio')}finally{f.close()}});
 test('dedicated Calendar sync grant cannot create arbitrary tasks or access browser APIs',async()=>{const f=fixture();try{f.db.prepare('INSERT INTO _meos_agent_grants VALUES(?,?,?,?,0)').run(blob(f.agent),blob(f.owner),JSON.stringify(['sync:read','sync:write']),Date.parse('2027-01-01'));const origin='https://acceptance.invalid',headers=new Headers({Authorization:'Bearer synthetic','Content-Type':'application/json',Accept:'application/json, text/event-stream'});const handle=createMcpHandler({commands:f.commands,origin,readText:r=>r.text});const call=msg=>handle({method:'POST',url:origin+'/api/meos/v1/mcp',headers,text:JSON.stringify({jsonrpc:'2.0',id:1,...msg})},{id:f.agent});const names=(await call({method:'tools/list'}).json()).result.tools.map(t=>t.name);assert(names.includes('calendar_apply'));assert(!names.includes('create_task'));assert.equal((await call({method:'tools/call',params:{name:'create_task',arguments:{value:task(),idempotencyKey:key()}}}).json()).result.isError,true);assert.equal((await createHttpHandler({commands:f.commands,origin})(new Request(origin+'/api/meos/v1/resources/tasks'),{id:f.agent})).status,403)}finally{f.close()}});
 
 test('delegated owner MCP has freshness/receipts without service grants and cannot impersonate another owner',async()=>{
@@ -263,11 +263,11 @@ test('MCP routine creation reuses domain validation, owner scope and retry recei
   assert.deepEqual(tools.map(t=>t.name),['create_routine','update_routine'])
   assert.equal(tools[0].annotations.readOnlyHint,false);assert.equal(tools[0].annotations.idempotentHint,true)
   assert.equal(tools[0].inputSchema.properties.value.type,'object')
-  const value=routine({title:'  Walk  ',weekdays:[5,1],preferredTime:{text:'before lunch'}});delete value.time
+  const value=routine({title:'  Walk  ',recurrenceIntent:{text:'every friday, monday',anchorDate:'2020-01-01'},preferredTime:{text:'before lunch'}});delete value.time
   const input={value,idempotencyKey:key()},result=await invoke(input)
   assert.equal(result.isError,undefined)
   const saved=result.structuredContent;validateSchema(schemas.RoutineEnvelope,saved)
-  assert.equal(saved.revision,1);assert.equal(saved.value.title,'Walk');assert.deepEqual(saved.value.weekdays,[1,5])
+  assert.equal(saved.revision,1);assert.equal(saved.value.title,'Walk');assert.deepEqual(saved.value.recurrenceIntent.weekdays,[1,5])
   assert.equal(saved.value.time,undefined);assert.equal(saved.value.preferredTime.status,'context_required')
   assert.deepEqual(f.commands.get(f.owner,'routines',value.id),saved)
   assert.equal(f.commands.list(f.agent,'routines').items.length,0);assert.equal(f.commands.list(f.other,'routines').items.length,0)
@@ -278,7 +278,7 @@ test('MCP routine creation reuses domain validation, owner scope and retry recei
   assert.equal(f.db.prepare('SELECT count(*) n FROM sync_outbox').get().n,1)
   const error=async(args,code)=>{const r=await invoke(args);assert.equal(r.isError,true);assert.equal(JSON.parse(r.content[0].text).error.code,code)}
   await error({...input,value:{...value,title:'Changed'}},'conflict')
-  for(const invalid of [{weekdays:[]},{weekdays:[1,1]},{timezone:'Not/A_Zone'},{time:'25:00'},{title:' '},{ownerId:f.other},{notes:{type:'doc',content:[{type:'image'}]}}]){
+  for(const invalid of [{recurrenceIntent:{text:'',anchorDate:'2020-01-01'}},{recurrenceIntent:{text:'every day',anchorDate:'bad'}},{weekdays:[1]},{durationMinutes:30},{actualDurationMinutes:30},{timezone:'Not/A_Zone'},{time:'25:00'},{title:' '},{ownerId:f.other},{notes:{type:'doc',content:[{type:'image'}]}}]){
    await error({value:routine(invalid),idempotencyKey:key()},'validation')
   }
   await error({value:routine(),idempotencyKey:key(),ownerId:f.other},'validation')

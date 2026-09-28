@@ -2,8 +2,8 @@ import {getConfig} from './config'
 import {scheduledInstant} from '../../backend/scheduling.mjs'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { addDays, dateInZone, dayPeriod, millisecondsUntilNextDay, periodContains,
-  routineDatesInPeriod, scheduleDisplayDate, weekPeriod, zonedInstant,
-  type DatePeriod, type RoutineSchedule, type ZonedSchedule } from './dates';
+  weekPeriod, zonedInstant,
+  type DatePeriod, type ZonedSchedule } from './dates';
 import type { PlannerPreferences } from './planner-contracts';
 
 export interface PlannerClock {
@@ -100,24 +100,4 @@ export function projectScheduledTasks<T extends ScheduledTaskLike>(tasks: readon
     if (!periodContains(period, displayDate)) return [];
     return [{ task, displayDate, instant }];
   });
-}
-export interface RoutineLike extends RoutineSchedule { id: string; archived?: boolean }
-export interface OccurrenceLike { routineId: string; date: string; completed: boolean }
-export interface ProjectedRoutine<T> {
-  routine: T;
-  /** Completion identity is this routine-local date, not displayDate. */
-  date: string;
-  displayDate: string;
-  completed: boolean;
-  instant?: number;
-}
-export function projectRoutineOccurrences<T extends RoutineLike>(routines: readonly T[], occurrences: readonly OccurrenceLike[],
-  period: DatePeriod, displayTimezone: string): ProjectedRoutine<T>[] {
-  const completions = new Map(occurrences.map(item => [JSON.stringify([item.routineId, item.date]), item.completed]));
-  return routines.flatMap(routine => routine.archived ? [] : routineDatesInPeriod(routine, period, displayTimezone).map(date => ({
-    routine, date,
-    displayDate: scheduleDisplayDate({ date, time: routine.time, timezone: routine.timezone }, displayTimezone),
-    completed: completions.get(JSON.stringify([routine.id, date])) ?? false,
-    instant: routine.time === undefined ? undefined : zonedInstant(date, routine.time, routine.timezone),
-  })));
 }

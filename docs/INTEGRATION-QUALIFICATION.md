@@ -66,11 +66,10 @@ acceptance-only. No acceptance database or credentials will be promoted.
   edit already archived project browser regression.
 - Existing occurrence duration silently could not clear: explicitly require
   replacement duration and explain limitation; browser validation assertion.
-- Weekday edits retained overriding natural-language recurrence: clear intent
-  when explicitly editing weekdays; browser rule replacement assertion.
-- Initial occurrence load could finish an old routine snapshot after a new routine
-  save: explicitly cancel before invalidation; deterministic held-response browser
-  regression proves new instances appear before release and survive late completion.
+- Routine templates formerly exposed duplicate weekday/time/duration controls:
+  intent-only editor and explicit occurrence scheduling replace those paths.
+- Template saves no longer materialize instances. Explicit planning creates
+  unscheduled snapshots; browsing and editing templates do not assign a schedule.
 - Legacy demo serviceworker could survive mode cutover: unregister before session
   data loads; real worker registration/reload regression.
 - Test host static/route adapter: focused denial tests plus browser using actual
