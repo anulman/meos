@@ -84,9 +84,13 @@ class Bridge:
                 if intent.exists(): raise ValueError('refresh outcome requires reconciliation')
                 save(intent, {'state':'refreshing'})
                 code, tokens = self.request('/api/auth/v1/refresh', {'refresh_token':credentials['refreshToken']})
-                if code != 200 or not all(isinstance(tokens.get(k), str) and tokens[k] for k in ('auth_token','refresh_token')):
+                if code != 200 or not isinstance(tokens, dict) or not isinstance(tokens.get('auth_token'), str) or not tokens['auth_token']:
                     raise ValueError('refresh rejected')
-                save(p, {'authToken':tokens['auth_token'],'refreshToken':tokens['refresh_token']})
+                # Pinned native refresh keeps its session token and returns only an auth token.
+                # Accept an explicitly rotated token too, but never silently accept a malformed one.
+                refreshed = tokens.get('refresh_token', credentials['refreshToken'])
+                if not isinstance(refreshed, str) or not refreshed: raise ValueError('invalid refresh token')
+                save(p, {'authToken':tokens['auth_token'],'refreshToken':refreshed})
                 intent.unlink()
                 d = os.open(p.parent, os.O_DIRECTORY); os.fsync(d); os.close(d)
                 status, result = self.request('/api/meos/v1/mcp', message, tokens['auth_token'])
