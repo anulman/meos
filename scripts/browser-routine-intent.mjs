@@ -20,6 +20,7 @@ const tasks = [
  envelope({id:id(13),title:'Project ride',type:'commute',projectId:id(20),notes:{type:'doc'},completed:false,priority:'none',durationMinutes:30,schedule:{date:day,time:'13:00',timezone}})
 ];
 const projects=[envelope({id:id(20),title:'Band project',notes:{type:'doc'}})];
+const outcomes=[10,11,12].map((task,index)=>envelope({id:id(30+index),taskId:id(task),period:{start:day,end:'2026-10-04'},position:index}));
 const requests = [], serverErrors = [], pageErrors = [], blockedRequests = [];
 const revisions = () => ({ tasks: tasks.reduce((n,r)=>n+r.revision,0), projects: 1, routines: routines.reduce((sum, row) => sum + row.revision, 0), occurrences: occurrence.revision, outcomes: 0, periodNotes: 0, preferences: 1 });
 const server = http.createServer(async (req, res) => {
@@ -60,7 +61,7 @@ const server = http.createServer(async (req, res) => {
       else if (call.path.includes('/resources/')) {
         const kind = call.path.split('/').at(-1);
         assert.ok(['routines', 'occurrences', 'tasks', 'projects', 'outcomes', 'periodNotes'].includes(kind));
-        response = { items: kind === 'routines' ? routines : kind === 'occurrences' ? [occurrence] : kind === 'tasks' ? tasks : kind === 'projects' ? projects : [] };
+        response = { items: kind === 'routines' ? routines : kind === 'occurrences' ? [occurrence] : kind === 'tasks' ? tasks : kind === 'projects' ? projects : kind === 'outcomes' ? outcomes : [] };
       } else if (call.path.endsWith('/calendar/status')) response = {state:'disconnected',syncActive:false,scopes:[],lastSyncAt:null};
       else if (call.path.endsWith('/calendar-window')) response = { id: 'calendar', available: true, state: 'connected', syncActive: true, lastSyncAt: Date.now(), plannerLastSyncAt: Date.now(), windowStart: null, windowEnd: null, drafts: [], planner: { plannerLastSyncAt: Date.now(), conflicts: [] }, sequence: 1, status: 'fresh', unchanged: false, items: [] };
       else throw Error(`Unexpected read: ${call.path}`);
@@ -94,6 +95,11 @@ try {
     };
   });
   await page.goto(origin + '/week');
+  const priorities=page.locator('.week-section').filter({has:page.getByRole('heading',{name:'Priorities',exact:true})});
+  for(const title of ['Ordinary task','Travel research','Ride to rehearsal'])await priorities.getByRole('button',{name:title,exact:true}).waitFor();
+  assert.equal(await priorities.locator('.outcome-row').count(),3);
+  assert.equal(await priorities.getByRole('button',{name:/Remove .* from week|Remove from week/}).count(),0);
+  assert.equal(requests.filter(call=>call.method!=='GET').length,0,'rendering three priorities must not mutate outcomes');
   await page.getByRole('button', { name: 'New routine', exact: true }).click();
   let dialog = page.getByRole('dialog', { name: 'Routine details' });
   await dialog.getByLabel('Routine name', { exact: true }).fill('Flexible exercise');
@@ -118,6 +124,7 @@ try {
   assert.deepEqual(requests.filter(call => call.method !== 'GET').map(call => call.path), ['/api/meos/v1/resources/routines', '/api/meos/v1/operations/update_routine'], 'template saves must not plan occurrences or write Calendar');
   assert.equal(occurrence.revision, 1, 'template saves preserve existing occurrence');
   await page.reload(); await page.getByRole('button', { name: /^Flexible exercise/ }).waitFor();
+  await page.getByRole('link',{name:'Settings',exact:true}).click();
   await page.getByText('Unscheduled routine instances', { exact: true }).click();
   await page.getByRole('button', { name: `Existing instance · ${day}`, exact: true }).click();
   const instance = page.getByRole('dialog', { name: 'Routine instance' });
@@ -155,10 +162,51 @@ try {
   await page.getByText('Ride to rehearsal',{exact:true}).click();
   await page.getByLabel('Task type',{exact:true}).selectOption('');
   await page.getByRole('button',{name:'Save changes',exact:true}).click();
+  await page.getByRole('dialog',{name:'Edit task',exact:true}).waitFor({state:'hidden'});
   assert.equal(tasks[2].value.type,undefined);assert.equal(tasks[2].value.schedule.time,'12:00');
   await page.goto(origin+'/settings');await noProject.getByText('Ride to rehearsal',{exact:true}).waitFor();
+  const writesBeforeTailChecks=requests.filter(call=>call.method!=='GET').length;
+  const tailLabels=['Archived resources','Archived routines','Unscheduled routine instances'];
+  const scheduled=occurrence.value.schedule;
+  for(let mask=0;mask<8;mask++){
+    projects[0].value.archived=!!(mask&1)&&mask!==1;
+    tasks[0].value.archived=mask===1;
+    routines[0].value.archived=!!(mask&2);
+    occurrence.value.schedule=mask&4?undefined:scheduled;
+    await page.reload();await page.getByRole('button',{name:'Save preferences',exact:true}).waitFor();
+    await page.getByRole('button',{name:/^Flexible exercise/}).waitFor();
+    const expected=tailLabels.filter((_,index)=>mask&(1<<index));
+    // Wait for all independent collection reads before asserting absent sections.
+    await page.waitForLoadState('networkidle');
+    assert.deepEqual(await page.locator('.settings-view > details > summary').allTextContents(),expected);
+    const order=await page.locator('.settings-view > section, .settings-view > details').evaluateAll(nodes=>nodes.map(node=>node.querySelector('h2,summary')?.textContent));
+    assert.deepEqual(order.slice(-expected.length||order.length),expected);
+    assert.ok(order.indexOf('Preferences')<order.indexOf('Interface'));
+    assert.equal(await page.getByText('Plan routine instances',{exact:true}).count(),0);
+    assert.equal(await page.getByRole('button',{name:/Choose routines to plan|Plan selected routines|Retry same planning request/}).count(),0);
+    if(mask===7){
+      await page.getByRole('link',{name:'Week',exact:true}).click();
+      await page.getByRole('button',{name:/^Flexible exercise/}).waitFor();
+      for(const label of ['Archived routines','Unscheduled routine instances','Plan routine instances'])assert.equal(await page.getByText(label,{exact:true}).count(),0,'Week omits secondary routine sections even when populated');
+      assert.equal(await priorities.locator('.outcome-row').count(),3);
+      assert.equal(await priorities.getByRole('button',{name:/Remove .* from week|Remove from week/}).count(),0);
+      await page.getByRole('link',{name:'Settings',exact:true}).click();
+      await page.getByText('Archived resources',{exact:true}).click();
+      await page.getByRole('button',{name:'Band project',exact:true}).click();
+      await page.getByRole('button',{name:'Restore project',exact:true}).waitFor();await page.keyboard.press('Escape');
+      await page.getByText('Archived routines',{exact:true}).click();
+      await page.getByRole('button',{name:'Existing routine',exact:true}).click();
+      await page.getByRole('button',{name:'Restore routine',exact:true}).waitFor();await page.keyboard.press('Escape');
+      await page.getByText('Unscheduled routine instances',{exact:true}).click();
+      await page.getByRole('button',{name:`Preserved instance draft · ${day}`,exact:true}).click();
+      await page.getByRole('dialog',{name:'Routine instance',exact:true}).waitFor();await page.keyboard.press('Escape');
+    }
+  }
+  occurrence.value.skipped=true;await page.reload();await page.getByRole('button',{name:/^Flexible exercise/}).waitFor();await page.waitForLoadState('networkidle');
+  assert.equal(await page.getByText('Unscheduled routine instances',{exact:true}).count(),0,'skipped instances do not populate the unscheduled list');
+  assert.equal(requests.filter(call=>call.method!=='GET').length,writesBeforeTailChecks,'Settings reads and opening tail editors do not plan or mutate');
   assert.deepEqual(serverErrors, []); assert.deepEqual(pageErrors, []); assert.deepEqual(blockedRequests, []);
-  console.log('PASS routine intent create/edit, stable anchor, absent exact template controls, no automatic occurrences, exact occurrence scheduling');
+  console.log('PASS eight independent Settings tail visibility combinations, archive editors, no planning UI or read writes; routine intent create/edit, stable anchor, absent exact template controls, no automatic occurrences, exact occurrence scheduling');
 } catch (error) {
   console.error(JSON.stringify({ serverErrors, pageErrors, blockedRequests, mutations: requests.filter(call => call.method !== 'GET'), text: await page?.locator('body').innerText().catch(() => '') }));
   throw error;
