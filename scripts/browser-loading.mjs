@@ -43,7 +43,8 @@ try{
   await page.getByRole('link',{name:'Today',exact:true}).hover();await delay(100);
   const warm=await page.evaluate(async()=>{const start=performance.now();document.querySelector('a[href="/"]').click();await new Promise(resolve=>{const check=()=>{if(document.querySelector('h1')?.textContent==='Today'&&document.body.innerText.includes('Fixture task'))resolve();else requestAnimationFrame(check)};check()});return performance.now()-start});assert.ok(warm<100,`warm render ${warm}`);assert.equal(requests.filter(r=>r.method!=='GET').length,0);results.push({n,mode:'warm',ms:warm});
   await page.goBack();await page.getByRole('heading',{name:'This week',exact:true}).waitFor();assert.equal(requests.filter(r=>r.method!=='GET').length,0);
-  if(n===3){await page.getByRole('button',{name:'Choose routines to plan',exact:true}).click();await page.getByRole('button',{name:'Plan selected routines',exact:true}).click();await page.getByText('Planned 3 routines:',{exact:false}).waitFor();assert.equal(requests.filter(r=>r.method==='POST').length,1);const call=requests.find(r=>r.method==='POST');assert.ok(call.path.endsWith('/plan_routines'));assert.equal(call.body.routines.length,3)}
+  assert.equal(await page.getByText('Plan routine instances',{exact:true}).count(),0);
+  assert.equal(await page.getByRole('button',{name:/Choose routines to plan|Plan selected routines/}).count(),0);
   assert.deepEqual(errors,[]);await context.close();
  }
  const context=await browser.newContext(),page=await context.newPage();await page.addInitScript(()=>{const D=Date,start=D.now();window.Date=class extends D{constructor(...a){super(...(a.length?a:[1790524800000+D.now()-start]))}static now(){return 1790524800000+D.now()-start}}});

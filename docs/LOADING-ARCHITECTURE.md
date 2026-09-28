@@ -18,22 +18,24 @@ publication timestamps are health metadata, not planner content revisions.
 
 ## Using routine planning
 
-Open the routine section in Week or Settings, choose **Choose routines to plan**,
-and select up to 100 active fixed routines. **Plan selected routines** creates
-missing instances from today through 14 days ahead in each routine's timezone.
-Existing slots retain identity, completion, edits, skips and snapshot fields.
-Flexible and unresolved recurrence requires deliberate scheduling instead.
+Plan routine instances with an agent through the backend or MCP `plan_routines`
+operation. Settings and Week do not expose manual planning controls. The operation
+creates missing instances from today through 14 days ahead in each routine's
+timezone. Existing slots retain identity, completion, edits, skips and snapshot
+fields. Flexible and unresolved recurrence requires deliberate scheduling instead.
 
 Planning is explicit. Loading, preloading, navigating, refetching, saving a
 routine template, Calendar synchronization and date rollover do not create
 instances. Calendar continues to reconcile already-existing scheduled records.
 
-If the response is uncertain, **Retry same planning request** reuses its exact
-request and idempotency key across in-app navigation. This pending request is
-memory-only: finish its retry before reloading, closing the tab or ending the
-session. Do not discard that request and invent a replacement
-while its outcome is unknown. A template conflict rejects the entire transaction;
-review the refreshed routine before making a new planning decision.
+The agent must retain the exact request and idempotency key until the outcome is
+known. After an uncertain response, replay that request rather than creating a
+replacement. A template conflict rejects the entire transaction; read the updated
+routine before making a new planning decision.
+
+Settings places archived resources, archived routines and unscheduled routine
+instances after Preferences and Interface. Each list is hidden when empty.
+Existing instances remain editable, including their link back to the routine.
 
 ## Reference
 
@@ -65,5 +67,7 @@ The isolated backend suite exercises batch rollback, replay, preservation, owner
 separation, revision changes and pure bootstrap reads. `scripts/browser-loading.mjs`
 loads the built SPA with synthetic loopback APIs, an advancing clock and 100 ms
 response latency. It checks 0/3/6 routines, HTTP-cached reload, warm intent/navigation,
-independent delayed occurrences, revision deduplication, explicit planning and
-session isolation. These are fixture measurements, not production latency claims.
+independent delayed occurrences, revision deduplication, absence of planning
+controls and session isolation. These are fixture measurements, not production latency claims.
+`scripts/browser-routine-intent.mjs` checks all eight Settings tail-list visibility
+combinations, archived editors, instance editing and the routine backlink.

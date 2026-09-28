@@ -155,10 +155,45 @@ try {
   await page.getByText('Ride to rehearsal',{exact:true}).click();
   await page.getByLabel('Task type',{exact:true}).selectOption('');
   await page.getByRole('button',{name:'Save changes',exact:true}).click();
+  await page.getByRole('dialog',{name:'Edit task',exact:true}).waitFor({state:'hidden'});
   assert.equal(tasks[2].value.type,undefined);assert.equal(tasks[2].value.schedule.time,'12:00');
   await page.goto(origin+'/settings');await noProject.getByText('Ride to rehearsal',{exact:true}).waitFor();
+  const writesBeforeTailChecks=requests.filter(call=>call.method!=='GET').length;
+  const tailLabels=['Archived resources','Archived routines','Unscheduled routine instances'];
+  const scheduled=occurrence.value.schedule;
+  for(let mask=0;mask<8;mask++){
+    projects[0].value.archived=!!(mask&1)&&mask!==1;
+    tasks[0].value.archived=mask===1;
+    routines[0].value.archived=!!(mask&2);
+    occurrence.value.schedule=mask&4?undefined:scheduled;
+    await page.reload();await page.getByRole('button',{name:'Save preferences',exact:true}).waitFor();
+    await page.getByRole('button',{name:/^Flexible exercise/}).waitFor();
+    const expected=tailLabels.filter((_,index)=>mask&(1<<index));
+    // Wait for all independent collection reads before asserting absent sections.
+    await page.waitForLoadState('networkidle');
+    assert.deepEqual(await page.locator('.settings-view > details > summary').allTextContents(),expected);
+    const order=await page.locator('.settings-view > section, .settings-view > details').evaluateAll(nodes=>nodes.map(node=>node.querySelector('h2,summary')?.textContent));
+    assert.deepEqual(order.slice(-expected.length||order.length),expected);
+    assert.ok(order.indexOf('Preferences')<order.indexOf('Interface'));
+    assert.equal(await page.getByText('Plan routine instances',{exact:true}).count(),0);
+    assert.equal(await page.getByRole('button',{name:/Choose routines to plan|Plan selected routines|Retry same planning request/}).count(),0);
+    if(mask===7){
+      await page.getByText('Archived resources',{exact:true}).click();
+      await page.getByRole('button',{name:'Band project',exact:true}).click();
+      await page.getByRole('button',{name:'Restore project',exact:true}).waitFor();await page.keyboard.press('Escape');
+      await page.getByText('Archived routines',{exact:true}).click();
+      await page.getByRole('button',{name:'Existing routine',exact:true}).click();
+      await page.getByRole('button',{name:'Restore routine',exact:true}).waitFor();await page.keyboard.press('Escape');
+      await page.getByText('Unscheduled routine instances',{exact:true}).click();
+      await page.getByRole('button',{name:`Preserved instance draft · ${day}`,exact:true}).click();
+      await page.getByRole('dialog',{name:'Routine instance',exact:true}).waitFor();await page.keyboard.press('Escape');
+    }
+  }
+  occurrence.value.skipped=true;await page.reload();await page.getByRole('button',{name:/^Flexible exercise/}).waitFor();await page.waitForLoadState('networkidle');
+  assert.equal(await page.getByText('Unscheduled routine instances',{exact:true}).count(),0,'skipped instances do not populate the unscheduled list');
+  assert.equal(requests.filter(call=>call.method!=='GET').length,writesBeforeTailChecks,'Settings reads and opening tail editors do not plan or mutate');
   assert.deepEqual(serverErrors, []); assert.deepEqual(pageErrors, []); assert.deepEqual(blockedRequests, []);
-  console.log('PASS routine intent create/edit, stable anchor, absent exact template controls, no automatic occurrences, exact occurrence scheduling');
+  console.log('PASS eight independent Settings tail visibility combinations, archive editors, no planning UI or read writes; routine intent create/edit, stable anchor, absent exact template controls, no automatic occurrences, exact occurrence scheduling');
 } catch (error) {
   console.error(JSON.stringify({ serverErrors, pageErrors, blockedRequests, mutations: requests.filter(call => call.method !== 'GET'), text: await page?.locator('body').innerText().catch(() => '') }));
   throw error;

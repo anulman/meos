@@ -52,7 +52,14 @@ export function ResourceLists(){
  const open=useContext(ResourceContext)
  const {data:projects=[]}=useLiveQuery(q=>q.from({project:projectsCollection}))
  const {data:tasks=[]}=useLiveQuery(q=>q.from({task:tasksCollection}))
- return <><section className="settings-card"><div className="section-heading"><h2>Projects</h2><CreateResource kind="project">New project</CreateResource></div><ul className="resource-list">{projects.filter(p=>!p.archived).map(p=><li key={p.id}><Button className="resource-link" onClick={()=>open({kind:'project',resource:p})}>{p.completed?'✓':'○'} {p.title} <span aria-hidden="true">↗</span></Button></li>)}</ul></section><section className="settings-card"><div className="section-heading"><h2>No project</h2><CreateResource kind="task">New task</CreateResource></div><p className="muted">Standalone tasks, including those not yet scheduled. Routine instances and commutes stay in the agenda.</p><TaskRows tasks={tasks.filter(t=>!t.projectId&&!t.archived&&t.type!=='commute')} compact showSchedule/></section><details className="settings-card"><summary>Archived resources</summary><p className="muted">Open an item to restore it.</p><ul className="resource-list">{projects.filter(p=>p.archived).map(p=><li key={p.id}><Button className="resource-link" onClick={()=>open({kind:'project',resource:p})}>{p.title}</Button></li>)}</ul><TaskRows tasks={tasks.filter(t=>t.archived)} compact showSchedule/></details></>
+ return <><section className="settings-card"><div className="section-heading"><h2>Projects</h2><CreateResource kind="project">New project</CreateResource></div><ul className="resource-list">{projects.filter(p=>!p.archived).map(p=><li key={p.id}><Button className="resource-link" onClick={()=>open({kind:'project',resource:p})}>{p.completed?'✓':'○'} {p.title} <span aria-hidden="true">↗</span></Button></li>)}</ul></section><section className="settings-card"><div className="section-heading"><h2>No project</h2><CreateResource kind="task">New task</CreateResource></div><p className="muted">Standalone tasks, including those not yet scheduled. Routine instances and commutes stay in the agenda.</p><TaskRows tasks={tasks.filter(t=>!t.projectId&&!t.archived&&t.type!=='commute')} compact showSchedule/></section></>
+}
+export function ArchivedResources(){
+ const open=useContext(ResourceContext)
+ const {data:projects=[]}=useLiveQuery(q=>q.from({project:projectsCollection}))
+ const {data:tasks=[]}=useLiveQuery(q=>q.from({task:tasksCollection}))
+ if(!projects.some(p=>p.archived)&&!tasks.some(t=>t.archived))return null
+ return <details className="settings-card"><summary>Archived resources</summary><p className="muted">Open an item to restore it.</p><ul className="resource-list">{projects.filter(p=>p.archived).map(p=><li key={p.id}><Button className="resource-link" onClick={()=>open({kind:'project',resource:p})}>{p.title}</Button></li>)}</ul><TaskRows tasks={tasks.filter(t=>t.archived)} compact showSchedule/></details>
 }
 export function FloatingAdd({kind}:{kind:'task'|'outcome'}) {
  const open=useContext(ResourceContext);const planning=usePlanning();const clock=usePlannerClock()

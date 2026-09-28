@@ -1,4 +1,3 @@
-import {RoutinePlanning} from './RoutinePlanning'
 import {CalendarAgenda,type CalendarTimelineItem} from './CalendarAgenda'
 import {getConfig} from '../lib/config'
 import {lazy,Suspense} from 'react'
@@ -6,7 +5,7 @@ const OccurrenceEditor=lazy(()=>import('./OccurrenceEditor').then(m=>({default:m
 import type {Occurrence} from '../lib/contracts'
 import {createContext,useContext,useEffect,useRef,useState,type ReactNode} from 'react'
 import {useLiveQuery} from '@tanstack/react-db'
-import {tasksCollection,routinesCollection,occurrencesCollection,outcomesCollection,periodNotesCollection,queryClient,savePlanner,saveTask,removeOutcome} from '../lib/store'
+import {tasksCollection,routinesCollection,occurrencesCollection,outcomesCollection,periodNotesCollection,savePlanner,saveTask,removeOutcome} from '../lib/store'
 import {usePlannerClock,projectScheduledTasks} from '../lib/planner-clock'
 import {type DatePeriod} from '../lib/dates'
 import type {Routine,Task} from '../lib/contracts'
@@ -70,8 +69,20 @@ export function PlannerAgenda({period,compact=false}:{period:DatePeriod;compact?
 
 }
 export function RoutineManager() {
- const clock=usePlannerClock();const {data:routines=[],isLoading,isError}=useLiveQuery(q=>q.from({routine:routinesCollection}));const [selected,setSelected]=useState<Routine|null>(null);const {data:instances=[]}=useLiveQuery(q=>q.from({instance:occurrencesCollection}));const [instance,setInstance]=useState<Occurrence|null>(null)
- return <>{instance&&<Suspense fallback={<p role="status">Opening editor…</p>}><OccurrenceEditor initial={instance} onClose={()=>setInstance(null)}/></Suspense>}{!getConfig().demo&&<details><summary>Unscheduled routine instances</summary>{instances.filter(o=>!o.schedule&&!o.skipped).map(o=><button key={o.id} className="resource-link" onClick={()=>setInstance(o)}>{o.title} · {o.date}</button>)}</details>}<div className="section-heading"><h2>Routines</h2><button className="quiet-action" onClick={()=>setSelected({id:crypto.randomUUID(),title:'',recurrenceIntent:{text:'',anchorDate:clock.today},timezone:clock.preferences.timezone,notes:{type:'doc'}})}>New routine</button></div>{isLoading&&<p role="status">Gathering routines…</p>}{isError&&<p role="alert">Could not load routines.</p>}{!isLoading&&!isError&&!routines.some(r=>!r.archived)&&<p className="empty-state">Make room for a small daily rhythm.</p>}{routines.filter(r=>!r.archived).map(r=><button key={r.id} className="routine-card routine-edit" onClick={()=>setSelected(r)}><strong>{r.title}</strong><span>{r.recurrenceIntent.text} · {r.durationIntent??'Duration not specified'}</span></button>)}{!getConfig().demo&&<RoutinePlanning routines={routines}/>}<details><summary>Archived routines</summary>{routines.filter(r=>r.archived).map(r=><button key={r.id} className="resource-link" onClick={()=>setSelected(r)}>{r.title}</button>)}</details>{selected&&<RoutineEditor initial={selected} onClose={()=>setSelected(null)}/>}</>
+ const clock=usePlannerClock();const {data:routines=[],isLoading,isError}=useLiveQuery(q=>q.from({routine:routinesCollection}));const [selected,setSelected]=useState<Routine|null>(null)
+ return <><div className="section-heading"><h2>Routines</h2><button className="quiet-action" onClick={()=>setSelected({id:crypto.randomUUID(),title:'',recurrenceIntent:{text:'',anchorDate:clock.today},timezone:clock.preferences.timezone,notes:{type:'doc'}})}>New routine</button></div>{isLoading&&<p role="status">Gathering routines…</p>}{isError&&<p role="alert">Could not load routines.</p>}{!isLoading&&!isError&&!routines.some(r=>!r.archived)&&<p className="empty-state">Make room for a small daily rhythm.</p>}{routines.filter(r=>!r.archived).map(r=><button key={r.id} className="routine-card routine-edit" onClick={()=>setSelected(r)}><strong>{r.title}</strong><span>{r.recurrenceIntent.text} · {r.durationIntent??'Duration not specified'}</span></button>)}{selected&&<RoutineEditor initial={selected} onClose={()=>setSelected(null)}/>}</>
+}
+export function ArchivedRoutines() {
+ const {data:routines=[]}=useLiveQuery(q=>q.from({routine:routinesCollection}));const [selected,setSelected]=useState<Routine|null>(null)
+ const archived=routines.filter(r=>r.archived)
+ if(!archived.length)return null
+ return <><details className="settings-card"><summary>Archived routines</summary>{archived.map(r=><button key={r.id} className="resource-link" onClick={()=>setSelected(r)}>{r.title}</button>)}</details>{selected&&<RoutineEditor initial={selected} onClose={()=>setSelected(null)}/>}</>
+}
+export function UnscheduledRoutineInstances() {
+ const {data:instances=[]}=useLiveQuery(q=>q.from({instance:occurrencesCollection}));const [instance,setInstance]=useState<Occurrence|null>(null)
+ const unscheduled=instances.filter(o=>!o.schedule&&!o.skipped)
+ if(getConfig().demo||!unscheduled.length)return null
+ return <><details className="settings-card"><summary>Unscheduled routine instances</summary>{unscheduled.map(o=><button key={o.id} className="resource-link" onClick={()=>setInstance(o)}>{o.title} · {o.date}</button>)}</details>{instance&&<Suspense fallback={<p role="status">Opening editor…</p>}><OccurrenceEditor initial={instance} onClose={()=>setInstance(null)}/></Suspense>}</>
 }
 export function RoutineEditor({initial,onClose}:{initial:Routine;onClose:()=>void}) {
  const [draft,setDraft]=useState(initial);const [dirty,setDirty]=useState(false);const [error,setError]=useState('');const [saving,setSaving]=useState(false)
