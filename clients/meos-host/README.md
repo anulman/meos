@@ -10,8 +10,30 @@ change Calendar grants, or infer task completion from elapsed time.
 Use a renewable session for the existing owner. A session is a credential, not
 another user. `scripts/delegated-session.py` verifies the admitted owner and
 issues a native session without writing users or grants. Mint independent
-sessions for clients that refresh independently; do not share one rotating
-refresh token between the MCP bridge and Go notification client.
+sessions for independent clients; do not share a refresh token between the MCP
+bridge and Go notification client.
+
+### Persistent host authentication
+
+The native MCP endpoint requires a bearer even over the private Unix relay;
+the relay does not authenticate a MeOS owner. Keep that boundary. For an
+unattended private host, explicitly admit `sessionPolicy: "host-until-revoked"`
+in the session helper's admission. The helper mints one independent session for
+the existing owner, then sets **only that session** to native's nonexpiring
+refresh lifetime (`i64::MAX`). The default `native-12h` remains suitable for
+short-lived operator access. No global auth configuration or grants change.
+
+Access tokens still expire. The bridge refreshes on 401 and atomically saves
+the new bearer under a lock. Pinned native refresh preserves the session secret
+and does not consume it, so a lost response or interrupted save can retry safely.
+There is no refresh-intent state or rotating-token compatibility path.
+
+Deleting the native session revokes renewal; already issued access tokens remain
+valid until their normal expiry. Owner logout can invalidate host sessions too.
+Store the session secret as a private 0600 file under a 0700 directory. A host
+session is not permission for network clients to bypass authentication.
+When upgrading, reconcile and archive any old refresh-intent and expired pair;
+never resurrect an expired/deleted session or reuse an issuance copy as backup.
 
 Native MCP now accepts ordinary owners acting on their own resources. Existing
 agent grants remain scoped, expiring and revocable; expired grants never fall
@@ -53,7 +75,7 @@ of exactly-once external effects.
    `--access-config`, `--admission`, `--output`. Never print credentials.
 3. Install source read-only. Copy each session pair into its client's private
    directory, mode0700 with mode0600 files and non-writable ancestors. An
-   unresolved mint/refresh intent requires reconciliation, not deletion and retry.
+   unresolved mint intent requires reconciliation, not deletion and retry.
 4. Expose only the native socket through
    `deployment/meos-host-upstream.{socket,service}.in`. Resolve the backend
    prefix, native socket and gateway user. The proxy uses reserved UID61006;

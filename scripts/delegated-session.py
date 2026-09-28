@@ -14,6 +14,7 @@ def secure(path):
 state_path=secure(a.state);access_path=secure(a.access_config);admission_path=secure(a.admission)
 state=json.loads(state_path.read_text());access=json.loads(access_path.read_text());admission=json.loads(admission_path.read_text())
 assert admission['status']=='approved-delegated-session' and admission['reviewer'] and admission['evidence']
+policy=admission.get('sessionPolicy','native-12h');assert policy in ['native-12h','host-until-revoked']
 assert admission['scriptSHA256']==hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest()
 assert admission['stateSHA256']==hashlib.sha256(state_path.read_bytes()).hexdigest() and admission['accessSHA256']==hashlib.sha256(access_path.read_bytes()).hexdigest()
 assert state['environment'] in ['acceptance','production'] and admission['environment']==state['environment']
@@ -63,5 +64,17 @@ else:
  credentials=json.loads(secure(credential_path).read_text());assert set(credentials)=={'authToken','refreshToken'} and all(isinstance(v,str) and v for v in credentials.values())
  claims=json.loads(base64.urlsafe_b64decode(credentials['authToken'].split('.')[1]+'==='));assert base64.urlsafe_b64decode(claims['sub']+'===')==owner
  del credentials,claims
-save('receipt.json',{'status':'delegated-session-issued-not-activated','environment':state['environment'],'runtimeEnvironment':runtime,'instanceId':run,'ownerId':access['ownerId'],'identityCreated':False,'grantsChanged':False,'admissionSHA256':hashlib.sha256(admission_path.read_bytes()).hexdigest()})
+# The pinned native CLI fixes both TTLs to 12h. Native negative refresh TTLs
+# use i64::MAX. Apply that supported representation only to this admitted host
+# session, never globally or to another client's session. Repeating is idempotent.
+if policy=='host-until-revoked':
+ credentials=json.loads(secure(credential_path).read_text())
+ session_path=verify().with_name('session.db')
+ with sqlite3.connect('file:'+str(session_path)+'?mode=rw',uri=True) as db:
+  db.execute('BEGIN IMMEDIATE')
+  row=db.execute('SELECT user,expires FROM _session WHERE refresh_token=?',(credentials['refreshToken'],)).fetchall()
+  assert len(row)==1 and row[0][0]==owner and row[0][1]>time.time(),'Missing/expired session: reconcile, never resurrect'
+  assert db.execute('UPDATE _session SET expires=? WHERE refresh_token=? AND user=?',((1<<63)-1,credentials['refreshToken'],owner)).rowcount==1
+ del credentials
+save('receipt.json',{'status':'delegated-session-issued-not-activated','environment':state['environment'],'runtimeEnvironment':runtime,'instanceId':run,'ownerId':access['ownerId'],'identityCreated':False,'grantsChanged':False,'sessionPolicy':policy,'admissionSHA256':hashlib.sha256(admission_path.read_bytes()).hexdigest()})
 print(json.dumps({'status':'delegated-session-issued-not-activated','receipt':str(out/'receipt.json')}))

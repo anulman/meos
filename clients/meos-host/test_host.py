@@ -80,7 +80,7 @@ class BridgeTests(unittest.TestCase):
         with patch.object(self.b,'request',return_value=(200,{'instanceId':'other'})):
             with self.assertRaises(ValueError):self.b.call({'id':1})
     def test_refresh_then_restart_uses_saved_token(self):
-        with patch.object(m,'private',side_effect=pathlib.Path),patch.object(self.b,'request',side_effect=[self.identity,(401,None),(200,{'auth_token':'new','refresh_token':'new-refresh'}),(200,{'id':1})]) as request:
+        with patch.object(m,'private',side_effect=pathlib.Path),patch.object(self.b,'request',side_effect=[self.identity,(401,None),(200,{'auth_token':'new','csrf_token':'csrf'}),(200,{'id':1})]) as request:
             self.assertEqual(self.b.call({'id':1}),{'id':1})
             self.assertEqual(request.call_args.args[2],'new')
         self.assertEqual(json.loads(self.p.read_text())['authToken'],'new')
@@ -94,27 +94,33 @@ class BridgeTests(unittest.TestCase):
         with patch.object(m,'private',side_effect=pathlib.Path),patch.object(restarted,'request',side_effect=[self.identity,(200,{'id':2})]) as request:
             self.assertEqual(restarted.call({'id':2}),{'id':2})
             self.assertEqual(request.call_args.args[2],'new')
-    def test_invalid_refresh_response_preserves_credentials_and_intent(self):
-        for code,tokens in [(401,{}),(200,None),(200,{}),(200,{'auth_token':''}),(200,{'auth_token':'new','refresh_token':None}),(200,{'auth_token':'new','refresh_token':''})]:
+    def test_invalid_refresh_response_preserves_credentials(self):
+        for code,tokens in [(401,{}),(200,None),(200,{}),(200,{'auth_token':''})]:
             with self.subTest(code=code,tokens=tokens):
                 intent=self.p.with_name('credentials.json.refresh-intent')
-                if intent.exists():intent.unlink() # Independent synthetic case, not recovery.
                 with patch.object(m,'private',side_effect=pathlib.Path),patch.object(self.b,'request',side_effect=[self.identity,(401,None),(code,tokens)]):
                     with self.assertRaises(ValueError):self.b.call({'id':1})
-                self.assertTrue(intent.exists())
+                self.assertFalse(intent.exists())
                 self.assertEqual(json.loads(self.p.read_text()),{'authToken':'old','refreshToken':'refresh'})
-    def test_ambiguous_refresh_fails_closed(self):
+    def test_lost_nonrotating_refresh_response_can_retry(self):
         with patch.object(m,'private',side_effect=pathlib.Path),patch.object(self.b,'request',side_effect=[self.identity,(401,None),TimeoutError()]):
             with self.assertRaises(TimeoutError):self.b.call({'id':1})
-        with patch.object(m,'private',side_effect=pathlib.Path),patch.object(self.b,'request',side_effect=[self.identity,(401,None)]) as request:
-            with self.assertRaises(ValueError):self.b.call({'id':2})
-            self.assertEqual(request.call_count,2)
+        self.assertEqual(json.loads(self.p.read_text()),{'authToken':'old','refreshToken':'refresh'})
+        with patch.object(m,'private',side_effect=pathlib.Path),patch.object(self.b,'request',side_effect=[self.identity,(401,None),(200,{'auth_token':'new'}),(200,{'id':2})]) as request:
+            self.assertEqual(self.b.call({'id':2}),{'id':2})
+            self.assertEqual(request.call_args_list[2].args[1],{'refresh_token':'refresh'})
+    def test_failed_persistence_can_retry_same_session(self):
+        with patch.object(m,'private',side_effect=pathlib.Path),patch.object(m,'save',side_effect=OSError()),patch.object(self.b,'request',side_effect=[self.identity,(401,None),(200,{'auth_token':'new'})]):
+            with self.assertRaises(OSError):self.b.call({'id':1})
+        with patch.object(m,'private',side_effect=pathlib.Path),patch.object(self.b,'request',side_effect=[self.identity,(401,None),(200,{'auth_token':'newer'}),(200,{'id':2})]):
+            self.assertEqual(self.b.call({'id':2}),{'id':2})
+        self.assertEqual(json.loads(self.p.read_text()),{'authToken':'newer','refreshToken':'refresh'})
     def test_systemd_private_credential_mount_allows_lock_and_refresh_only(self):
         folder=os.environ.get('MEOS_SANDBOX_CREDENTIAL_DIR')
         if not folder:self.skipTest('requires trusted host sandbox launcher')
         path=pathlib.Path(folder)/'credentials.json';m.save(path,{'authToken':'old','refreshToken':'synthetic'})
         b=m.Bridge({**self.b.c,'credentials':str(path)})
-        with patch.object(b,'request',side_effect=[self.identity,(401,None),(200,{'auth_token':'new','refresh_token':'new-refresh'}),(200,{'id':1})]):
+        with patch.object(b,'request',side_effect=[self.identity,(401,None),(200,{'auth_token':'new','csrf_token':'csrf'}),(200,{'id':1})]):
             self.assertEqual(b.call({'id':1}),{'id':1})
         self.assertEqual(json.loads(path.read_text())['authToken'],'new')
         self.assertTrue(path.with_name('credentials.json.lock').exists())

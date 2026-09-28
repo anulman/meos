@@ -78,21 +78,12 @@ class Bridge:
             credentials = json.loads(private(p).read_text())
             status, result = self.request('/api/meos/v1/mcp', message, credentials['authToken'])
             if status == 401:
-                # Persist an intent before refresh: an ambiguous rotated token must
-                # stop, not repeatedly refresh an invalid predecessor after a crash.
-                intent = p.with_name(p.name + '.refresh-intent')
-                if intent.exists(): raise ValueError('refresh outcome requires reconciliation')
-                save(intent, {'state':'refreshing'})
+                # Native refresh does not rotate or consume the session secret.
+                # A lost response is safe to retry; no durable refresh intent is needed.
                 code, tokens = self.request('/api/auth/v1/refresh', {'refresh_token':credentials['refreshToken']})
                 if code != 200 or not isinstance(tokens, dict) or not isinstance(tokens.get('auth_token'), str) or not tokens['auth_token']:
                     raise ValueError('refresh rejected')
-                # Pinned native refresh keeps its session token and returns only an auth token.
-                # Accept an explicitly rotated token too, but never silently accept a malformed one.
-                refreshed = tokens.get('refresh_token', credentials['refreshToken'])
-                if not isinstance(refreshed, str) or not refreshed: raise ValueError('invalid refresh token')
-                save(p, {'authToken':tokens['auth_token'],'refreshToken':refreshed})
-                intent.unlink()
-                d = os.open(p.parent, os.O_DIRECTORY); os.fsync(d); os.close(d)
+                save(p, {'authToken':tokens['auth_token'],'refreshToken':credentials['refreshToken']})
                 status, result = self.request('/api/meos/v1/mcp', message, tokens['auth_token'])
             if status not in (200, 202): raise ValueError('upstream rejected')
             if self.c.get('outbox') and message.get('method')=='tools/list' and isinstance(result,dict) and 'result' in result:

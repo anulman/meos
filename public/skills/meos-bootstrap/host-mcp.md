@@ -42,11 +42,14 @@ storage, rollback artifacts and human release gates.
 1. Verify the deployed native revision supports ordinary-owner MCP and the
    expected migrations. Source presence does not prove deployed support.
 2. Inspect only non-secret state/receipts to locate the existing owner’s live
-   client credential. If that client already has a valid rotating pair, reuse
+   client credential. If that client already has a valid pair, reuse
    it. For a new client, follow the admission schema in
    `clients/meos-host/README.md` and `scripts/delegated-session.py`: an independent
    reviewer binds the helper, state and access-config hashes, environments,
-   existing owner and output path. Invoke only the admitted helper:
+   existing owner and output path. For an unattended private host, explicitly
+   select `sessionPolicy: "host-until-revoked"` in that admission. This affects
+   only the new host session; access tokens still expire and refresh normally.
+   The default CLI session expires after 12 hours. Invoke only the admitted helper:
 
    ```sh
    # Replace each placeholder with a verified private path; never token values.
@@ -57,9 +60,8 @@ storage, rollback artifacts and human release gates.
 
 3. Store the pair in a private client directory (0700; files 0600), with trusted
    ancestors and write access for locks and atomic refresh persistence. Install
-   the bridge source read-only. Mint independent sessions only for independently
-   refreshing clients; do not share a refresh token or create another principal
-   by default. Never print credentials, pass them in argv, or put them in the ledger.
+   the bridge source read-only. Mint separate sessions for independent clients;
+   do not share a refresh token or create another principal by default. Never print credentials, pass them in argv, or put them in the ledger.
 
 ## Install the private socket and persistent stdio registration
 
@@ -132,9 +134,9 @@ owned continuation, report that exact capability blocker, not work “continuing
 The parent must consume completion and deliver the result; no user nudge is needed.
 
 After interruption, inspect live registration, units, current private credential
-reference and prior receipts before retrying. Reconcile surviving mint/refresh
-intents with native session state. The issuance copy is not a backup of a rotating
-pair; never copy it over the live file or blindly mint another session. Resume only
+reference and prior receipts before retrying. Reconcile surviving mint
+intents with native session state. The issuance copy is not a live credential
+backup; never copy it over the live file or blindly mint another session. Resume only
 missing steps. Preserve uncertain effects as blocked until reconciled, retaining
 an owner and next action. Report installed, doctor/direct protocol, personal-tool
 and scheduled-tool readiness separately, including unperformed expiry/rebind
