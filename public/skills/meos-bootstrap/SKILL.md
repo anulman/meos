@@ -9,6 +9,60 @@ Use when a user's agent should install MeOS from scratch or finish configuring a
 
 A user's bootstrap request covers the necessary supported installation and configuration dependencies of the requested setup, within that user's existing authority and standing constraints. Reconcile working components, then complete missing authorized MCP access, event listener and durable dispatcher/worker setup when included in that scope; discovery alone is not completion. Do not ask again for authority already granted. For a genuinely missing grant or decision, prepare the concrete supported changes first and ask only for that exact permission or choice, stating why it is required. Missing packaging or implementation is not a permission question: report the concrete capability gap and, when coding is authorized, assign an implementation owner instead of inventing production infrastructure. Preserve independent qualification and human-only release gates. Use supported, reversible defaults and make a recommendation when the environment or established preferences resolve the choice; proceed within authority instead of silently waiting for unnecessary decisions. Surface real blockers with their next action and owner, and continue independent work.
 
+## Keep one completion checklist
+
+Before installation work, create or resume one checklist in the durable host
+installation ledger. Retain the user's full requested outcome and its authority
+limits across turns, delegated tasks and separate runbooks. Use existing durable
+host records; this procedure requires no MeOS schema, receipt API or new polling
+service. If durable storage is unavailable, report that blocker instead of
+claiming resumable setup.
+
+List each requested component and its installation and verification steps. Use
+the stages below to select the applicable work:
+
+| Component | Steps to track separately |
+| --- | --- |
+| Persistent application | Release/artifact admission, configuration/storage, activation, owner login, restart/persistence proof |
+| MCP access | Installation, doctor/protocol, personal tool call, scheduled tool call, applicable authentication lifecycle proof |
+| Operating agent | Skill/authority configuration and each requested schedule's registration, readback and execution proof |
+| Event delivery | Listener installation, durable outbox/dispatcher installation, supervision, actual handoff/handling, restart/replay and authorized delivery proof |
+| Selected integrations | Each requested Calendar, backup, reflection or search setup and its own verification steps |
+
+Track optional features only when selected; record exclusions without turning
+them into blockers. Do not run real rituals or send test messages merely to fill
+a checklist: preserve each stage's proof restrictions and mark unavailable live
+proof explicitly unverified.
+
+For **every step**, retain:
+
+- **Actual state and evidence:** what is installed/configured, what was observed,
+  when it was checked and a non-secret proof reference. Source code, a published
+  PR, an enabled service or queue acceptance does not prove runtime completion.
+- **Next action and blocker:** the exact missing action or proof, including any
+  independent qualification, human merge, release or deployment gate.
+- **Execution owner:** the responsible actor and accepted session/job/run ID when
+  work is delegated; distinguish queued, running, waiting, blocked, paused and
+  completed from verified execution evidence. Record no active owner explicitly.
+- **Delivery route:** where the owner returns completion/failure, who consumes it
+  and how the user receives the result. Keep delivery confirmation separate from
+  installation proof.
+
+Update the checklist after each step and before every handoff. A child's success
+closes only its evidenced steps, not the combined request. The parent must consume
+that checkpoint, reconcile actual effects and continue the remaining authorized
+work or assign it to an accepted owner with a configured result route. A narrower
+MCP-only handoff must not discard an already-requested listener or dispatcher.
+Removing a step from scope requires the user's decision, not a worker's narrower
+assignment.
+
+Before yielding, account for every unfinished step: accepted execution ownership,
+or an exact external decision/capability blocker with a responsible actor and next
+action. A saved plan is not execution; if no work is running, say so. At the next
+checkpoint or supported completion/failure event, reconcile the owner and resume
+eligible work within existing authority. Do not bypass a human gate, invent a
+watchdog or rely on another user prompt to remember the remaining steps.
+
 ## Installation target
 
 Use an existing verified persistent deployment when available. The shipped path is
@@ -272,10 +326,12 @@ or recreate jobs, recipients, registrations or seed data merely to rerun this sk
   resources, but let unrelated planning runs continue. Stop only the affected
   client when its documented operation requires exclusive state ownership.
 
-Create an installation ledger in durable host storage containing the pinned MeOS release and installation-manifest reference, artifact verification, host/deployment path, service IDs, persistent-storage references, non-secret access endpoints, workspace/account identity, skill versions, job IDs, triggers, timezone, execution settings, authority, status, verification receipts, and remaining blockers. Never store tokens or secret values in it. A job created successfully is **configured**, not proof of a successful execution. Install authorized morning/evening/review schedules independently of the event pipeline. Missing MCP access may block a ritual's planning execution, not its schedule installation: require an access preflight, explicit blocked reporting and no invented plans. Reuse known times and ordering; when a weekly review follows evening close, sequence them in one execution rather than creating concurrent jobs.
+Keep the installation ledger current with the pinned MeOS release and installation-manifest reference, artifact verification, host/deployment path, service IDs, persistent-storage references, non-secret access endpoints, workspace/account identity, skill versions, job IDs, triggers, timezone, execution settings, authority, status, verification receipts, and remaining blockers. Never store tokens or secret values in it. A job created successfully is **configured**, not proof of a successful execution. Install authorized morning/evening/review schedules independently of the event pipeline. Missing MCP access may block a ritual's planning execution, not its schedule installation: require an access preflight, explicit blocked reporting and no invented plans. Reuse known times and ordering; when a weekly review follows evening close, sequence them in one execution rather than creating concurrent jobs.
 
-For each maintenance run, record the selected mode/features, observed starting
-state, intended changes, completed effects and unresolved steps. Keep secret
+Update the same [completion checklist](#keep-one-completion-checklist), not a
+separate ledger that loses the broader request. For each maintenance run, record
+the selected mode/features, observed starting state, intended changes, completed
+effects and unresolved steps. Keep secret
 references, never secret contents. An unchanged run records a no-change result
 without rewriting managed resources.
 
@@ -372,6 +428,11 @@ and recovery guarantees; do not claim exactly-once effects from queue durability
 If the API, supervision, durable state, or necessary permissions are unavailable, first reconcile and complete supported setup within existing authority. For unresolved dependencies, record the exact blocker and leave the dependent event component uninstalled or explicitly paused; request an exact missing grant or route authorized implementation work to an owner as described above. Record that owner's scope, current state and completion-delivery route; do not present an unowned next step as work in progress. Install compatible manual/scheduled pieces independently when authorized. Do not silently substitute periodic polling for a requested long-poller, or claim event updates are live.
 
 ## Verify and hand off
+
+Reconcile every requested step in the [completion checklist](#keep-one-completion-checklist)
+with its proof before closing the combined request. Report partial completion
+when any requested installation, verification or delivery remains unresolved;
+retain its next action and owner even when a narrower task is complete.
 
 Read back the actual installed configuration: resource IDs, enabled state, next scheduled times, timezone/DST handling, model/reasoning settings, delivery route, and authority limits. Confirm there is one intended consumer, not multiple overlapping installations. Capture receipts in the ledger.
 

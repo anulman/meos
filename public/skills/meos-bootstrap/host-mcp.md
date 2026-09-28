@@ -6,6 +6,12 @@ backup, Calendar consent or planner activation. Those remain separately selected
 features. You need installation authority and independently admitted artifacts;
 reading this runbook grants neither release nor deployment authority.
 
+When this is part of a broader bootstrap request, use its existing
+[completion checklist](SKILL.md#keep-one-completion-checklist). This runbook's
+scope does not remove selected features from that request. Return MCP proof as a
+component checkpoint; the parent retains unfinished installation steps and their
+next owners rather than closing the combined setup.
+
 ## Pin and reconcile the application
 
 Use the same reviewed checkout for this guide, `deployment/` and
