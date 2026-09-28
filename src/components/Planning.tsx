@@ -5,7 +5,7 @@ const OccurrenceEditor=lazy(()=>import('./OccurrenceEditor').then(m=>({default:m
 import type {Occurrence} from '../lib/contracts'
 import {createContext,useContext,useEffect,useRef,useState,type ReactNode} from 'react'
 import {useLiveQuery} from '@tanstack/react-db'
-import {tasksCollection,routinesCollection,occurrencesCollection,outcomesCollection,periodNotesCollection,savePlanner,saveTask,removeOutcome} from '../lib/store'
+import {tasksCollection,routinesCollection,occurrencesCollection,outcomesCollection,periodNotesCollection,savePlanner,saveTask} from '../lib/store'
 import {usePlannerClock,projectScheduledTasks} from '../lib/planner-clock'
 import {type DatePeriod} from '../lib/dates'
 import type {Routine,Task} from '../lib/contracts'
@@ -47,9 +47,9 @@ export function OutcomeEditor({period,onClose}:{period:DatePeriod;onClose:()=>vo
  }catch(e){setError(String(e))}finally{setSaving(false)}}}><div className="resource-body"><p className="muted">{period.start} – {period.end}</p><p className="muted">An outcome links a task to this week. It does not change its priority or scheduled date.</p><label>Choose an existing task<select value={taskId} disabled={saving||!!created.current} onChange={e=>{setTaskId(e.target.value);setTitle('')}}><option value="">Create a new task instead</option>{eligible.map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</select></label>{!taskId&&<label>New outcome name<input value={title} onChange={e=>setTitle(e.target.value)} maxLength={200} disabled={saving||!!created.current}/></label>}{created.current&&<p className="muted">Your task has been created. Retry to link it to this week.</p>}{error&&<p role="alert">{error} Your draft is preserved.</p>}</div><div className="resource-actions"><button className="save-button" disabled={saving}>Add to week</button></div></form></Sheet>
 }
 export function WeeklyOutcomes({period}:{period:DatePeriod}) {
- const {data:tasks=[]}=useLiveQuery(q=>q.from({task:tasksCollection}));const {data:outcomes=[],isLoading,isError}=useLiveQuery(q=>q.from({outcome:outcomesCollection}));const [error,setError]=useState('')
+ const {data:tasks=[]}=useLiveQuery(q=>q.from({task:tasksCollection}));const {data:outcomes=[],isLoading,isError}=useLiveQuery(q=>q.from({outcome:outcomesCollection}))
  const rows=outcomes.filter(o=>samePeriod(o.period,period)&&tasks.some(t=>t.id===o.taskId&&!t.archived)).sort((a,b)=>a.position-b.position)
- return <>{isLoading?<p role="status">Gathering outcomes…</p>:isError?<p role="alert">Could not load outcomes.</p>:!rows.length?<p className="empty-state">Choose a few things that would make this week feel good.</p>:rows.map(o=><div className="outcome-row" key={o.id}><TaskRows tasks={[tasks.find(t=>t.id===o.taskId)!]} compact showSchedule/><button className="quiet-action" aria-label={`Remove ${tasks.find(t=>t.id===o.taskId)!.title} from week`} onClick={async()=>{try{await removeOutcome(o.id)}catch(e){setError(String(e))}}}>Remove from week</button></div>)}{error&&<p role="alert">{error}</p>}</>
+ return <>{isLoading?<p role="status">Gathering outcomes…</p>:isError?<p role="alert">Could not load outcomes.</p>:!rows.length?<p className="empty-state">Choose a few things that would make this week feel good.</p>:rows.map(o=><div className="outcome-row" key={o.id}><TaskRows tasks={[tasks.find(t=>t.id===o.taskId)!]} compact showSchedule/></div>)}</>
 }
 export function PlannerAgenda({period,compact=false}:{period:DatePeriod;compact?:boolean}) {
  const clock=usePlannerClock();const {data:tasks=[],isLoading,isError}=useLiveQuery(q=>q.from({task:tasksCollection}));const {data:routines=[],isLoading:routinesLoading,isError:routineError}=useLiveQuery(q=>q.from({routine:routinesCollection}));const {data:occurrences=[],isLoading:occurrencesLoading,isError:occurrenceError}=useLiveQuery(q=>q.from({occurrence:occurrencesCollection}));const [error,setError]=useState('')

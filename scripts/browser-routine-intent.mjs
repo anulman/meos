@@ -20,6 +20,7 @@ const tasks = [
  envelope({id:id(13),title:'Project ride',type:'commute',projectId:id(20),notes:{type:'doc'},completed:false,priority:'none',durationMinutes:30,schedule:{date:day,time:'13:00',timezone}})
 ];
 const projects=[envelope({id:id(20),title:'Band project',notes:{type:'doc'}})];
+const outcomes=[10,11,12].map((task,index)=>envelope({id:id(30+index),taskId:id(task),period:{start:day,end:'2026-10-04'},position:index}));
 const requests = [], serverErrors = [], pageErrors = [], blockedRequests = [];
 const revisions = () => ({ tasks: tasks.reduce((n,r)=>n+r.revision,0), projects: 1, routines: routines.reduce((sum, row) => sum + row.revision, 0), occurrences: occurrence.revision, outcomes: 0, periodNotes: 0, preferences: 1 });
 const server = http.createServer(async (req, res) => {
@@ -60,7 +61,7 @@ const server = http.createServer(async (req, res) => {
       else if (call.path.includes('/resources/')) {
         const kind = call.path.split('/').at(-1);
         assert.ok(['routines', 'occurrences', 'tasks', 'projects', 'outcomes', 'periodNotes'].includes(kind));
-        response = { items: kind === 'routines' ? routines : kind === 'occurrences' ? [occurrence] : kind === 'tasks' ? tasks : kind === 'projects' ? projects : [] };
+        response = { items: kind === 'routines' ? routines : kind === 'occurrences' ? [occurrence] : kind === 'tasks' ? tasks : kind === 'projects' ? projects : kind === 'outcomes' ? outcomes : [] };
       } else if (call.path.endsWith('/calendar/status')) response = {state:'disconnected',syncActive:false,scopes:[],lastSyncAt:null};
       else if (call.path.endsWith('/calendar-window')) response = { id: 'calendar', available: true, state: 'connected', syncActive: true, lastSyncAt: Date.now(), plannerLastSyncAt: Date.now(), windowStart: null, windowEnd: null, drafts: [], planner: { plannerLastSyncAt: Date.now(), conflicts: [] }, sequence: 1, status: 'fresh', unchanged: false, items: [] };
       else throw Error(`Unexpected read: ${call.path}`);
@@ -94,6 +95,11 @@ try {
     };
   });
   await page.goto(origin + '/week');
+  const priorities=page.locator('.week-section').filter({has:page.getByRole('heading',{name:'Priorities',exact:true})});
+  for(const title of ['Ordinary task','Travel research','Ride to rehearsal'])await priorities.getByRole('button',{name:title,exact:true}).waitFor();
+  assert.equal(await priorities.locator('.outcome-row').count(),3);
+  assert.equal(await priorities.getByRole('button',{name:/Remove .* from week|Remove from week/}).count(),0);
+  assert.equal(requests.filter(call=>call.method!=='GET').length,0,'rendering three priorities must not mutate outcomes');
   await page.getByRole('button', { name: 'New routine', exact: true }).click();
   let dialog = page.getByRole('dialog', { name: 'Routine details' });
   await dialog.getByLabel('Routine name', { exact: true }).fill('Flexible exercise');
@@ -118,6 +124,7 @@ try {
   assert.deepEqual(requests.filter(call => call.method !== 'GET').map(call => call.path), ['/api/meos/v1/resources/routines', '/api/meos/v1/operations/update_routine'], 'template saves must not plan occurrences or write Calendar');
   assert.equal(occurrence.revision, 1, 'template saves preserve existing occurrence');
   await page.reload(); await page.getByRole('button', { name: /^Flexible exercise/ }).waitFor();
+  await page.getByRole('link',{name:'Settings',exact:true}).click();
   await page.getByText('Unscheduled routine instances', { exact: true }).click();
   await page.getByRole('button', { name: `Existing instance · ${day}`, exact: true }).click();
   const instance = page.getByRole('dialog', { name: 'Routine instance' });
@@ -178,6 +185,12 @@ try {
     assert.equal(await page.getByText('Plan routine instances',{exact:true}).count(),0);
     assert.equal(await page.getByRole('button',{name:/Choose routines to plan|Plan selected routines|Retry same planning request/}).count(),0);
     if(mask===7){
+      await page.getByRole('link',{name:'Week',exact:true}).click();
+      await page.getByRole('button',{name:/^Flexible exercise/}).waitFor();
+      for(const label of ['Archived routines','Unscheduled routine instances','Plan routine instances'])assert.equal(await page.getByText(label,{exact:true}).count(),0,'Week omits secondary routine sections even when populated');
+      assert.equal(await priorities.locator('.outcome-row').count(),3);
+      assert.equal(await priorities.getByRole('button',{name:/Remove .* from week|Remove from week/}).count(),0);
+      await page.getByRole('link',{name:'Settings',exact:true}).click();
       await page.getByText('Archived resources',{exact:true}).click();
       await page.getByRole('button',{name:'Band project',exact:true}).click();
       await page.getByRole('button',{name:'Restore project',exact:true}).waitFor();await page.keyboard.press('Escape');
