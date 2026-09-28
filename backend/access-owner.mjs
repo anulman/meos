@@ -21,7 +21,7 @@ export function createAccessOwner({origin,policy,readKeys,owner,upstream,now=()=
   async session(request){
    const url=new URL(request.url)
    if(url.pathname==='/api/auth/v1/login')return new Response('Not found',{status:404})
-   if(url.pathname!=='/api/meos/v1/session'||request.method!=='GET'){
+   if(!['/api/meos/v1/session','/api/meos/v1/bootstrap'].includes(url.pathname)||request.method!=='GET'){
     if(url.pathname.startsWith('/api/meos/')&&!['/api/meos/v1/mcp','/api/meos/v1/bridge'].includes(url.pathname)&&!url.pathname.startsWith('/api/meos/v1/bridge/')){
      const probe=await upstream(new Request(origin+'/api/meos/v1/session',{headers:{Cookie:request.headers.get('Cookie')??''}}));const data=probe.ok?await probe.json():null
      if(data?.user?.id!==policy.ownerId)return new Response(JSON.stringify({error:{code:'unauthenticated',message:'Owner session required'}}),{status:401,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}})
@@ -36,7 +36,7 @@ export function createAccessOwner({origin,policy,readKeys,owner,upstream,now=()=
    if(![200,303].includes(login.status))throw Error('Owner session unavailable')
    const cookies=login.headers.getSetCookie();if(cookies.length!==2||new Set(cookies.map(c=>c.split('=')[0])).size!==2||!cookies.every(c=>/^(auth_token|refresh_token)=[A-Za-z0-9._~+/-]+={0,2};/.test(c)))throw Error('Invalid owner session')
    const cookie=cookies.map(c=>c.split(';')[0]).join('; ')
-   const result=await upstream(new Request(origin+'/api/meos/v1/session',{headers:{Cookie:cookie}}));const session=await result.json();if(!result.ok||session?.user?.id!==policy.ownerId)throw Error('Owner identity mismatch')
+   const result=await upstream(new Request(origin+url.pathname,{headers:{Cookie:cookie}}));const session=await result.json();if(!result.ok||session?.user?.id!==policy.ownerId)throw Error('Owner identity mismatch')
    const headers=new Headers({'Content-Type':'application/json','Cache-Control':'no-store'})
    for(const raw of cookies){const age=raw.split(';').map(p=>p.trim()).find(p=>/^max-age=/i.test(p))?.slice(8);if(!/^\d+$/.test(age??'')||Number(age)>31536000)throw Error('Invalid owner cookie lifetime');headers.append('Set-Cookie',raw.split(';')[0]+'; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age='+age)}
    return new Response(JSON.stringify(session),{headers})

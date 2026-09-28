@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-import {useEffect} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import {schemas,validateSchema} from '../../backend/contract.mjs'
 import type {CalendarCache,CalendarWindow} from './backend/generated'
@@ -10,12 +9,12 @@ import {getConfig} from './config'
 import type {DatePeriod} from './dates'
 
 /** Keyed by period and zone: navigation never presents another period as empty. */
-export function useCalendarWindow(period:DatePeriod,timezone:string){
+export function calendarWindowOptions(period:DatePeriod,timezone:string){
  const queryKey=['calendar-window',period.start,period.end,timezone]
- const query=useQuery({queryKey,enabled:!getConfig().demo,staleTime:30000,refetchInterval:30000,refetchOnWindowFocus:true,
+ return {queryKey,enabled:!getConfig().demo,staleTime:30000,refetchInterval:30000,refetchOnWindowFocus:true,
   // A completed sync between pages restarts this read once, never a mutation.
-  retry:(count,error)=>count<1&&error instanceof RepositoryError&&error.code==='conflict',retryDelay:0,
-  queryFn:async({signal}):Promise<CalendarCache>=>{
+  retry:(count:number,error:Error)=>count<1&&error instanceof RepositoryError&&error.code==='conflict',retryDelay:0,
+  queryFn:async({signal}:{signal:AbortSignal}):Promise<CalendarCache>=>{
    const previous=queryClient.getQueryData<CalendarCache>(queryKey)
    let cursor:string|undefined,sequence=previous?.sequence,cache:CalendarWindow|undefined
    const items:CalendarCache['items']=[]
@@ -32,8 +31,6 @@ export function useCalendarWindow(period:DatePeriod,timezone:string){
    const {unchanged,nextCursor,...metadata}=cache!
    return {...metadata,items}
   }
- })
- const synced=query.data?.planner.plannerLastSyncAt
- useEffect(()=>{if(synced!=null){void queryClient.invalidateQueries({queryKey:['tasks']});void queryClient.invalidateQueries({queryKey:['occurrences']})}},[synced])
- return query
+ }
 }
+export function useCalendarWindow(period:DatePeriod,timezone:string){return useQuery(calendarWindowOptions(period,timezone))}

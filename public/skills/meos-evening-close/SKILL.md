@@ -38,3 +38,7 @@ Before making the planning decisions above:
 Follow the [learning-loop reference](../learning-loop.md). Capture a material surprise or success with its task/source reference, and leave unobserved effort unknown. Ask only a question that changes the next decision; do not reconstruct every minute or critique estimates nightly. Preserve tomorrow's settled answers in authorized notes when available; otherwise deliver an unsaved reflection and disclose that cross-run reuse is unavailable. Verify note saving separately from tomorrow's calendar commitment.
 
 **Result:** known outcomes and actuals, follow-ups, unfinished-work dispositions, tomorrow's first action and any necessary decision. A missed close is absorbed into the next launch, not accumulated as review debt.
+
+## Routine coverage
+
+When this authorized planning operation needs new fixed routine instances, use the [explicit routine planning contract](../contract.md#explicit-routine-planning). Reuse the prior request receipt when coverage is already planned. Ordinary context reads and unchanged plans do not require another materialization command.

@@ -21,3 +21,7 @@ Use on a meaningful disruption or an explicit “help me recover today” reques
 Use the [learning-loop reference](../learning-loop.md) to distinguish changed scope, interruptions, dependencies and priorities before asking a decision-changing question. Elapsed time does not identify a cause, and resizing a block does not revise the original forecast. Choose the smallest authorized repair; learning notes do not make imported commitments writable. Preserve the reason through authorized notes if available, otherwise deliver it unsaved without claiming cross-run memory.
 
 **Result:** a workable next action plus a concise change summary and explicit deferrals. No promise of new notifications without verified platform support/receipts.
+
+## Routine coverage
+
+When this authorized planning operation needs new fixed routine instances, use the [explicit routine planning contract](../contract.md#explicit-routine-planning). Reuse the prior request receipt when coverage is already planned. Ordinary context reads and unchanged plans do not require another materialization command.

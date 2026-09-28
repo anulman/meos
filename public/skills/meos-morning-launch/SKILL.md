@@ -44,3 +44,7 @@ Read the [learning-loop reference](../learning-loop.md) and relevant prior notes
 ## Search supporting context
 
 Use the [search reference](../search.md) when related work or prior reflections could change a decision. Search is supporting evidence, not a replacement for exact agenda or Calendar reads.
+
+## Routine coverage
+
+When this authorized planning operation needs new fixed routine instances, use the [explicit routine planning contract](../contract.md#explicit-routine-planning). Reuse the prior request receipt when coverage is already planned. Ordinary context reads and unchanged plans do not require another materialization command.

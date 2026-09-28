@@ -54,7 +54,15 @@ export function createCommands({begin,now=()=>Date.now()}) {
   return validateResource(kind,{title:r.title,notes:r.notes,...(r.durationMinutes?{durationMinutes:r.durationMinutes}:{}),...Object.fromEntries(['location','durationIntent'].filter(k=>r[k]!==undefined).map(k=>[k,r[k]])),...(r.preferredTime?{preferredTime:r.preferredTime}:{}),skipped:false,edited:false,...value,templateRevision:Number(row[1])})
  }
  function checkTombstone(db,kind,owner,id){if(db.query('SELECT 1 FROM deletion_tombstones WHERE owner_id=? AND kind=? AND entity_id=?',[blob(owner),kind,id]).length)throw new DomainError('conflict','Deleted identity cannot be reused')}
+ function contentRevisions(db,owner) {
+  const revisions=Object.fromEntries(Object.keys(tables).map(kind=>[kind,0]))
+  for(const [kind,sequence] of db.query('SELECT kind,MAX(sequence) FROM sync_outbox WHERE owner_id=? GROUP BY kind',[blob(owner)]))if(Object.hasOwn(revisions,kind))revisions[kind]=Number(sequence)
+  revisions.preferences=Number(db.query('SELECT revision FROM preferences WHERE owner_id=?',[blob(owner)])[0]?.[0]??0)
+  return revisions
+ }
  const api={
+  bootstrap(owner){return tx(db=>({preferences:api.getPreferences(owner),revisions:contentRevisions(db,owner)}))},
+  revisions(owner){return tx(db=>contentRevisions(db,owner))},
   calendarWindow(owner,input){return tx(db=>readCalendarWindow(db,owner,input,now()))},
   calendarCache(owner){return tx(db=>readCalendarCache(db,owner,now()))},
   get(owner,kind,id){return tx(db=>envelope(requireOwned(db,kind,owner,id)))},
@@ -141,7 +149,34 @@ export function createCommands({begin,now=()=>Date.now()}) {
      if(name==='move_occurrence'){if(input.schedule===null)delete value.schedule;else value.schedule=input.schedule;for(const k of ['title','notes','durationMinutes','location','durationIntent','actualDurationMinutes','skipped'])if(input[k]!==undefined)value[k]=input[k]}
      else value.completed=input.completed
      result=api.update(owner,'occurrences',value,input.expectedRevision)
-    }else if((name==='materialize_routine'||name==='calendar_materialize')){
+    }else if(name==='plan_routines'){
+     const seen=new Set(),ids=new Set();let created=0,preserved=0
+     // All work shares this transaction: any stale template/invalid slot rolls it back.
+     for(const selection of input.routines){
+      if(seen.has(selection.routineId))throw new DomainError('validation','Duplicate routine selection')
+      seen.add(selection.routineId)
+      const row=envelope(requireOwned(db,'routines',owner,selection.routineId)),r=row.value
+      if(row.revision!==selection.expectedRevision)throw new DomainError('conflict','Routine changed')
+      if(r.archived||r.recurrenceIntent&&r.recurrenceIntent.kind!=='fixed')throw new DomainError('validation','Select active fixed routines')
+      const {start,end}=selection.period,today=localDay(now(),r.timezone)
+      date(start);date(end);horizon(end,r.timezone,now())
+      if(start<today||end<start)throw new DomainError('validation','Plan within the current routine-local horizon')
+      for(const [day,id] of Object.entries(selection.ids)){
+       date(day);if(day<start||day>end||ids.has(id))throw new DomainError('validation','Invalid or duplicate candidate slot')
+       ids.add(id)
+      }
+      for(let day=start;day<=end;day=addDays(day,1)){
+       if(!selection.ids[day])throw new DomainError('validation','Candidate ID required for every selected date')
+       if(!occursOn(r,day))continue
+       const existing=db.query('SELECT 1 FROM occurrences WHERE owner_id=? AND routine_id=? AND occurrence_date=?',[blob(owner),r.id,day])
+       if(existing.length){preserved++;continue}
+       const value={id:selection.ids[day],routineId:r.id,date:day,completed:false}
+       if(r.time){const schedule={date:day,time:r.time,timezone:r.timezone};try{scheduledInstant(schedule);value.schedule=schedule}catch(error){if(!(error instanceof DomainError))throw error}}
+       api.create(owner,'occurrences',value);created++
+      }
+     }
+     result={routines:seen.size,created,preserved}
+    }else if(name==='materialize_routine'){
      const row=envelope(requireOwned(db,'routines',owner,input.routineId)),r=row.value,today=localDay(now(),r.timezone)
      date(input.through);horizon(input.through,r.timezone,now());if(input.through<today)throw new DomainError('validation','Materialization starts at current local day')
      const items=[];if(!r.archived)for(let day=today;day<=input.through;day=addDays(day,1)){

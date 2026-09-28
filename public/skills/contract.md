@@ -70,3 +70,25 @@ Report: reviewed scope; authorized changes verified; important decisions/deferra
 ## Search supporting context
 
 Use the [search reference](search.md) when related work or prior reflections could change a decision. Search is supporting evidence, not a replacement for exact agenda or Calendar reads.
+
+## Explicit routine planning
+
+Routine instances are created only by an explicit planning operation. Reading
+an agenda, opening a page, refreshing, saving a routine template, and Calendar
+sync do not generate instances. During an authorized planning ritual, discover
+`plan_routines` (`occurrences:write`) and call it once with the selected active
+fixed routines, their current revisions, and explicit routine-local date windows.
+Each window must start today or later and end no later than 14 days after today
+in that routine's timezone. Supply one UUID candidate for every selected date;
+select at most 100 routines with at most 15 dates each. Flexible or unresolved
+intent requires separate scheduling decisions, not automatic expansion.
+
+Retain the complete request, including its idempotency key and slot UUIDs, until
+the result is known. After an uncertain response, replay that identical request
+or read its command receipt; do not generate another request. A stale template
+revision rejects the entire batch. Re-read and review the changed template before
+making a new planning decision. Existing instances, including edits and skips,
+are preserved. The summary reports created and preserved counts, not Calendar
+publication or target-day commitment. Verify relevant agenda/instance reads
+separately. If the operation or grant is unavailable, disclose missing routine
+coverage; do not invoke a sync-only capability or imply routines were planned.

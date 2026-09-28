@@ -42,6 +42,7 @@ export function PlannerClockProvider({ initialPreferences, children }: {
     validatePreferences(initialPreferences);
     return { ...initialPreferences };
   });
+  useEffect(()=>{validatePreferences(initialPreferences);updatePreferences(previous=>({...previous,...initialPreferences}))},[initialPreferences.timezone,initialPreferences.weekStartsOn]);
   const [now, setNow] = useState(() => Date.now());
   const refresh = useCallback(() => setNow(Date.now()), []);
   const setPreferences = useCallback((update: Partial<PlannerPreferences>) => {

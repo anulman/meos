@@ -207,3 +207,48 @@ test('freshness uses pinned scheduling rules for both DST offsets and case-insen
   assert.equal(current.scheduledAt,offsetMinutes===-240?'2026-11-01T05:30:00.000Z':'2026-11-01T06:30:00.000Z')
  }}finally{f.close()}
 })
+
+test('explicit batch planning is atomic, revision checked, owner scoped and replayable',()=>{
+ const f=fixture();try{
+  const a=routine(),b=routine();f.commands.create(f.owner,'routines',a);f.commands.create(f.owner,'routines',b)
+  const select=r=>({routineId:r.id,expectedRevision:1,period:{start:'2026-09-26',end:'2026-09-28'},ids:Object.fromEntries(['2026-09-26','2026-09-27','2026-09-28'].map(day=>[day,id()]))})
+  const input={routines:[select(a),select(b)],idempotencyKey:key()}
+  assert.throws(()=>f.invoke('plan_routines',{...input,routines:[input.routines[0],{...input.routines[1],expectedRevision:2}]}),{code:'conflict'})
+  assert.equal(f.commands.list(f.owner,'occurrences').items.length,0)
+  const result=f.invoke('plan_routines',input);assert.deepEqual(result,{routines:2,created:6,preserved:0})
+  const original=f.commands.list(f.owner,'occurrences').items[0]
+  f.invoke('move_occurrence',{id:original.value.id,expectedRevision:original.revision,schedule:null,skipped:true,title:'Edited',idempotencyKey:key()})
+  f.clock(Date.parse('2026-09-29T15:00Z'))
+  assert.deepEqual(f.invoke('plan_routines',input),result,'receipt replay precedes current-day validation')
+  assert.equal(f.commands.list(f.owner,'occurrences').items.length,6)
+  assert.equal(f.commands.get(f.owner,'occurrences',original.value.id).value.title,'Edited')
+  f.clock(Date.parse('2026-09-26T15:00Z'))
+  assert.deepEqual(f.invoke('plan_routines',{...input,idempotencyKey:key()}),{routines:2,created:0,preserved:6})
+  assert.equal(f.commands.get(f.owner,'occurrences',original.value.id).value.skipped,true)
+  assert.throws(()=>f.commands.invoke(f.other,'plan_routines',{...input,idempotencyKey:key()}),{code:'not_found'})
+  assert.throws(()=>f.invoke('plan_routines',{...input,routines:[input.routines[0],input.routines[0]],idempotencyKey:key()}),{code:'validation'})
+  assert.throws(()=>f.invoke('plan_routines',{...input,routines:[{...input.routines[0],period:{start:'2026-09-25',end:'2026-09-28'}}],idempotencyKey:key()}),{code:'validation'})
+  assert.throws(()=>f.invoke('plan_routines',{...input,routines:[{...input.routines[0],ids:{}}],idempotencyKey:key()}),{code:'validation'})
+  assert.throws(()=>f.invoke('plan_routines',{...input,routines:[{...input.routines[0],period:{start:'2026-09-26',end:'2026-10-11'}}],idempotencyKey:key()}),{code:'validation'})
+  assert.equal(operations.calendar_materialize,undefined,'sync credentials cannot generate routines')
+ }finally{f.close()}
+})
+test('bootstrap and revisions are pure owner reads and reflect deletes/preferences',async()=>{
+ const f=fixture();try{
+  const prefs={timezone:'America/Toronto',weekStartsOn:1,weather:{enabled:false,source:'latest',units:'celsius'}}
+  f.commands.savePreferences(f.owner,prefs,0)
+  const row=f.commands.create(f.owner,'tasks',task())
+  const before=f.db.prepare('SELECT total_changes() AS n').get().n
+  const boot=f.commands.bootstrap(f.owner);validateSchema(schemas.Bootstrap,{...boot,user:{id:f.owner},csrf:'synthetic'})
+  assert.equal(boot.preferences.value.timezone,prefs.timezone);assert.ok(boot.revisions.tasks>0)
+  assert.deepEqual(f.commands.revisions(f.owner),boot.revisions)
+  assert.equal(f.db.prepare('SELECT total_changes() AS n').get().n,before)
+  f.invoke('delete_task',{id:row.value.id,expectedRevision:row.revision,idempotencyKey:key()})
+  assert.ok(f.commands.revisions(f.owner).tasks>boot.revisions.tasks)
+  assert.equal(f.commands.revisions(f.other).tasks,0)
+  const handle=createHttpHandler({commands:f.commands,origin:'https://acceptance.invalid'})
+  assert.equal((await handle(new Request('https://acceptance.invalid/api/meos/v1/bootstrap'),null)).status,401)
+  const response=await handle(new Request('https://acceptance.invalid/api/meos/v1/bootstrap'),{id:f.owner,csrf:'synthetic'})
+  assert.equal(response.headers.get('cache-control'),'no-store');assert.equal((await response.json()).user.id,f.owner)
+ }finally{f.close()}
+})
