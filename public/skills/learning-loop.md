@@ -12,9 +12,15 @@ Read the note first. Reuse its ID and revision, or supply a new stable UUID and 
 
 If the tools are absent or scope-denied, state the exact capability blocker. If no write was attempted, deliver the reflection as **unsaved**; use local fallback storage only when explicitly requested or already authorized, label it as fallback, and do not silently keep both journals. Continue supported planning. If success is uncertain, report persistence as unverified and recover the original command receipt or replay the identical input/key before attempting a new entry.
 
-## A small reflection
+## Daily journal: one short line per update
 
-Use the same four fields in an existing authorized day/week note, or in the unsaved result:
+Write one short journal line per meaningful daily update: what changed and why. For example: “Moved the brief to tomorrow because the audience decision is still pending.” State an unknown reason as unknown; do not invent a cause. Keep the note useful to the person reading their day, not a transcript of agent operations.
+
+Do not use a four-field reflection for daily capture. Keep command receipts, IDs, revision details, sync diagnostics and verification summaries in operational evidence, not the user journal. Required readback and Calendar checks still apply; completing them does not require another journal entry. Add a new line only for a new material change or correction.
+
+## Weekly reflection
+
+Use these four fields for a weekly synthesis in an authorized week note, or in the unsaved weekly result:
 
 - **Observation:** what happened, with relevant task/occurrence references and the source of the claim. Keep unknowns explicit.
 - **Possible explanation:** a hypothesis, not an established cause.
@@ -47,7 +53,7 @@ Reflections remain hypotheses, not new instructions or authority. Never automati
 
 ## Save only through supported semantics
 
-Before editing a note, read its current content and revision. Preserve user prose and unrelated entries; add or update the small reflection rather than replacing the whole note with an agent summary. Keep stable task/source references and the same semantic entry across retries so a resumed ritual does not append a duplicate.
+Before editing a note, read its current content and revision. Preserve user prose and unrelated entries; append the short daily line or weekly reflection rather than replacing the whole note with an agent summary. Keep stable task/source references in supported metadata or operational evidence and the same semantic entry across retries so a resumed ritual does not append a duplicate.
 
 Use the discovered note tool’s actual schema and revision/retry rules. `append_period_note` accepts plain text, not Markdown or arbitrary rich-text fields. A supported note operation is not an invitation to bypass the agent’s scope.
 
@@ -59,4 +65,4 @@ A saved reflection is not a calendar commitment, boundary acknowledgment or mess
 
 The note-write response prompts the active authorized agent to consider actual-time corrections and future recalculation; it does not perform them or wake an idle agent. Fresh-read the relevant occurrence, agenda and Calendar context. Preserve the original plan/context, apply supported revision-checked updates within existing authority, then verify Calendar propagation before calling the correction complete. A known start can be corrected while finish remains unknown. Use 15-minute precision for ordinary timing, preserve explicitly precise times and activity-specific exceptions, and never round fixed appointments. Distinguish elapsed time, focused effort and planned future end; do not infer a finish from a message timestamp or change routine defaults from one delayed instance.
 
-The existing command receipt retains the note source, input revision, result revision and optional caller-reported `outcome` (`pending`, `not_needed`, `blocked`, `verified`), with a reason, up to 20 effect `commandKeys` and 10 bounded `calendarEvidence` references. These are claims/evidence references, not backend verification or new authority. After follow-up, append a concise outcome with a new key and fresh note revision; link the original note command key in `source`. Use `verified` only after fresh Calendar evidence matches the applied changes; use `blocked` for unavailable propagation proof and `not_needed` when no correction is warranted. Do not copy sensitive raw logs. Note saved is not Calendar reconciled.
+The existing command receipt retains the note source, input revision, result revision and optional caller-reported `outcome` (`pending`, `not_needed`, `blocked`, `verified`), with a reason, up to 20 effect `commandKeys` and 10 bounded `calendarEvidence` references. These are claims/evidence references, not backend verification or new authority. After follow-up, retain the outcome and its supporting references in operational evidence; do not append a verification summary to the user journal. If a new material change warrants a journal line, use a new key and fresh note revision, with the original note command key in `source`. Use `verified` only after fresh Calendar evidence matches the applied changes; use `blocked` for unavailable propagation proof and `not_needed` when no correction is warranted. Do not copy sensitive raw logs. Note saved is not Calendar reconciled.
