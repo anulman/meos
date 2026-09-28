@@ -25,6 +25,7 @@ grant planner writes, external communications or infrastructure changes.
 | “What's next?”, “Review my commitments” or “Walk through my backlog” | [Walk the board](../meos-walk-board/SKILL.md) |
 | “Clean up my task list” or “Sort these duplicates and stale items” | [Clean the board](../meos-clean-board/SKILL.md) |
 | “I'm behind,” “My afternoon changed” or “Help me replan” | [Rescue the day](../meos-rescue-day/SKILL.md) |
+| “Record this update,” “I started/finished” or a timing correction | [Daily journal and timing reconciliation](../learning-loop.md), within existing planning authority |
 | “Wrap up today” or “Prepare tomorrow” | [Evening close](../meos-evening-close/SKILL.md) |
 | “Help me prepare for/start/finish this block” | [Event companion](../meos-event-companion/SKILL.md), using the explicit request and current record, not an invented event |
 | “Set up MeOS,” “Inspect my setup” or “Fix/update my MeOS agent” | [Bootstrap](../meos-bootstrap/SKILL.md), limited to the requested maintenance mode |
