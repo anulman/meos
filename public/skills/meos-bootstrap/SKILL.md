@@ -263,7 +263,7 @@ Only after a verified instance exists should the agent configure the recurring o
 ## Discover before configuring
 
 1. Discover the actual host scheduling, agent execution, service supervision, configuration, and secret-reference capabilities. A filesystem or shell is not required: use supported configuration tools when available. Identify the MeOS MCP connection, authenticated account/workspace, available operations, and relevant permission scopes without exposing credentials.
-2. Read the [shared operating contract](../contract.md) and the seven core skills from the [discovery index](../../llms.txt). Inspect existing schedules, services, installation records, timezone, model/reasoning preferences, quiet hours, and grants of authority. Reuse existing approvals; do not widen them.
+2. Read the [shared operating contract](../contract.md) and the seven core skills from the [discovery index](../../llms.txt). Inspect existing schedules, services, installation records, timezone, model/reasoning preferences, quiet hours, and grants of authority. Audit saved skill references using [Keep operating skills current](../skill-updates.md): identify checkout/commit pins, copied instructions, missing installations and stale local versions. Reuse existing approvals; do not widen them.
 3. Identify which settings are known, inferred, unsupported, or genuinely missing. Ask only for choices that materially affect the installation and cannot be resolved from the environment or established preferences. Do not guess account identity, timezone, or permission to send communications.
 
 ## Build a concrete installation plan
@@ -294,7 +294,11 @@ Capture natural-language routine intent, frequency targets, duration intent, sof
 
 ## Install idempotently
 
-Use supported host configuration tools within the user's existing authority. Compare desired state with existing state before creating or updating anything. Preserve unrelated configuration. Use stable installation and job identifiers, reuse matching resources, and record previous values for changes to shared resources. Pin or record the installed skill versions and source references so upgrades can be reviewed.
+Use supported host configuration tools within the user's existing authority. Compare desired state with existing state before creating or updating anything. Preserve unrelated configuration. Use stable installation and job identifiers, reuse matching resources, and record previous values for changes to shared resources.
+
+Install the [chief-of-staff / executive-assistant entry point](../meos-assistant/SKILL.md) through the host’s supported skill mechanism when agent skill setup is authorized. Keep its natural-language intent description in the locally discoverable entry so ordinary chat about daily triage, weekly priorities, next actions and MeOS operations can select it without a scheduled trigger or explicit MeOS mention. Verify discovery separately from invocation and schedule registration; MCP connection alone does not install this entry.
+
+Recommend installing operating skills as lightweight proxies to the verified deployment's stable published URLs. Follow [Keep operating skills current](../skill-updates.md) to resolve and record the published content at each invocation without editing jobs after each deployment. A local-copy installation is an explicit alternative: configure invocation-time periodic upstream checks and a durable, deduplicated upgrade-offer sentinel; never overwrite it silently. Audit and repair stale/pinned saved jobs within existing authority, preserving every unrelated scheduler field. An intentional pin remains until the user changes that policy.
 
 Bootstrap is an ongoing maintenance workflow, not a one-time setup. Select the
 requested mode before acting: install, enable a named feature, inspect, repair,
@@ -321,9 +325,10 @@ or recreate jobs, recipients, registrations or seed data merely to rerun this sk
   or remint blindly. Record the runtime owner/run ID, verified state, last
   progress, next action and configured delivery route; resume only missing steps.
 - **Keep planning independent:** installation maintenance must not reset
-  planning state or overwrite operating skills. Pin bootstrap independently;
-  update planning skills only when requested. Coordinate changes to shared
-  resources, but let unrelated planning runs continue. Stop only the affected
+  planning state or overwrite local operating skills. Pin application artifacts
+  and bootstrap independently. Operating proxies follow their recorded published
+  source policy; replacing a local copy requires the user’s upgrade decision.
+  Coordinate changes to shared resources, but let unrelated planning runs continue. Stop only the affected
   client when its documented operation requires exclusive state ownership.
 
 Keep the installation ledger current with the pinned MeOS release and installation-manifest reference, artifact verification, host/deployment path, service IDs, persistent-storage references, non-secret access endpoints, workspace/account identity, skill versions, job IDs, triggers, timezone, execution settings, authority, status, verification receipts, and remaining blockers. Never store tokens or secret values in it. A job created successfully is **configured**, not proof of a successful execution. Install authorized morning/evening/review schedules independently of the event pipeline. Missing MCP access may block a ritual's planning execution, not its schedule installation: require an access preflight, explicit blocked reporting and no invented plans. Reuse known times and ordering; when a weekly review follows evening close, sequence them in one execution rather than creating concurrent jobs.
