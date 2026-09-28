@@ -37,6 +37,44 @@ bootstrap as production authorization. Reuse a verified existing deployment.
 Render, review and validate units before authorized activation. Preserve current
 storage, rollback artifacts and human release gates.
 
+## Verify the authentication lifecycle
+
+Inspect the deployed backend's actual authentication requirement before configuring
+the client. MeOS requires a bearer over the private Unix relay: socket access does
+not establish the application's owner identity. Do not remove authentication merely
+because the transport is local.
+
+Record access-token expiry and server-side session expiry separately. A successful
+refresh replaces an expired access token; it does not necessarily extend the session
+deadline. This MeOS host uses a dedicated session for the existing owner, valid until
+revoked, while its short-lived access tokens refresh normally. That is an explicitly
+admitted private-host policy, not a default for other MCP servers or clients. Verify
+the selected release and installation policy rather than inferring lifetime from a
+refresh token's presence.
+
+Follow the shipped refresh contract. Pinned native MeOS reuses its refresh token;
+the bridge refreshes on 401 and saves the new bearer atomically under its credential
+lock. A lost refresh response or failed save can retry with the same session secret.
+Do not require token rotation, add rotating-token compatibility or resurrect removed
+refresh-intent state. Rotating refresh tokens are preferred for a future iteration,
+but are neither a current dependency nor assumed supported behavior. Add no renewal
+daemon, recurring cron or extra state unless the actual backend/client contract
+demonstrates a need.
+
+Qualify real signed-token expiry and renewal against the exact backend/bridge in an
+isolated fixture, accounting for validation leeway; do not weaken validation or age
+production credentials to force the test. Require authenticated discovery and a
+harmless read after renewal, including after client process recreation. Then verify
+actual personal and scheduled-agent discovery/read receipts as described below;
+when scheduled access is used, include its expiry/renewal path in qualification.
+Initial discovery alone is not lifecycle proof. Record fixture evidence separately
+from live runtime evidence and disclose any unperformed check.
+
+Deleting the MeOS session prevents further renewal; issued access tokens retain
+their ordinary validity window, including validation leeway. Owner logout can also
+revoke host sessions. Preserve the private session secret and reconcile revocation
+before attempting recovery; never silently create a replacement session.
+
 ## Issue or reuse the delegated credential
 
 1. Verify the deployed native revision supports ordinary-owner MCP and the

@@ -173,6 +173,15 @@ Connect MCP using the release's supported authentication procedure on behalf of 
 
 Prefer a local Unix socket when the release supports one, using a supported stdio MCP adapter if the agent host requires stdio. Socket permissions restrict connection access; they do not replace application authentication unless the release explicitly supports that mechanism. HTTP can be preferable across hosts, across container boundaries without a shared socket, or for managed/remote MCP clients that do not support local stdio/socket access. Use the release's actual HTTP transport, supported authentication and TLS appropriate to exposure; do not add public routing or a new auth server merely because HTTP is available. Verify endpoint/adapter capabilities rather than assuming a backend socket or HTTP API already speaks MCP.
 
+Before declaring MCP ready, verify the deployed backend's authentication and
+refresh contract, not just transport access. Distinguish short-lived access tokens
+from the server-side session's lifetime: refreshing a bearer need not extend that
+session. Follow the shipped token-reuse or rotation behavior; do not require a new
+refresh token when the backend reuses it. Qualify expiry and renewal with discovery
+and a harmless read, including the scheduled agent context when used. See the
+[host authentication lifecycle](host-mcp.md#verify-the-authentication-lifecycle)
+for MeOS-specific session policy and proof requirements.
+
 Track MCP readiness as separate receipts, in order:
 
 1. **Installed:** pinned bridge, private configuration and persistent registration.
