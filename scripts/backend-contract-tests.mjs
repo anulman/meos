@@ -309,3 +309,65 @@ test('explicit commute classification preserves project and schedule, without cl
   assert.equal(cleared.value.type,undefined);assert.deepEqual(cleared.value.schedule,schedule);assert.equal(cleared.value.projectId,project.value.id);
  }finally{f.close()}
 });
+
+test('period reflections preserve human prose, isolate owners and retry atomically',()=>{
+ const f=fixture();try{
+  const selector={kind:'day',period:{start:'2026-09-26',end:'2026-09-26'}}
+  assert.deepEqual(f.invoke('get_period_note',selector),{record:null})
+  const human={type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'My own words',marks:[{type:'strong'}]}]}]}
+  const original=f.commands.saveNatural(f.owner,'periodNotes',{id:id(),...selector,notes:human},0)
+  const input={...selector,id:original.value.id,expectedRevision:1,idempotencyKey:key(),author:'Clawy',text:'Started at 09:15.\nFinish unknown.',source:'Synthetic conversation message 42'}
+  const saved=f.invoke('append_period_note',input)
+  assert.equal(saved.record.revision,2);assert.equal(saved.sourceRevision,1)
+  assert.deepEqual(saved.record.value.notes.content[0],human.content[0])
+  assert.equal(saved.record.value.notes.content[1].content[0].content[0].text,'🤖 Clawy')
+  assert.equal(saved.outcome.status,'pending');assert.match(saved.followUp,/Note saved is not Calendar reconciled/)
+  assert.deepEqual(f.invoke('append_period_note',input),saved)
+  assert.throws(()=>f.invoke('append_period_note',{...input,text:'Changed'}),{code:'conflict'})
+  assert.throws(()=>f.invoke('append_period_note',{...input,idempotencyKey:key()}),{code:'conflict'})
+  assert.throws(()=>f.invoke('append_period_note',{...input,expectedRevision:2,id:id(),idempotencyKey:key()}),{code:'conflict'})
+  assert.deepEqual(f.commands.invoke(f.other,'get_period_note',selector),{record:null})
+  const receipt=f.invoke('get_command_receipt',{key:input.idempotencyKey})
+  assert.equal(receipt.input.source,input.source);assert.deepEqual(receipt.result,saved)
+  const outcome={status:'blocked',reason:'Calendar cache unavailable',commandKeys:[key()],calendarEvidence:['Synthetic cache unavailable']}
+  const updated=f.invoke('append_period_note',{...input,text:'Follow-up: Calendar unavailable.',expectedRevision:2,idempotencyKey:key(),outcome})
+  assert.deepEqual(updated.outcome,outcome);assert.equal(updated.record.revision,3)
+  assert.deepEqual(f.invoke('get_period_note',selector).record,updated.record)
+  assert.deepEqual(f.commands.list(f.owner,'tasks').items,[])
+  assert.deepEqual(f.commands.list(f.owner,'occurrences').items,[])
+  assert.equal(f.db.prepare("SELECT count(*) n FROM sync_outbox WHERE kind IN ('tasks','occurrences')").get().n,0)
+ }finally{f.close()}
+})
+test('period reflection creation, bounds and receipt rollback',()=>{
+ const f=fixture();try{
+  const input={kind:'week',period:{start:'2026-09-21',end:'2026-09-27'},id:id(),expectedRevision:0,idempotencyKey:key(),author:'Agent',text:'A small reflection',source:'Synthetic weekly review'}
+  const saved=f.invoke('append_period_note',input)
+  assert.equal(saved.record.revision,1);assert.deepEqual(f.invoke('append_period_note',input),saved)
+  assert.throws(()=>f.invoke('append_period_note',{...input,id:id(),idempotencyKey:key()}),{code:'conflict'})
+  for(const patch of [{period:{start:'2026-09-21',end:'2026-10-21'}},{text:'x'.repeat(10001)},{author:'Bad\nAuthor'},{text:' '},{source:' '},{ownerId:f.other}]){
+   assert.throws(()=>f.invoke('append_period_note',{...input,expectedRevision:1,idempotencyKey:key(),...patch}),{code:'validation'})
+  }
+  const day={kind:'day',period:{start:'2026-09-26',end:'2026-09-26'}}
+  assert.throws(()=>f.invoke('get_period_note',{...day,period:{start:'2026-09-26',end:'2026-09-27'}}),{code:'validation'})
+  const full=f.commands.saveNatural(f.owner,'periodNotes',{id:id(),...day,notes:{type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'x'.repeat(100000)}]}]}},0)
+  const overflow={...input,...day,id:full.value.id,expectedRevision:1,idempotencyKey:key(),text:'x'.repeat(1000)}
+  assert.throws(()=>f.invoke('append_period_note',overflow),{code:'validation'})
+  assert.deepEqual(f.invoke('get_period_note',day).record,full)
+  assert.deepEqual(f.invoke('get_command_receipt',{key:overflow.idempotencyKey}),{found:false})
+ }finally{f.close()}
+})
+test('MCP note scopes remain separate from notification planning reads',async()=>{
+ const f=fixture();try{
+  f.db.prepare('INSERT INTO _meos_agent_grants VALUES(?,?,?,?,0)').run(blob(f.agent),blob(f.owner),JSON.stringify(['planning:read']),Date.parse('2027-01-01'))
+  const handle=createMcpHandler({commands:f.commands,origin:'https://acceptance.invalid',readText:r=>r.text})
+  const call=async(method,params,user=f.agent)=>(await handle({method:'POST',headers:new Headers({Authorization:'Bearer synthetic','Content-Type':'application/json',Accept:'application/json, text/event-stream'}),text:JSON.stringify({jsonrpc:'2.0',id:1,method,params})},{id:user}).json()).result
+  const discovered=(await call('tools/list')).tools
+  assert.ok(discovered.some(t=>t.name==='get_period_note'));assert.ok(!discovered.some(t=>t.name==='append_period_note'))
+  const input={kind:'day',period:{start:'2026-09-26',end:'2026-09-26'},id:id(),expectedRevision:0,idempotencyKey:key(),author:'Agent',text:'Reflection',source:'Synthetic'}
+  assert.equal((await call('tools/call',{name:'append_period_note',arguments:input})).isError,true)
+  const ownerTools=(await call('tools/list',{},f.owner)).tools
+  assert.equal(ownerTools.find(t=>t.name==='append_period_note').annotations.readOnlyHint,false)
+  const result=await call('tools/call',{name:'append_period_note',arguments:input},f.owner)
+  assert.equal(result.structuredContent.record.revision,1);assert.deepEqual(JSON.parse(result.content[0].text),result.structuredContent)
+ }finally{f.close()}
+})

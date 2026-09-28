@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import { DomainError, canonical, uuid, date, timezone, validatePreferences, validateResource } from './domain.mjs'
+import { DomainError, canonical, uuid, date, period, timezone, validatePreferences, validateResource } from './domain.mjs'
 import {addDays,localDay,scheduledInstant,horizon,occursOn} from './scheduling.mjs'
 import {publishCalendarCache,readCalendarCache,listCalendarCache,readCalendarWindow} from './calendar-cache.mjs'
 import {delegatedPrincipal} from './delegation.mjs'
@@ -120,6 +120,22 @@ export function createCommands({begin,now=()=>Date.now()}) {
     if(spec.write){const old=db.query('SELECT operation,payload,result FROM command_receipts WHERE owner_id=? AND command_key=?',[blob(owner),input.idempotencyKey])[0];if(old){if(old[0]!==name||old[1]!==canonical(input))throw new DomainError('conflict','Idempotency key payload mismatch');return JSON.parse(old[2])}}
     let result
     if(['search','configure_search','search_index_status','search_index_batch','search_index_commit','search_query_commit'].includes(name))result=searchOperation(db,owner,name,input,now())
+    else if(name==='get_period_note'||name==='append_period_note'){
+     period(input.period,input.kind)
+     const row=db.query(`SELECT ${columns} FROM period_notes WHERE owner_id=? AND kind=? AND start_date=? AND end_date=?`,[blob(owner),input.kind,input.period.start,input.period.end])[0]
+     const previous=row?envelope(row):null
+     if(name==='get_period_note')result={record:previous}
+     else {
+      if((previous?.revision??0)!==input.expectedRevision)throw new DomainError('conflict','Period note changed',{currentRevision:previous?.revision??0})
+      if(previous&&previous.value.id!==input.id)throw new DomainError('conflict','Period note identity changed')
+      if(!input.author.trim()||/[\r\n]/.test(input.author)||!input.text.trim()||!input.source.trim())throw new DomainError('validation','Author, reflection and source must contain text; author must be one line')
+      const paragraph=text=>({type:'paragraph',content:[{type:'text',text}]})
+      const block={type:'blockquote',content:[{type:'paragraph',content:[{type:'text',text:'🤖 '+input.author,marks:[{type:'em'}]}]},...input.text.split('\n').map(text=>text?paragraph(text):{type:'paragraph'}),paragraph('Source: '+input.source)]}
+      const value={id:input.id,kind:input.kind,period:input.period,notes:{...(previous?.value.notes??{type:'doc'}),content:[...(previous?.value.notes.content??[]),block]}}
+      const record=api.saveNatural(owner,'periodNotes',value,input.expectedRevision)
+      result={record,sourceRevision:input.expectedRevision,outcome:input.outcome??{status:'pending',reason:'Consider timing corrections and authorized future recalculation; Calendar has not been verified by this note write.'},followUp:spec.output.properties.followUp.const}
+     }
+    }
     else if(name==='get_command_receipt'){const row=db.query('SELECT operation,payload,result FROM command_receipts WHERE owner_id=? AND command_key=?',[blob(owner),input.key])[0];result=row?{found:true,operation:row[0],input:JSON.parse(row[1]),result:JSON.parse(row[2])}:{found:false}}
     else if(name==='calendar_inventory')result=api.list(owner,input.kind,{cursor:input.cursor,limit:250})
     else if(name==='calendar_changes'){
