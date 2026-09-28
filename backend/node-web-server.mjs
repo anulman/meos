@@ -19,9 +19,9 @@ export function createNodeWebHandler({origin,root,upstream,demo=false,accessOwne
   if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);res.end();return}
   const pathname=new URL(request.url).pathname;res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store')
   if(pathname==='/config.js'){res.setHeader('Content-Type','text/javascript');res.end(req.method==='HEAD'?undefined:'window.MEOS_CONFIG='+JSON.stringify({demo,accessGated:!!accessOwner,timezone:'UTC',apiBase:'/api'})+';');return}
-  let file;if(['/','/week','/settings'].includes(pathname))file=path.join(directory,'_shell.html');else if(/^\/assets\/[a-zA-Z0-9_.-]+$/.test(pathname))file=path.join(directory,pathname.slice(1));else if(demo&&pathname==='/mockServiceWorker.js')file=path.join(directory,'mockServiceWorker.js')
+  let file;if(['/','/week','/settings'].includes(pathname))file=path.join(directory,'_shell.html');else if(/^\/assets\/[a-zA-Z0-9_.-]+$/.test(pathname))file=path.join(directory,pathname.slice(1));else if(pathname==='/llms.txt'||/^\/skills\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.md$/.test(pathname))file=path.join(directory,pathname.slice(1));else if(demo&&pathname==='/mockServiceWorker.js')file=path.join(directory,'mockServiceWorker.js')
   if(!file||!fs.existsSync(file)||!fs.statSync(file).isFile()||fs.lstatSync(file).isSymbolicLink()||!fs.realpathSync(file).startsWith(fs.realpathSync(directory)+path.sep)){res.writeHead(404);res.end('Not found');return}
-  res.setHeader('Content-Type',({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2'})[path.extname(file)]??'application/octet-stream')
+  res.setHeader('Content-Type',({'.md':'text/markdown; charset=utf-8','.txt':'text/plain; charset=utf-8','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2'})[path.extname(file)]??'application/octet-stream')
   if(pathname.startsWith('/assets/'))res.setHeader('Cache-Control','public, max-age=31536000, immutable')
   res.end(req.method==='HEAD'?undefined:fs.readFileSync(file))
  }catch{if(!res.headersSent)res.writeHead(503,{'Cache-Control':'no-store'});res.end('Service unavailable')}}
