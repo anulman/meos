@@ -4,6 +4,10 @@
 
 ## Operating skills
 
+- [Chief-of-staff / executive-assistant entry point](skills/meos-assistant/SKILL.md): Daily triage, weekly priorities, next actions and MeOS operations in ordinary chat; no scheduled trigger or product-name mention required.
+
+- [Keep operating skills current](skills/skill-updates.md): Install published-source proxies, audit pinned saved jobs, or check local copies periodically and offer upgrades without overwriting them.
+
 - [Install and bootstrap](skills/meos-bootstrap/SKILL.md): Install a post-cutover production release (Compose first, Helm later), install optional backup encryption from pinned source or an admitted runtime, plan and verify recovery, then configure agent schedules, per-install planning authority and event long-polling.
 
 - [Shared operating contract](skills/contract.md): Required authority, tentative/target-day planning, Google-wins reconciliation, evidence-aware actuals, weekly reflection, tool discovery and delivery rules.
