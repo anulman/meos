@@ -217,19 +217,21 @@ installation discovery; [release tooling](scripts/release-build.py) and
 [service templates](deployment/) show the implementation. Host-specific paths,
 admission records, and credentials are not supplied by a fresh clone.
 
-Many `docs/*HANDOFF*`, `*QUALIFICATION*`, and release-plan files preserve historical
-checkpoints. Use them as evidence for their stated revision, not as current
-installation status or blanket deployment authority. See the
-[contributor guide](docs/CONTRIBUTING.md#read-documents-in-context) for the source
-of truth for each kind of question.
+Release status and task-specific qualification evidence belong in PR/CI artifacts
+or operator records outside the source tree. Repository topic guides describe
+behavior; retained license and machine-readable admission records serve their
+specific consumers. See the [documentation lifecycle](docs/CONTRIBUTING.md#keep-documentation-current)
+for retention and removal rules.
 
 ## Continue
 
 - [Contribute a change](docs/CONTRIBUTING.md): trace behavior, choose checks, and diagnose common failures.
+- [Application contract](docs/application-contract.md): operation ownership, retries, and scheduling invariants.
 - [Loading and explicit planning](docs/LOADING-ARCHITECTURE.md): session ownership and bounded routine materialization.
 - [Calendar cache](docs/calendar-cache.md): freshness, publication, and scheduling context.
 - [Search](docs/search.md): keyword retrieval and optional revision-bound embeddings.
 - [Native agent client](clients/meos-agent/README.md) and [host integration](clients/meos-host/README.md): durable handoff and recovery.
+- [Native runtime boundaries](docs/native-runtime.md): private services, release identity, and rollback.
 - [Backup and recovery](docs/BACKUP-RECOVERY.md): optional host-side recovery tooling.
 
 MeOS-authored code is [Apache-2.0](LICENSE). Dependencies and runtime components

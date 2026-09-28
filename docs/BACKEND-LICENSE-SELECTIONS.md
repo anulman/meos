@@ -11,6 +11,8 @@ The runtime admission validator now also recognizes these reviewed, standard per
 
 The hashes of exact notices live in the retained source inventories bound by `backend/qualification-evidence.json`. A compound AND grant is represented by an explicit list of all selected licenses; raw ambiguous `OR`, unknown or copyleft expressions still fail admission. For offered alternatives such as ittapi's GPL/BSD or self_cell's Apache/GPL, select the actual packaged BSD or Apache grant and preserve that notice. AWS-LC's own complete notice explicitly elects BSD for its jitter entropy code; do not infer a GPL runtime from its explanation of the unused alternative.
 
-No compiler, host libc, image-processing library or build cache belongs in the final service image. The intended service image is scratch plus the musl-static binary, independent guest, application configuration/migrations and notices. It is still a candidate until the final binary/image inventory and isolation checks pass.
+No compiler, host libc, image-processing library or build cache belongs in the final service image. The intended service image is scratch plus the musl-static binary, independent guest, application configuration/migrations and notices. Each release needs its own final binary/image inventory and isolation checks; this reference is not an artifact admission.
 
 - **MIT-0:** exact `borrow-or-share0.2.4/LICENSE` grants unrestricted use/copy/modification/distribution without attribution conditions; retained regardless.
+
+The protected web adapter has a separate [Node runtime license boundary](node-runtime-licenses.md), including host linkage and supplemental notices.
