@@ -19,7 +19,7 @@ export const schemas={
 }
 const calendarFields={location:{type:'string',maxLength:1000},durationIntent:{type:'string',maxLength:500},actualDurationMinutes:integer(1,10080)}
 const base={id,title:str(),notes:ref('Notes')},schedule=ref('Schedule'),pref=ref('PreferredTime')
-schemas.Task=obj({...base,...calendarFields,completed:bool,priority:{enum:['none','low','medium','high']},projectId:id,schedule,durationMinutes:integer(1,1440),archived:bool,references:array(ref('Reference'),50),preferredTime:pref},['id','title','notes','completed','priority'])
+schemas.Task=obj({...base,...calendarFields,type:{const:'commute'},completed:bool,priority:{enum:['none','low','medium','high']},projectId:id,schedule,durationMinutes:integer(1,1440),archived:bool,references:array(ref('Reference'),50),preferredTime:pref},['id','title','notes','completed','priority'])
 schemas.Routine=obj({...base,location:calendarFields.location,durationIntent:calendarFields.durationIntent,timezone:str(100),archived:bool,preferredTime:pref,recurrenceIntent:ref('RecurrenceIntent')},['id','title','notes','recurrenceIntent','timezone'])
 schemas.Occurrence=obj({...base,...calendarFields,routineId:id,date:day,completed:bool,schedule,durationMinutes:integer(1,1440),preferredTime:pref,skipped:bool,edited:bool,templateRevision:integer()},['id','routineId','date','completed'])
 schemas.Project=obj({...base,completed:bool,archived:bool,targetDate:day,references:array(ref('Reference'),50)},['id','title','notes'])

@@ -294,3 +294,18 @@ test('MCP routine creation reuses domain validation, owner scope and retry recei
   assert.equal((await call('tools/call',{name:'create_routine',arguments:ownerInput},f.owner)).result.structuredContent.value.id,ownerInput.value.id)
  }finally{f.close()}
 })
+
+
+test('explicit commute classification preserves project and schedule, without classifying titles',()=>{
+ const f=fixture();try{
+  const project=f.commands.create(f.owner,'projects',{id:id(),title:'Band',notes});
+  const schedule={date:'2026-09-28',time:'17:00',timezone:'America/Toronto'};
+  const value=task({type:'commute',projectId:project.value.id,schedule,durationMinutes:30});
+  const saved=f.commands.create(f.owner,'tasks',value);assert.deepEqual(saved.value,value);
+  assert.throws(()=>f.commands.create(f.owner,'tasks',task({type:'routine'})),/Schema/);
+  assert.throws(()=>f.commands.create(f.owner,'tasks',task({type:'commute',projectId:id()})),/Record not found/);
+  const ordinary=f.commands.create(f.owner,'tasks',task({title:'Travel research'}));assert.equal(ordinary.value.type,undefined);
+  const {type,...rest}=saved.value;const cleared=f.commands.update(f.owner,'tasks',rest,saved.revision);
+  assert.equal(cleared.value.type,undefined);assert.deepEqual(cleared.value.schedule,schedule);assert.equal(cleared.value.projectId,project.value.id);
+ }finally{f.close()}
+});

@@ -8102,6 +8102,9 @@
             "minimum": 1,
             "maximum": 10080
           },
+          "type": {
+            "const": "commute"
+          },
           "completed": {
             "type": "boolean"
           },

@@ -13,8 +13,15 @@ const envelope = (value, revision = 1) => ({ value, revision, createdAt: `${day}
 const preferences = envelope({ timezone, weekStartsOn: 1, weather: { enabled: false, source: 'latest', units: 'celsius' } });
 const routines = [envelope({ id: id(1), title: 'Existing routine', notes: { type: 'doc' }, timezone, recurrenceIntent: interpretRecurrence('every day', day), durationIntent: 'About 25 minutes' })];
 let occurrence = envelope({ id: id(2), routineId: id(1), title: 'Existing instance', notes: { type: 'doc' }, date: day, completed: false, durationMinutes: 25, templateRevision: 1 });
+const tasks = [
+ envelope({id:id(10),title:'Ordinary task',notes:{type:'doc'},completed:false,priority:'none'}),
+ envelope({id:id(11),title:'Travel research',notes:{type:'doc'},completed:false,priority:'none'}),
+ envelope({id:id(12),title:'Ride to rehearsal',type:'commute',notes:{type:'doc'},completed:false,priority:'none',durationMinutes:30,schedule:{date:day,time:'12:00',timezone}}),
+ envelope({id:id(13),title:'Project ride',type:'commute',projectId:id(20),notes:{type:'doc'},completed:false,priority:'none',durationMinutes:30,schedule:{date:day,time:'13:00',timezone}})
+];
+const projects=[envelope({id:id(20),title:'Band project',notes:{type:'doc'}})];
 const requests = [], serverErrors = [], pageErrors = [], blockedRequests = [];
-const revisions = () => ({ tasks: 0, projects: 0, routines: routines.reduce((sum, row) => sum + row.revision, 0), occurrences: occurrence.revision, outcomes: 0, periodNotes: 0, preferences: 1 });
+const revisions = () => ({ tasks: tasks.reduce((n,r)=>n+r.revision,0), projects: 1, routines: routines.reduce((sum, row) => sum + row.revision, 0), occurrences: occurrence.revision, outcomes: 0, periodNotes: 0, preferences: 1 });
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
@@ -25,7 +32,11 @@ const server = http.createServer(async (req, res) => {
       requests.push(call);
       let response;
       if (call.method !== 'GET') {
-        if (call.path === '/api/meos/v1/resources/routines' || call.path === '/api/meos/v1/operations/update_routine') {
+        if (call.path.startsWith('/api/meos/v1/resources/tasks/')) {
+          const index=tasks.findIndex(row=>row.value.id===call.body.value.id);assert.ok(index>=0);
+          assert.equal(call.body.expectedRevision,tasks[index].revision);
+          tasks[index]=envelope(validateResource('tasks',call.body.value),tasks[index].revision+1);response=tasks[index];
+        } else if (call.path === '/api/meos/v1/resources/routines' || call.path === '/api/meos/v1/operations/update_routine') {
           const value = structuredClone(call.body.value);
           for (const key of ['weekdays', 'time', 'durationMinutes', 'actualDurationMinutes']) assert.ok(!Object.hasOwn(value, key), `obsolete template field: ${key}`);
           const index = routines.findIndex(row => row.value.id === value.id);
@@ -49,8 +60,9 @@ const server = http.createServer(async (req, res) => {
       else if (call.path.includes('/resources/')) {
         const kind = call.path.split('/').at(-1);
         assert.ok(['routines', 'occurrences', 'tasks', 'projects', 'outcomes', 'periodNotes'].includes(kind));
-        response = { items: kind === 'routines' ? routines : kind === 'occurrences' ? [occurrence] : [] };
-      } else if (call.path.endsWith('/calendar-window')) response = { id: 'calendar', available: true, state: 'connected', syncActive: true, lastSyncAt: Date.now(), plannerLastSyncAt: Date.now(), windowStart: null, windowEnd: null, drafts: [], planner: { plannerLastSyncAt: Date.now(), conflicts: [] }, sequence: 1, status: 'fresh', unchanged: false, items: [] };
+        response = { items: kind === 'routines' ? routines : kind === 'occurrences' ? [occurrence] : kind === 'tasks' ? tasks : kind === 'projects' ? projects : [] };
+      } else if (call.path.endsWith('/calendar/status')) response = {state:'disconnected',syncActive:false,scopes:[],lastSyncAt:null};
+      else if (call.path.endsWith('/calendar-window')) response = { id: 'calendar', available: true, state: 'connected', syncActive: true, lastSyncAt: Date.now(), plannerLastSyncAt: Date.now(), windowStart: null, windowEnd: null, drafts: [], planner: { plannerLastSyncAt: Date.now(), conflicts: [] }, sequence: 1, status: 'fresh', unchanged: false, items: [] };
       else throw Error(`Unexpected read: ${call.path}`);
       res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(response));
     } else if (url.pathname === '/config.js') {
@@ -110,6 +122,12 @@ try {
   await page.getByRole('button', { name: `Existing instance · ${day}`, exact: true }).click();
   const instance = page.getByRole('dialog', { name: 'Routine instance' });
   assert.equal(await instance.getByLabel('Instance duration', { exact: true }).inputValue(), '25');
+  await instance.getByLabel('Instance name', {exact:true}).fill('Preserved instance draft');
+  await instance.getByRole('button',{name:'Open routine: Existing routine',exact:true}).click();
+  dialog=page.getByRole('dialog',{name:'Routine details'});
+  assert.equal(await dialog.getByLabel('Routine name',{exact:true}).inputValue(),'Existing routine');
+  page.once('dialog',d=>d.accept());await dialog.getByRole('button',{name:'Close planner details',exact:true}).click();
+  assert.equal(await instance.getByLabel('Instance name',{exact:true}).inputValue(),'Preserved instance draft');
   await instance.getByLabel('Instance date', { exact: true }).fill(day);
   await instance.getByLabel('Instance time', { exact: true }).fill('10:15');
   await instance.getByLabel('Instance duration', { exact: true }).fill('40');
@@ -122,6 +140,23 @@ try {
   assert.equal(occurrence.value.schedule.timezone, 'America/Toronto'); assert.equal(occurrence.value.durationMinutes, 40);
   assert.equal(routines[0].value.durationIntent, 'About 25 minutes', 'instance editing preserves template');
   assert.equal(requests.filter(call => call.method !== 'GET').length, 3);
+  await page.goto(origin+'/settings');
+  const noProject=page.locator('section').filter({has:page.getByRole('heading',{name:'No project',exact:true})});
+  await noProject.getByText('Ordinary task',{exact:true}).waitFor();
+  assert.equal(await noProject.getByText('Travel research',{exact:true}).count(),1);
+  assert.equal(await noProject.getByText('Ride to rehearsal',{exact:true}).count(),0);
+  assert.equal(await noProject.getByText('Preserved instance draft',{exact:true}).count(),0);
+  await page.getByRole('button',{name:/Band project/}).click();
+  await page.getByText('Project ride',{exact:true}).waitFor();
+  await page.goto(origin+'/');
+  await page.getByText('Ride to rehearsal',{exact:true}).waitFor();
+  await page.getByText('Project ride',{exact:true}).waitFor();
+  await page.getByText('Preserved instance draft',{exact:true}).waitFor();
+  await page.getByText('Ride to rehearsal',{exact:true}).click();
+  await page.getByLabel('Task type',{exact:true}).selectOption('');
+  await page.getByRole('button',{name:'Save changes',exact:true}).click();
+  assert.equal(tasks[2].value.type,undefined);assert.equal(tasks[2].value.schedule.time,'12:00');
+  await page.goto(origin+'/settings');await noProject.getByText('Ride to rehearsal',{exact:true}).waitFor();
   assert.deepEqual(serverErrors, []); assert.deepEqual(pageErrors, []); assert.deepEqual(blockedRequests, []);
   console.log('PASS routine intent create/edit, stable anchor, absent exact template controls, no automatic occurrences, exact occurrence scheduling');
 } catch (error) {
