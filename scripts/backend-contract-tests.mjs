@@ -369,5 +369,10 @@ test('MCP note scopes remain separate from notification planning reads',async()=
   assert.equal(ownerTools.find(t=>t.name==='append_period_note').annotations.readOnlyHint,false)
   const result=await call('tools/call',{name:'append_period_note',arguments:input},f.owner)
   assert.equal(result.structuredContent.record.revision,1);assert.deepEqual(JSON.parse(result.content[0].text),result.structuredContent)
+  assert.match(result.structuredContent.followUp,/Run the reset\/reschedule procedures as directed.*within existing authority/)
+  assert.match(result.structuredContent.followUp,/Prefer rescheduling to unscheduling where possible, unless otherwise directed/)
+  assert.match(result.structuredContent.followUp,/Reply to the user with a concise summary of the changes and any unresolved blockers/)
+  assert.equal(result.structuredContent.outcome.status,'pending')
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM command_receipts').get().n,1)
  }finally{f.close()}
 })
