@@ -41,4 +41,4 @@ Follow the [learning-loop reference](../learning-loop.md). Capture a material su
 
 ## Routine coverage
 
-When this authorized planning operation needs new fixed routine instances, use the [explicit routine planning contract](../contract.md#explicit-routine-planning). Reuse the prior request receipt when coverage is already planned. Ordinary context reads and unchanged plans do not require another materialization command.
+When this authorized planning operation needs new routine instances, use the [explicit routine planning contract](../contract.md#explicit-routine-planning). Reuse the prior request receipt when coverage is already planned. Ordinary context reads and unchanged plans do not require another materialization command.

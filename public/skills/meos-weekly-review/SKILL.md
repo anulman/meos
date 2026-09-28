@@ -9,11 +9,11 @@ description: Review priorities and capacity across the next 14 days when the use
 
 Suggested participation: 20–30 minutes. Use for strategic weekly reconciliation and forward planning, not every calendar update.
 
-1. Reuse recent review progress and discuss priorities first: choose a few meaningful outcomes with the user or existing priority policy before collecting or decomposing tasks. Preserve the agreed priority order.
+1. Reuse recent review progress and discuss priorities first: choose a few meaningful outcomes with the user or existing priority policy before collecting or decomposing tasks. Preserve the agreed priority order. Link each priority to a current MeOS project using the [project-linking policy](../contract.md#link-planning-priorities-to-projects): infer only an obvious link from recent MeOS context, otherwise ask; suggest creating a project when none is obvious or available.
 2. Perform the weekly estimates-versus-actuals reflection: compare original estimates, planned slots and evidenced actuals, retain unknowns and confidence, and propose useful future-estimate adjustments without rewriting history. Do not treat elapsed slots as completion. Load open commitments, waiting-for items, routines and the next 14 days of availability. Record incomplete coverage and stale sources.
-3. Derive tasks from the agreed outcomes. Invoke [Walk the board](../meos-walk-board/SKILL.md) for consequential decisions; invoke [Clean the board](../meos-clean-board/SKILL.md) only when hygiene obstructs them. Do not repeat captured decisions. Identify preparation, travel, follow-ups, durations and dependencies; surface capacity conflicts without silently changing priorities. Review deadlines beyond the window only when preparation is needed within it.
+3. Derive tasks from the agreed outcomes, carrying their verified MeOS project IDs. Invoke [Walk the board](../meos-walk-board/SKILL.md) for consequential decisions; invoke [Clean the board](../meos-clean-board/SKILL.md) only when hygiene obstructs them. Do not repeat captured decisions. Identify preparation, travel, follow-ups, durations and dependencies; surface capacity conflicts without silently changing priorities. Review deadlines beyond the window only when preparation is needed within it.
 4. Once outcomes, task estimates and constraints are sufficient, automatically begin scheduling within existing authority. If scheduling authority is missing, ask to start scheduling instead of ending with intake notes. Do not ask again when scheduling is already authorized.
-5. Place tasks and routine instances on the dedicated MeOS calendar in the same planning pass. Explicitly instantiate and schedule routine coverage up to two weeks ahead using the supported planning contract; saving templates alone is not coverage. Interpret routine intent as frequency targets, soft preferred times and hard rules. Preserve existing instances and calendar events, protect rest, meals and travel, and leave deliberate slack. Rebalance tasks and routines together rather than filling the calendar with tasks first. Surface unsupported recurrence or instance creation as a coverage gap; never silently omit it or invent a fixed recurrence.
+5. Place tasks and routine instances on the dedicated MeOS calendar in the same planning pass. Explicitly instantiate and schedule routine coverage up to two weeks ahead using the supported planning contract; saving templates alone is not coverage. Interpret routine intent as frequency targets, duration intent, soft preferred times and hard rules. Fixed recurrence expansion yields unscheduled snapshots; choose concrete occurrence slots and durations separately. Use explicit occurrence creation for flexible targets. Preserve existing instances and calendar events, protect rest, meals and travel, and leave deliberate slack. Rebalance tasks and routines together rather than filling the calendar with tasks first. Surface unsupported recurrence or instance creation as a coverage gap; never silently omit it or invent a fixed recurrence.
 6. Apply and verify authorized revision-checked changes. Future blocks, including tomorrow and week two, default to TENTATIVE; use only supported schema representation or retain an explicit proposal. Target-day commitment belongs to prior-night preparation or day-of launch, with fresh capacity checks. Respect Google-wins reconciliation without losing MeOS-only notes, estimates or history. Verify task and routine coverage together and distinguish saved MeOS schedules from verified Calendar propagation. Explicitly defer work that does not fit. Planning farther ahead does not authorize notifications beyond seven days.
 
 ## All-day context
@@ -50,12 +50,18 @@ Use the [search reference](../search.md) when related work or prior reflections 
 
 When the user authorizes a new routine, discover `create_routine` and its schema
 (`routines:write` scope). Supply a stable UUID, title, rich-text `notes` (an empty
-document is `{"type":"doc"}`), distinct `weekdays` (0 is Sunday), and an IANA
-`timezone` in `value`, plus an `idempotencyKey`. `time` is optional; do not invent
-a clock time from a soft preference. Use supported `preferredTime` and
-`recurrenceIntent` fields to preserve intent, and inspect their returned status.
-If required weekdays are unresolved, clarify them rather than inventing a fixed
-pattern. Saving a template does not create occurrences or Calendar events.
+document is `{"type":"doc"}`), and an IANA `timezone` in `value`, plus an
+`idempotencyKey`. Preserve frequency in `recurrenceIntent` with the user's `text`
+and a routine-local `anchorDate`; preserve duration in `durationIntent` text
+and soft timing in `preferredTime.text`. For example, “three times a week,”
+“roughly half an hour,” and “mornings” do not require exact weekdays or a clock
+time. Do not supply removed template `weekdays`, `time` or `durationMinutes`
+fields, or manufacture client-side interpretation. Read the server-derived
+recurrence kind/status and preferred-time interpretation; clarify unresolved
+intent only when it prevents a concrete planning decision. A flexible frequency
+is valid intent, not a request to invent a fixed pattern. Exact schedules and
+`durationMinutes` belong to occurrences. Saving a template does not create
+occurrences or Calendar events.
 
 Retain the returned routine ID, revision and request. After uncertain success,
 replay the identical request and key; do not generate another identity. Report
@@ -64,4 +70,4 @@ discoverable, keep an explicit unsaved proposal.
 
 ## Routine coverage
 
-When this authorized planning operation needs new fixed routine instances, use the [explicit routine planning contract](../contract.md#explicit-routine-planning). Reuse the prior request receipt when coverage is already planned. Ordinary context reads and unchanged plans do not require another materialization command.
+When this authorized planning operation needs new routine instances, use the [explicit routine planning contract](../contract.md#explicit-routine-planning). Reuse the prior request receipt when coverage is already planned. Ordinary context reads and unchanged plans do not require another materialization command.

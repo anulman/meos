@@ -40,6 +40,8 @@ export function interpretRecurrence(text,anchorDate){
  let weekdays=s==='every day'?[0,1,2,3,4,5,6]:s==='every weekday'?[1,2,3,4,5]:undefined,intervalWeeks=1
  const m=s.match(/^every (other )?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)$/)
  if(m){weekdays=[names.indexOf(m[2])];intervalWeeks=m[1]?2:1}
+ const list=s.startsWith('every ')?s.slice(6).split(',').map(v=>v.trim()):[]
+ if(list.length&&list.every(v=>names.includes(v))&&new Set(list).size===list.length)weekdays=list.map(v=>names.indexOf(v)).sort()
  if(weekdays)return {text,status:'validated',kind:'fixed',weekdays,intervalWeeks,anchorDate}
  const f=s.match(/^(one|two|three|four|five|six|seven|[1-7]) times? a week(?:,? preferably on weekdays)?$/)
  if(f)return {text,anchorDate,status:'validated',kind:'flexible',frequency:Number(f[1])||['one','two','three','four','five','six','seven'].indexOf(f[1])+1,period:'week',preferredWeekdays:s.includes('weekdays')?[1,2,3,4,5]:[]}
@@ -47,9 +49,9 @@ export function interpretRecurrence(text,anchorDate){
 }
 export function occursOn(routine,day){
  const intent=routine.recurrenceIntent
- if(intent&&intent.kind!=='fixed')return false // Flexible targets go to scheduler, not arbitrary expansion.
- const weekdays=intent?.weekdays??routine.weekdays,interval=intent?.intervalWeeks??1
+ if(intent.kind!=='fixed')return false // Flexible targets require explicit planning.
+ const weekdays=intent.weekdays,interval=intent.intervalWeeks
  if(!weekdays.includes(new Date(day+'T00:00:00Z').getUTCDay()))return false
- if(intent){const delta=Math.floor((Date.parse(day+'T00:00:00Z')-Date.parse(intent.anchorDate+'T00:00:00Z'))/86400000);return delta>=0&&Math.floor(delta/7)%interval===0}
- return true
+ const delta=Math.floor((Date.parse(day+'T00:00:00Z')-Date.parse(intent.anchorDate+'T00:00:00Z'))/86400000)
+ return delta>=0&&Math.floor(delta/7)%interval===0
 }

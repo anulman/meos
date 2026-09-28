@@ -22,7 +22,7 @@ for (const module of ['react', 'react/jsx-runtime', './dates', './config', '../.
   const resolved = module === './dates' ? new URL('../src/lib/dates.ts', import.meta.url).href : module==='./config'?new URL('../src/lib/config.ts',import.meta.url).href:module==='../../backend/scheduling.mjs'?new URL('../backend/scheduling.mjs',import.meta.url).href:import.meta.resolve(module);
   compiled = compiled.replaceAll(`from '${module}'`, `from '${resolved}'`).replaceAll(`from "${module}"`, `from "${resolved}"`);
 }
-const { selectedWeekPeriod, projectScheduledTasks, projectRoutineOccurrences } =
+const { selectedWeekPeriod, projectScheduledTasks } =
   await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 
 assert.deepEqual(selectedWeekPeriod('2024-12-31', 1, 'next'), { start: '2025-01-06', end: '2025-01-12' });
@@ -46,15 +46,4 @@ assert.equal(new Date(result[0].instant).toISOString(), '2023-12-31T15:30:00.000
 assert.equal(result.length, 1, 'Legacy untimed tasks must not become Anytime agenda entries');
 assert.equal(JSON.stringify(tasks), before, 'Projection must not mutate schedule intent');
 assert.deepEqual(projectScheduledTasks([task], period, 'Asia/Tokyo'), []);
-const routine = { id: 'routine', weekdays: [1], time: '00:30', timezone: 'Asia/Tokyo' };
-const completions = [{ routineId: 'routine', date: '2024-01-01', completed: true },
-  { routineId: 'other', date: '2024-01-01', completed: false }];
-const projected = projectRoutineOccurrences([routine], completions, period, 'America/Los_Angeles');
-assert.equal(projected.length, 1);
-assert.equal(projected[0].date, '2024-01-01');
-assert.equal(projected[0].displayDate, '2023-12-31');
-assert.equal(projected[0].completed, true);
-assert.equal(projectRoutineOccurrences([routine], [{ routineId: 'routine', date: '2023-12-31', completed: true }], period,
-  'America/Los_Angeles')[0].completed, false, 'Display-date completion must not complete a different occurrence');
-assert.deepEqual(projectRoutineOccurrences([{ ...routine, archived: true }], completions, period, 'America/Los_Angeles'), []);
-console.log('Planner projection checks passed: week selection, immutable schedules, untimed exclusion, occurrence identity, archived exclusion.');
+console.log('Planner clock projections passed');

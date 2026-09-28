@@ -7,7 +7,7 @@ export interface Schedule { offsetMinutes?:number; date: string; time: string; t
 export interface LinkedReference { id: ID; label: string; url: string }
 export interface Task { _revision?:number; location?:string; durationIntent?:string; actualDurationMinutes?:number; preferredTime?:PreferredTime; id: ID; title: string; completed: boolean; priority: Priority; projectId?: ID; schedule?: Schedule; durationMinutes?: number; archived?: boolean; references?: LinkedReference[]; notes: Notes }
 export interface Project { _revision?:number; id: ID; title: string; completed?: boolean; archived?: boolean; targetDate?: string; references?: LinkedReference[]; notes: Notes }
-export interface Routine { _revision?:number; location?:string; durationIntent?:string; actualDurationMinutes?:number; preferredTime?:PreferredTime; recurrenceIntent?:RecurrenceIntent; id: ID; title: string; weekdays: number[]; time?: string; timezone: string; durationMinutes?: number; archived?: boolean; notes: Notes }
+export interface Routine { _revision?:number; location?:string; durationIntent?:string; preferredTime?:PreferredTime; recurrenceIntent:RecurrenceIntent; id: ID; title: string; timezone: string; archived?: boolean; notes: Notes }
 export interface Occurrence extends BackendOccurrence { _revision?:number }
 export interface Reference { id: ID; kind: 'task' | 'project' | 'routine'; entityId: ID }
 export interface Settings { timezone: string; weekStartsOn: 0 | 1 }

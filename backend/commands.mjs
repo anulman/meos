@@ -51,7 +51,7 @@ export function createCommands({begin,now=()=>Date.now()}) {
  function snapshot(db,kind,owner,value){
   if(kind!=='occurrences')return value
   const row=requireOwned(db,'routines',owner,value.routineId),r=JSON.parse(row[0])
-  return validateResource(kind,{title:r.title,notes:r.notes,...(r.durationMinutes?{durationMinutes:r.durationMinutes}:{}),...Object.fromEntries(['location','durationIntent'].filter(k=>r[k]!==undefined).map(k=>[k,r[k]])),...(r.preferredTime?{preferredTime:r.preferredTime}:{}),skipped:false,edited:false,...value,templateRevision:Number(row[1])})
+  return validateResource(kind,{title:r.title,notes:r.notes,...Object.fromEntries(['location','durationIntent'].filter(k=>r[k]!==undefined).map(k=>[k,r[k]])),...(r.preferredTime?{preferredTime:r.preferredTime}:{}),skipped:false,edited:false,...value,templateRevision:Number(row[1])})
  }
  function checkTombstone(db,kind,owner,id){if(db.query('SELECT 1 FROM deletion_tombstones WHERE owner_id=? AND kind=? AND entity_id=?',[blob(owner),kind,id]).length)throw new DomainError('conflict','Deleted identity cannot be reused')}
  function contentRevisions(db,owner) {
@@ -158,7 +158,7 @@ export function createCommands({begin,now=()=>Date.now()}) {
       seen.add(selection.routineId)
       const row=envelope(requireOwned(db,'routines',owner,selection.routineId)),r=row.value
       if(row.revision!==selection.expectedRevision)throw new DomainError('conflict','Routine changed')
-      if(r.archived||r.recurrenceIntent&&r.recurrenceIntent.kind!=='fixed')throw new DomainError('validation','Select active fixed routines')
+      if(r.archived||r.recurrenceIntent.kind!=='fixed')throw new DomainError('validation','Select active fixed routines')
       const {start,end}=selection.period,today=localDay(now(),r.timezone)
       date(start);date(end);horizon(end,r.timezone,now())
       if(start<today||end<start)throw new DomainError('validation','Plan within the current routine-local horizon')
@@ -172,7 +172,6 @@ export function createCommands({begin,now=()=>Date.now()}) {
        const existing=db.query('SELECT 1 FROM occurrences WHERE owner_id=? AND routine_id=? AND occurrence_date=?',[blob(owner),r.id,day])
        if(existing.length){preserved++;continue}
        const value={id:selection.ids[day],routineId:r.id,date:day,completed:false}
-       if(r.time){const schedule={date:day,time:r.time,timezone:r.timezone};try{scheduledInstant(schedule);value.schedule=schedule}catch(error){if(!(error instanceof DomainError))throw error}}
        api.create(owner,'occurrences',value);created++
       }
      }
@@ -187,8 +186,7 @@ export function createCommands({begin,now=()=>Date.now()}) {
       // Caller provides stable IDs indexed by original recurrence date. No guest RNG.
       const id=input.ids[day];if(!id)throw new DomainError('validation','Missing stable ID for recurrence slot')
       const value={id,routineId:r.id,date:day,completed:false}
-      // On DST gap/fold leave unscheduled for explicit scheduler resolution, never guess.
-      if(r.time){const schedule={date:day,time:r.time,timezone:r.timezone};try{scheduledInstant(schedule);value.schedule=schedule}catch(error){if(!(error instanceof DomainError))throw error}}
+      // Templates express intent; scheduling assigns concrete times separately.
       items.push(api.create(owner,'occurrences',value))
      }
      result={items}

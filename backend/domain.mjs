@@ -39,11 +39,12 @@ export function safeUrl(value,field='url') {
 }
 /** Matches the basic editor's supported document model; no arbitrary HTML or image fetches. */
 export function notes(value) {
+ // Reserve <1 KiB and two nodes for the legacy constraint-preservation paragraph.
  const encoded=JSON.stringify(value)
- if(encoded===undefined||encoded.length>100000)fail('notes','Notes exceed the document limit')
+ if(encoded===undefined||encoded.length>101024)fail('notes','Notes exceed the document limit')
  let count=0
  function visit(node,depth,parent) {
-  if(++count>5000||depth>32)fail('notes','Notes exceed the structure limit')
+  if(++count>5002||depth>32)fail('notes','Notes exceed the structure limit')
   keys(node,['type','content','text','marks','attrs'],'notes')
   if(typeof node.type!=='string')fail('notes','Missing node type')
   const inline=['text','hard_break'];const block=['paragraph','blockquote','heading','code_block','horizontal_rule']
@@ -87,7 +88,7 @@ const base=['id','title','notes']
 const fields={
  projects:[...base,'completed','archived','targetDate','references'],
  tasks:[...base,'completed','priority','projectId','schedule','durationMinutes','location','durationIntent','actualDurationMinutes','archived','references','preferredTime'],
- routines:[...base,'weekdays','time','timezone','durationMinutes','location','durationIntent','actualDurationMinutes','archived','preferredTime','recurrenceIntent'],
+ routines:[...base,'timezone','location','durationIntent','archived','preferredTime','recurrenceIntent'],
  occurrences:['id','routineId','date','completed','title','notes','durationMinutes','location','durationIntent','actualDurationMinutes','schedule','preferredTime','skipped','edited','templateRevision'],outcomes:['id','taskId','period','position'],periodNotes:['id','kind','period','notes']
 }
 export function validateResource(kind,input) {
@@ -116,10 +117,8 @@ export function validateResource(kind,input) {
   if(value.schedule!==undefined){keys(value.schedule,['date','time','timezone','offsetMinutes'],'schedule');date(value.schedule.date);timezone(value.schedule.timezone);time(value.schedule.time,'schedule.time')}
  }
  if(kind==='routines') {
-  if(value.recurrenceIntent!==undefined){keys(value.recurrenceIntent,['text','status','kind','weekdays','intervalWeeks','anchorDate','frequency','period','preferredWeekdays'],'recurrenceIntent');value.recurrenceIntent=interpretRecurrence(value.recurrenceIntent.text,value.recurrenceIntent.anchorDate??'2020-01-01')}
-
-  if(!Array.isArray(value.weekdays)||!value.weekdays.length||value.weekdays.length>7||new Set(value.weekdays).size!==value.weekdays.length)fail('weekdays','Use distinct weekdays')
-  value.weekdays.forEach(day=>integer(day,'weekdays',0,6));value.weekdays.sort();timezone(value.timezone);if(value.time!==undefined)time(value.time)
+  keys(value.recurrenceIntent,['text','status','kind','weekdays','intervalWeeks','anchorDate','frequency','period','preferredWeekdays'],'recurrenceIntent');value.recurrenceIntent=interpretRecurrence(value.recurrenceIntent.text,value.recurrenceIntent.anchorDate)
+  timezone(value.timezone)
  }
  if(kind==='occurrences'){uuid(value.routineId,'routineId');date(value.date);boolean(value.completed,'completed');if(value.title!==undefined)value.title=text(value.title,'title');if(value.notes!==undefined)notes(value.notes);for(const key of ['skipped','edited'])if(value[key]!==undefined)boolean(value[key],key);if(value.templateRevision!==undefined)integer(value.templateRevision,'templateRevision',1,Number.MAX_SAFE_INTEGER)}
  if(kind==='outcomes'){uuid(value.taskId,'taskId');period(value.period,'week');integer(value.position,'position',0,10000)}

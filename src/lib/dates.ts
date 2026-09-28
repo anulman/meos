@@ -1,7 +1,6 @@
 /** Calendar dates use YYYY-MM-DD (years 0001–9999); weekdays use Sunday = 0. */
 export interface DatePeriod { readonly start: string; readonly end: string }
 export interface ZonedSchedule { date: string; time?: string; timezone: string }
-export interface RoutineSchedule { weekdays: readonly number[]; time?: string; timezone: string }
 
 const DAY = 86_400_000;
 const formatters = new Map<string, Intl.DateTimeFormat>();
@@ -123,34 +122,6 @@ export function millisecondsUntilNextDay(now: number, timezone: string): number 
   const tomorrow = addDays(dateInZone(now, timezone), 1);
   return zonedInstant(tomorrow, '00:00', timezone) - now;
 }
-export function routineOccursOn(routine: RoutineSchedule, routineDate: string): boolean {
-  if (routine.weekdays.some(day => !Number.isInteger(day) || day < 0 || day > 6)) {
-    throw new RangeError('Routine weekdays must be 0–6');
-  }
-  return routine.weekdays.includes(weekday(routineDate));
-}
-/**
- * Returns routine-local occurrence dates whose projected dates are in the display
- * period. Persist completion with (routineId, returned date), not the display date.
- * All-day routines use floating dates, just like all-day schedules.
- */
-export function routineDatesInPeriod(routine: RoutineSchedule, period: DatePeriod, displayTimezone: string): string[] {
-  periodContains(period, period.start);
-  let start = period.start;
-  let end = period.end;
-  if (routine.time !== undefined) {
-    start = addDays(dateInZone(zonedInstant(period.start, '00:00', displayTimezone), routine.timezone), -1);
-    end = addDays(dateInZone(zonedInstant(addDays(period.end, 1), '00:00', displayTimezone), routine.timezone), 1);
-  }
-  const dates: string[] = [];
-  for (let date = start; ; date = addDays(date, 1)) {
-    if (routineOccursOn(routine, date) && periodContains(period,
-      scheduleDisplayDate({ date, time: routine.time, timezone: routine.timezone }, displayTimezone))) dates.push(date);
-    if (date === end) break;
-  }
-  return dates;
-}
-
 /** Google ends are exclusive; planner period dates are inclusive. */
 export function calendarEventOverlaps(event: {start?: {date?: string; dateTime?: string}; end?: {date?: string; dateTime?: string}}, period: DatePeriod, timezone: string): boolean {
   if (event.start?.date && event.end?.date) return event.start.date <= period.end && event.end.date > period.start;

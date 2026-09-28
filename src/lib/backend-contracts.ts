@@ -9,7 +9,6 @@ export interface Page<T> { items: Stored<T>[]; nextCursor?: string }
 export interface ReadOptions { signal?: AbortSignal }
 export interface ListOptions extends ReadOptions { cursor?: string; limit?: number }
 export interface UpdateOptions extends ReadOptions { expectedRevision: number }
-export interface BackendRoutine extends Routine { durationMinutes?: number; archived?: boolean }
 export interface WeeklyOutcome { id: ID; taskId: ID; period: DatePeriod; position: number }
 export interface PeriodNote { id: ID; kind: 'day' | 'week'; period: DatePeriod; notes: Notes }
 export interface OccurrenceCompletion { id: ID; routineId: ID; date: string; completed: boolean }
@@ -28,7 +27,7 @@ export interface WeatherSnapshot {
 }
 export interface SessionIdentity { id: ID; expiresAt: string }
 export interface Resources {
- tasks: Task; projects: Project; routines: BackendRoutine; outcomes: WeeklyOutcome
+ tasks: Task; projects: Project; routines: Routine; outcomes: WeeklyOutcome
  periodNotes: PeriodNote; occurrences: OccurrenceCompletion
 }
 export type ErrorCode = 'validation' | 'unauthenticated' | 'expired' | 'forbidden' | 'conflict' | 'not_found' | 'unavailable' | 'invalid_response' | 'aborted'

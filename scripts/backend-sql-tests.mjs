@@ -31,7 +31,7 @@ function fixture() {
 }
 const project=(extra={})=>({id:randomUUID(),title:'Synthetic project',notes:{type:'doc'},...extra})
 const task=(extra={})=>({id:randomUUID(),title:'Synthetic task',completed:false,priority:'none',notes:{type:'doc'},...extra})
-const routine=()=>({id:randomUUID(),title:'Synthetic routine',weekdays:[0,2],timezone:'America/Montreal',notes:{type:'doc'}})
+const routine=()=>({id:randomUUID(),title:'Synthetic routine',recurrenceIntent:{text:'every day',anchorDate:'2020-01-01'},timezone:'America/Montreal',notes:{type:'doc'}})
 
 test('same command layer: stable create, full update, CAS conflict and owner-scoped pagination',()=>{
  const f=fixture();try {
@@ -92,7 +92,7 @@ test('routine natural keys preserve independent occurrence history and reject cr
   f.commands.saveNatural(f.owner,'occurrences',b,0)
   f.commands.saveNatural(f.owner,'occurrences',{...a,completed:false},1)
   assert.equal(f.commands.get(f.owner,'occurrences',b.id).value.completed,true)
-  f.commands.update(f.owner,'routines',{...r,weekdays:[1]},1)
+  f.commands.update(f.owner,'routines',{...r,recurrenceIntent:{text:'every day',anchorDate:'2020-01-01'}},1)
   assert.equal(f.commands.list(f.owner,'occurrences').items.length,2)
   assert.throws(()=>f.commands.update(f.owner,'occurrences',{...b,date:'2026-10-01'},1),{code:'validation'})
   assert.throws(()=>f.commands.saveNatural(f.owner,'occurrences',{...b,completed:false},0),{code:'conflict'})

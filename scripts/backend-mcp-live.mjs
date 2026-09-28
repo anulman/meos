@@ -37,7 +37,7 @@ try{
  check('owner native token has no implicit agent grant',(await upstream('/api/meos/v1/mcp',{method:'POST',headers:{...h,Authorization:'Bearer '+owner.token},body:JSON.stringify(rpc)})).status===403)
  check('browser cookies cannot authenticate MCP',(await upstream('/api/meos/v1/mcp',{method:'POST',headers:{...h,Cookie:owner.cookie},body:JSON.stringify(rpc)})).status===401)
  check('MCP cross-origin denied',(await upstream('/api/meos/v1/mcp',{method:'POST',headers:{...h,Authorization:'Bearer '+agent.token,Origin:'https://evil.invalid'},body:JSON.stringify(rpc)})).status===403)
- const r={id:randomUUID(),title:'Independent daily',notes:{type:'doc'},timezone:'UTC',time:'10:00',weekdays:[0,1,2,3,4,5,6],recurrenceIntent:{text:'every day',anchorDate:today}}
+ const r={id:randomUUID(),title:'Independent daily',notes:{type:'doc'},timezone:'UTC',recurrenceIntent:{text:'every day',anchorDate:today}}
  let result=await upstream('/api/meos/v1/resources/routines',{method:'POST',headers:browserHeaders,body:JSON.stringify({value:r})});check('routine creation with shared recurrence contract live',result.status===201)
  const dates=Array.from({length:15},(_,i)=>new Date(Date.parse(today+'T00:00Z')+i*86400000).toISOString().slice(0,10))
  result=await operation('materialize_routine',{routineId:r.id,through:dates.at(-1),ids:Object.fromEntries(dates.map(d=>[d,randomUUID()])),idempotencyKey:randomUUID()});check('real guest materializes exactly bounded rolling horizon',result.status===200&&JSON.parse(result.body).items.length===15)

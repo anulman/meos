@@ -64,16 +64,27 @@ original text and recomputes the interpretation, ignoring forged status labels:
 from flexible weekly frequency/preferred weekdays. Supported examples include
 “every day”, “every weekday”, “every other monday”, and “three times a week,
 preferably on weekdays”. Preserve a stable explicit anchor when changing an
-interval. Unknown language remains unresolved. `weekdays` is retained for legacy
-routines; when recurrenceIntent exists, its validated interpretation governs
-expansion. Flexible targets are sent to scheduling, not expanded arbitrarily.
+interval. Unknown language remains unresolved. Routine templates require this intent;
+its server-derived interpretation governs expansion. Comma-separated weekday lists
+such as “every monday, friday” are fixed patterns. Flexible targets are sent to
+scheduling, not expanded arbitrarily.
+
+Templates use `durationIntent` for duration and `preferredTime` for soft timing.
+They do not accept top-level `weekdays`, `time`, `durationMinutes`, or
+`actualDurationMinutes`. Exact scheduled time, planned duration, and actual duration
+belong to individual occurrences. Migration 0813 preserves legacy recurrence and
+duration as intent, keeps conflicting duration and exact-time constraints in notes,
+and leaves historical occurrences untouched. Notes allow 1,024 additional
+characters and two additional nodes so even formerly full documents retain
+those constraints and remain editable.
 
 `materialize_routine` expands fixed recurrence from the actual current day in the
 routine's timezone to a requested `through` date, at most **today+14** (inclusive,
 15 possible dates counting today). It takes an `ids` map from original date to
 fresh UUID; the database natural-key constraint prevents duplicate slots. No
 caller-supplied “today”/clock is accepted. Existing slots are returned unchanged.
-DST gap/fold slots materialize **unscheduled**, awaiting explicit resolution.
+All new slots materialize **unscheduled**, without concrete duration. Assign an
+exact schedule and duration when planning each occurrence.
 Flexible/unresolved/archived routines produce no automatic occurrences.
 
 The same horizon checks apply to generic occurrence creation, natural-key saves,
