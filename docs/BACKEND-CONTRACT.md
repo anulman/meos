@@ -120,6 +120,14 @@ cookies cannot authenticate MCP, and agent identities cannot use browser
 planner APIs. Production credential provisioning remains a release/setup gate;
 the acceptance launcher creates synthetic credentials only.
 
+`create_routine` accepts `{value: Routine, idempotencyKey}` and returns a
+`RoutineEnvelope`. It requires `routines:write` and uses the same validation and
+owner-bound creation path as the browser API. The caller supplies a stable UUID;
+time is optional. Creation saves only the template, not occurrences or Calendar
+events. Replay the identical input and key after an uncertain response. Reusing
+the key with different input returns a conflict. Use `update_routine` with the
+returned revision for subsequent edits.
+
 Scopes: `agenda:read`, `tasks:write`, `routines:write`, `occurrences:write`,
 `schedule:read`, `schedule:write`, `sync:write`. Assign only the scopes needed.
 Pre-provisioned native tokens are used; this is **not** an implemented MCP OAuth

@@ -252,3 +252,45 @@ test('bootstrap and revisions are pure owner reads and reflect deletes/preferenc
   assert.equal(response.headers.get('cache-control'),'no-store');assert.equal((await response.json()).user.id,f.owner)
  }finally{f.close()}
 })
+
+test('MCP routine creation reuses domain validation, owner scope and retry receipts without planning',async()=>{
+ const f=fixture();try{
+  f.db.prepare('INSERT INTO _meos_agent_grants VALUES(?,?,?,?,0)').run(blob(f.agent),blob(f.owner),JSON.stringify(['routines:write']),Date.parse('2027-01-01'))
+  const origin='https://acceptance.invalid',handle=createMcpHandler({commands:f.commands,origin,readText:r=>r.text})
+  const call=async(method,params,user=f.agent)=>(await handle({method:'POST',headers:new Headers({Authorization:'Bearer synthetic','Content-Type':'application/json',Accept:'application/json, text/event-stream'}),text:JSON.stringify({jsonrpc:'2.0',id:1,method,params})},{id:user}).json())
+  const invoke=async args=>(await call('tools/call',{name:'create_routine',arguments:args})).result
+  const tools=(await call('tools/list')).result.tools
+  assert.deepEqual(tools.map(t=>t.name),['create_routine','update_routine'])
+  assert.equal(tools[0].annotations.readOnlyHint,false);assert.equal(tools[0].annotations.idempotentHint,true)
+  assert.equal(tools[0].inputSchema.properties.value.type,'object')
+  const value=routine({title:'  Walk  ',weekdays:[5,1],preferredTime:{text:'before lunch'}});delete value.time
+  const input={value,idempotencyKey:key()},result=await invoke(input)
+  assert.equal(result.isError,undefined)
+  const saved=result.structuredContent;validateSchema(schemas.RoutineEnvelope,saved)
+  assert.equal(saved.revision,1);assert.equal(saved.value.title,'Walk');assert.deepEqual(saved.value.weekdays,[1,5])
+  assert.equal(saved.value.time,undefined);assert.equal(saved.value.preferredTime.status,'context_required')
+  assert.deepEqual(f.commands.get(f.owner,'routines',value.id),saved)
+  assert.equal(f.commands.list(f.agent,'routines').items.length,0);assert.equal(f.commands.list(f.other,'routines').items.length,0)
+  assert.equal(f.commands.list(f.owner,'occurrences').items.length,0)
+  const replay=await invoke(input);assert.deepEqual(replay.structuredContent,saved)
+  assert.deepEqual(JSON.parse(replay.content[0].text),saved)
+  assert.equal(f.db.prepare('SELECT count(*) n FROM command_receipts').get().n,1)
+  assert.equal(f.db.prepare('SELECT count(*) n FROM sync_outbox').get().n,1)
+  const error=async(args,code)=>{const r=await invoke(args);assert.equal(r.isError,true);assert.equal(JSON.parse(r.content[0].text).error.code,code)}
+  await error({...input,value:{...value,title:'Changed'}},'conflict')
+  for(const invalid of [{weekdays:[]},{weekdays:[1,1]},{timezone:'Not/A_Zone'},{time:'25:00'},{title:' '},{ownerId:f.other},{notes:{type:'doc',content:[{type:'image'}]}}]){
+   await error({value:routine(invalid),idempotencyKey:key()},'validation')
+  }
+  await error({value:routine(),idempotencyKey:key(),ownerId:f.other},'validation')
+  const foreign=routine();f.commands.create(f.other,'routines',foreign)
+  await error({value:foreign,idempotencyKey:key()},'conflict')
+  assert.equal(f.commands.list(f.owner,'routines').items.length,1)
+  assert.equal(f.db.prepare('SELECT count(*) n FROM command_receipts').get().n,1)
+  f.db.prepare('UPDATE _meos_agent_grants SET scopes=? WHERE agent_id=?').run(JSON.stringify(['agenda:read']),blob(f.agent))
+  assert.equal((await call('tools/list')).result.tools.some(t=>t.name==='create_routine'),false)
+  assert.equal((await invoke({value:routine(),idempotencyKey:key()})).isError,true)
+  assert.equal(f.commands.list(f.owner,'routines').items.length,1)
+  const ownerInput={value:routine(),idempotencyKey:key()}
+  assert.equal((await call('tools/call',{name:'create_routine',arguments:ownerInput},f.owner)).result.structuredContent.value.id,ownerInput.value.id)
+ }finally{f.close()}
+})

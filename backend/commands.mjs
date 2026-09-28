@@ -143,6 +143,7 @@ export function createCommands({begin,now=()=>Date.now()}) {
      }
      items.sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)||a.value.id.localeCompare(b.value.id));result={items}
     }else if(name==='create_task'){checkTombstone(db,'tasks',owner,input.value.id);result=api.create(owner,'tasks',input.value)}
+    else if(name==='create_routine')result=api.create(owner,'routines',input.value)
     else if(name==='update_routine')result=api.update(owner,'routines',input.value,input.expectedRevision)
     else if(name==='move_occurrence'||name==='complete_occurrence'){
      const previous=envelope(requireOwned(db,'occurrences',owner,input.id)),value={...previous.value,edited:true}

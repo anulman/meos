@@ -46,6 +46,22 @@ Follow the [learning-loop reference](../learning-loop.md). Review available task
 
 Use the [search reference](../search.md) when related work or prior reflections could change a decision. Search is supporting evidence, not a replacement for exact agenda or Calendar reads.
 
+## Save routine templates
+
+When the user authorizes a new routine, discover `create_routine` and its schema
+(`routines:write` scope). Supply a stable UUID, title, rich-text `notes` (an empty
+document is `{"type":"doc"}`), distinct `weekdays` (0 is Sunday), and an IANA
+`timezone` in `value`, plus an `idempotencyKey`. `time` is optional; do not invent
+a clock time from a soft preference. Use supported `preferredTime` and
+`recurrenceIntent` fields to preserve intent, and inspect their returned status.
+If required weekdays are unresolved, clarify them rather than inventing a fixed
+pattern. Saving a template does not create occurrences or Calendar events.
+
+Retain the returned routine ID, revision and request. After uncertain success,
+replay the identical request and key; do not generate another identity. Report
+the saved template separately from any subsequent planning. If creation is not
+discoverable, keep an explicit unsaved proposal.
+
 ## Routine coverage
 
 When this authorized planning operation needs new fixed routine instances, use the [explicit routine planning contract](../contract.md#explicit-routine-planning). Reuse the prior request receipt when coverage is already planned. Ordinary context reads and unchanged plans do not require another materialization command.

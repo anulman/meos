@@ -50,6 +50,7 @@ export type Operations = {
  calendar_apply: { input: { "kind": "tasks" | "occurrences"; "id": string; "expectedRevision": number; "schedule": Schedule | null; "title"?: string; "location"?: string; "notes"?: Notes; "durationMinutes"?: number; "idempotencyKey": string }; output: TaskEnvelope | OccurrenceEnvelope }
  list_agenda: { input: { "date": string; "timezone": string }; output: { "items": Array<{ "kind": "tasks" | "occurrences"; "value": Task | Occurrence; "revision": number; "createdAt": string; "updatedAt": string; "scheduledAt": string }> } }
  create_task: { input: { "value": Task; "idempotencyKey": string }; output: TaskEnvelope }
+ create_routine: { input: { "value": Routine; "idempotencyKey": string }; output: RoutineEnvelope }
  update_routine: { input: { "value": Routine; "expectedRevision": number; "idempotencyKey": string }; output: RoutineEnvelope }
  move_occurrence: { input: { "id": string; "expectedRevision": number; "idempotencyKey": string; "schedule": Schedule | null; "location"?: string; "durationIntent"?: string; "actualDurationMinutes"?: number; "title"?: string; "notes"?: Notes; "durationMinutes"?: number; "skipped"?: boolean }; output: OccurrenceEnvelope }
  complete_occurrence: { input: { "id": string; "expectedRevision": number; "idempotencyKey": string; "completed": boolean }; output: OccurrenceEnvelope }
