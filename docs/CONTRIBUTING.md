@@ -131,16 +131,45 @@ Use this precedence when repository documents disagree:
 3. **Operating skills** define agent procedures. Start at the
    [shared contract](../public/skills/contract.md); a procedure is not evidence
    that its optional integration is installed.
-4. **Handoffs, qualification packets, and release plans** describe a checkpoint
-   and its evidence. For example, the historical
-   [backend contract narrative](BACKEND-CONTRACT.md) retains pre-integration
-   statements about deferred Calendar sync. Read its domain discussion alongside
-   current source; do not treat that historical status as today's capability.
+4. **License and artifact records** preserve reviewed selections, provenance,
+   and machine-readable admission inputs. They are not live deployment status.
+   The [application contract](application-contract.md) explains shared operation
+   invariants without historical implementation checkpoints.
 
 Use [OpenAPI](openapi.json) for the browser operation schemas and MCP tool
 discovery for the installed agent surface. Both originate in the same operation
 registry, but authentication and transport are different. Deployment status
 requires a live verification record outside this documentation.
+
+## Keep documentation current
+
+Commit durable topic guides, interface contracts, contributor instructions, and
+required license/provenance records. Do not commit or merge task handoffs,
+qualification reports, review transcripts, release plans, execution logs, or
+status snapshots merely to record work. Put task-specific evidence in the PR,
+CI artifacts, or the operator's durable records outside the source tree.
+`.qualification/` and `artifacts/` are already ignored for local outputs.
+
+If a temporary narrative must remain in the repository, state at its top:
+
+- why it must be versioned and who owns its removal;
+- the exact event or acceptance condition after which it is safe to remove;
+- where any required evidence will remain accessible.
+
+Remove it when that condition is met. Move only enduring instructions into the
+relevant topic guide; do not append superseding checkpoints indefinitely.
+Git history retains removed committed narratives without making them current
+navigation. New task reports should stay outside Git rather than adding an
+archive directory.
+
+Names are not retention policy. Before removing a record, inspect inbound links,
+source, scripts, and release/admission consumers. Preserve generated schemas,
+runtime registries, artifact hashes, dependency inventories, license selections,
+and notices while their consumers or obligations remain. In particular,
+`backend/reviewed-artifacts.json` is read by runtime tooling and
+`backend/componentizer-qualification.json` pins a release compiler. Removing or
+replacing these requires a separate consumer and provenance migration, not a
+prose cleanup. Keep private credentials and host-local receipts out of Git.
 
 ## Finish a change
 

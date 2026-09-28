@@ -19,7 +19,7 @@ bearer and body to that fixed route, discarding caller cookie/context/forwarding
 headers. It probes the exact configured instance/environment before listening.
 This machine endpoint **does not alter browser Cloudflare Access**. Deploying its
 own narrowly scoped reverse-proxy path/TLS and socket ACL requires the separate
-release gate; no such network or service changes are made by this branch.
+release gate; source documentation does not establish that the integration is installed.
 
 ## API
 
@@ -89,8 +89,8 @@ the dedicated launcher. Tests use disposable on-disk SQLite plus synthetic TLS;
 never production credentials, data or network. Source tests are not proof that
 the updated WASM guest or public route has been deployed. Before deployment:
 
-1. Wait for Calendar approved integration; merge/rebase independently reviewed
-   source without changing its retained acceptance evidence.
+1. Review the exact source and its Calendar integration. Keep qualification
+   evidence bound to that revision outside the source tree.
 2. Build exact guest via existing admitted isolated release builder; qualify
    migrations and native bearer/grant against a fresh isolated candidate. The
    release builder now includes the append-only0806 migration and rejects edits
@@ -110,33 +110,6 @@ the updated WASM guest or public route has been deployed. Before deployment:
    revocation, cancellation and lease takeover before enabling supervision.
 6. Human merge/deployment gates remain separate. A source PR or built archive
    is not evidence of a published binary, installed service or live delivery.
-
-### Completed synthetic qualification
-
-The exact independently admitted candidate passed native and composed transport
-proofs on September 26, 2026, after PR3 was merged into main. The final bootstrap
-edit changes instructions only; executable inputs remain the reviewed candidate.
-
-- Nine native checks verify mounted guest/schema bytes, principal boundaries,
-  actual planning, restart replay, revocation, fencing, idempotent acknowledgement
-  and native refresh. Receipt SHA256:
-  `96f77c133d20c1d3f18ef99b4d54285dc04090f747cf25f715accac01246298c`.
-- Eight composed checks exercise the actual Go binary through a synthetic TLS
-  host to the native guest: refresh, planned event delivery, durable dispatcher
-  admission, SIGKILL before acknowledgement, restart without duplicate admission,
-  native acknowledgement, graceful cancellation and production-path isolation.
-  Receipt SHA256:
-  `9b0e51e78dd4a4002bb5a79b8a93e1df51280e5818a8764843c2a2dd7b2b7dda`.
-- Both use image
-  `sha256:616de8c955d6f585be234bd990e2aeec879deb59b712c8fa3b2cf703f9d71c79`
-  and disposable fixture `6afd0c006e874e5781a43164770df9e4`. Synthetic delayed
-  boundary seeds avoid wall-clock waits; no production identity or data is used.
-
-These results supplement the 180 isolated backend tests and eight Go tests.
-They do not establish live endpoint activation, installed dispatcher behavior,
-retained production-volume upgrade or installation idempotence. The bootstrap
-maintenance instructions passed a separate six-scenario procedure review; host
-installation verification is still required on the selected deployment path.
 
 ## Optional record updates
 
