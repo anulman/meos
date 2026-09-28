@@ -7,6 +7,384 @@
     "description": "Planner contract. Browser transport uses same-origin native session and CSRF. MCP uses separate owner-bound native identities at /api/meos/v1/mcp; not a raw database API."
   },
   "paths": {
+    "/api/meos/v1/operations/get_period_note": {
+      "post": {
+        "operationId": "get_period_note",
+        "description": "Read one exact day or inclusive seven-day note with its revision; missing returns null. Daily reflections belong here by default, not in duplicate local Markdown. Read before appending; preserve human prose.",
+        "security": [
+          {
+            "browserSession": [],
+            "csrf": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "day",
+                      "week"
+                    ]
+                  },
+                  "period": {
+                    "$ref": "#/components/schemas/Period"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "period"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "record": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/components/schemas/PeriodNoteEnvelope"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "record"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed application error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed application error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed application error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed application error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed application error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed application error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": "planning:read"
+      }
+    },
+    "/api/meos/v1/operations/append_period_note": {
+      "post": {
+        "operationId": "append_period_note",
+        "description": "Append an emoji/author-attributed reflection without replacing human prose. Read first; expectedRevision=0 requires absence. Supply a stable UUID for creation and reuse the exact idempotencyKey and input on uncertain retries. Source and caller-reported reconciliation outcome are retained in the command receipt; outcome does not perform or prove Calendar reconciliation. Consider reported actual-time corrections and authorized future recalculation. Fresh-read occurrences, agenda and Calendar; apply revision-checked changes within existing authority, then verify Calendar propagation. Ordinary timing uses 15-minute precision; preserve explicit precise exceptions. Distinguish elapsed, focused and planned duration; do not infer finishes or change routine defaults. Note saved is not Calendar reconciled; reported outcomes are caller claims, not backend verification.",
+        "security": [
+          {
+            "browserSession": [],
+            "csrf": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "day",
+                      "week"
+                    ]
+                  },
+                  "period": {
+                    "$ref": "#/components/schemas/Period"
+                  },
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                  },
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9_-]+$"
+                  },
+                  "author": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 10000
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "outcome": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "enum": [
+                          "pending",
+                          "not_needed",
+                          "blocked",
+                          "verified"
+                        ]
+                      },
+                      "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1000
+                      },
+                      "commandKeys": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 8,
+                          "maxLength": 128,
+                          "pattern": "^[A-Za-z0-9_-]+$"
+                        },
+                        "maxItems": 20
+                      },
+                      "calendarEvidence": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "maxItems": 10
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "reason"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "kind",
+                  "period",
+                  "id",
+                  "expectedRevision",
+                  "idempotencyKey",
+                  "author",
+                  "text",
+                  "source"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "record": {
+                      "$ref": "#/components/schemas/PeriodNoteEnvelope"
+                    },
+                    "sourceRevision": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "outcome": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "enum": [
+                            "pending",
+                            "not_needed",
+                            "blocked",
+                            "verified"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "commandKeys": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 8,
+                            "maxLength": 128,
+                            "pattern": "^[A-Za-z0-9_-]+$"
+                          },
+                          "maxItems": 20
+                        },
+                        "calendarEvidence": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1000
+                          },
+                          "maxItems": 10
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "followUp": {
+                      "const": "Consider reported actual-time corrections and authorized future recalculation. Fresh-read occurrences, agenda and Calendar; apply revision-checked changes within existing authority, then verify Calendar propagation. Ordinary timing uses 15-minute precision; preserve explicit precise exceptions. Distinguish elapsed, focused and planned duration; do not infer finishes or change routine defaults. Note saved is not Calendar reconciled; reported outcomes are caller claims, not backend verification."
+                    }
+                  },
+                  "required": [
+                    "record",
+                    "sourceRevision",
+                    "outcome",
+                    "followUp"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed application error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed application error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed application error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed application error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed application error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed application error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": "notes:write"
+      }
+    },
     "/api/meos/v1/operations/search": {
       "post": {
         "operationId": "search",
