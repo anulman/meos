@@ -21,3 +21,11 @@ test('local CAS race retries Google import without stale provider write',async()
 
 test('Google ETag-only revision wins stale local intent even when content returns to baseline',async()=>{const f=fixture();await f.sync();const [id,event]=[...f.remotes][0];f.change(v=>v.title='Local');f.remotes.set(id,{...event,etag:'remote-reverted'});f.broker.patchEvent=async()=>{throw Error('stale overwrite')};await f.sync();assert.equal(f.current.record.value.title,task.title);assert.equal(Object.values(f.store.get('planner-sync').mappings)[0].displacedLocal.record.value.title,'Local')});
 test('Calendar synchronization never inventories templates or materializes routine instances, including rollover',async()=>{const f=fixture();await f.sync();f.args.now=()=>Date.parse('2026-09-28T12:00Z');await createCalendarPlanner(f.args).sync({renew(){},fenced(){},generation:'g'});assert.ok(f.calls.every(([name,input])=>!name.includes('materialize')&&name!=='plan_routines'&&!(name==='calendar_inventory'&&input.kind==='routines')));assert.equal(f.remotes.size,1)});
+
+test('commute classification does not remove or duplicate calendar events and survives remote edits',async()=>{
+ const f=fixture();await f.sync();const [id,event]=[...f.remotes][0];
+ f.change(v=>{v.type='commute';v.projectId='f891342e-df5d-43fd-8815-00a751d44061'});await f.sync();
+ assert.equal(f.remotes.size,1);assert.equal(f.remotes.get(id).status,'confirmed');assert.deepEqual(f.remotes.get(id).start,event.start);
+ f.remotes.set(id,{...f.remotes.get(id),summary:'Moved commute',etag:'remote'});await f.sync();
+ assert.equal(f.current.record.value.type,'commute');assert.equal(f.current.record.value.projectId,'f891342e-df5d-43fd-8815-00a751d44061');assert.equal(f.current.record.value.title,'Moved commute');
+});

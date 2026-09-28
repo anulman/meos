@@ -48,3 +48,19 @@ Use the [search reference](../search.md) when related work or prior reflections 
 ## Routine coverage
 
 When this authorized planning operation needs new routine instances, use the [explicit routine planning contract](../contract.md#explicit-routine-planning). Reuse the prior request receipt when coverage is already planned. Ordinary context reads and unchanged plans do not require another materialization command.
+
+## Routine instances and commutes
+
+Represent a planned repetition as an occurrence of its existing routine, using
+`routineId`; do not create a standalone task for the same routine slot. Preserve
+the occurrence's title, notes, completion, schedule and duration when correcting
+an existing plan. Create and verify the replacement before deleting a mistaken
+task with its current revision; then verify one managed Calendar event remains.
+
+Represent travel placeholders as tasks with `type: "commute"` when the discovered
+Task schema supports it. Keep their schedule, duration and any genuine project
+link. Do not create a project just to hide travel, infer type from titles, or
+archive travel to remove it from No project. Unclassified tasks retain normal
+project rules. Routine occurrences and explicit commutes are excluded from
+No project, not from the agenda or Calendar. If the live schema lacks this field,
+report classification pending deployment; do not send an unsupported mutation.

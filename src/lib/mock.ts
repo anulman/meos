@@ -17,6 +17,7 @@ function validate(value:Task|Project,kind:'tasks'|'projects') {
  if(value.references?.some(ref=>{try{return !['https:','http:'].includes(new URL(ref.url).protocol)}catch{return true}})) return 'References must use a valid http or https URL.'
  if(kind==='tasks') {
   const task=value as Task
+  if(task.type!==undefined&&task.type!=='commute')return 'Invalid task type.'
   if(typeof task.completed!=='boolean' || !['none','low','medium','high'].includes(task.priority)) return 'Invalid task status or priority.'
   if(task.projectId && !projects.some(p=>p.id===task.projectId&&!p.archived)) return 'Choose an active project, or No project.'
   if(task.durationMinutes!==undefined && (!Number.isInteger(task.durationMinutes)||task.durationMinutes<1||task.durationMinutes>1440)) return 'Duration must be between 1 and 1440 minutes.'
