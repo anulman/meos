@@ -22,7 +22,7 @@ export function createCalendarPlannerClient({upstream,origin,credentials,saveCre
   if(!raw)throw Error('planner_auth');accept(raw.split(';')[0].slice(11));
  }
  async function invoke(name,input){
-  if(!['calendar_cache_publish','calendar_inventory','calendar_changes','calendar_current','calendar_apply','calendar_materialize'].includes(name))throw Error('planner_operation');
+  if(!['calendar_cache_publish','calendar_inventory','calendar_changes','calendar_current','calendar_apply'].includes(name))throw Error('planner_operation');
   if(failure.retryAt>now())throw Object.assign(Error('planner_backoff'),{sessionExpired:failure.error==='session_expired'});
   try{
   for(let attempt=0;attempt<2;attempt++){

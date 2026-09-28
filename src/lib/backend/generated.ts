@@ -24,6 +24,8 @@ export type ProjectEnvelope = { "value": Project; "revision": number; "createdAt
 export type OutcomeEnvelope = { "value": Outcome; "revision": number; "createdAt": string; "updatedAt": string }
 export type PeriodNoteEnvelope = { "value": PeriodNote; "revision": number; "createdAt": string; "updatedAt": string }
 export type PreferencesEnvelope = { "value": Preferences; "revision": number; "createdAt": string; "updatedAt": string }
+export type ContentRevisions = { "tasks": number; "routines": number; "occurrences": number; "projects": number; "outcomes": number; "periodNotes": number; "preferences": number }
+export type Bootstrap = { "user": { "id": string }; "csrf": string; "preferences": PreferencesEnvelope; "revisions": ContentRevisions }
 export type CalendarEvent = { "id": string; "role": "primary" | "managed"; "etag": string; "summary": string; "location": string; "description": string; "start"?: { "date"?: string; "dateTime"?: string; "timeZone"?: string }; "end"?: { "date"?: string; "dateTime"?: string; "timeZone"?: string }; "linked": boolean; "recurring": boolean }
 export type CalendarDraft = { "id": string; "state": "pending" | "error" | "conflict" | "superseded"; "operation": "create" | "update" | "delete"; "event"?: { "summary": string; "location": string; "description": string; "start": { "date"?: string; "dateTime"?: string; "timeZone"?: string }; "end": { "date"?: string; "dateTime"?: string; "timeZone"?: string } } }
 export type CalendarConflict = { "id": string; "kind"?: "tasks" | "occurrences"; "title": string; "reason": string }
@@ -46,7 +48,6 @@ export type Operations = {
  calendar_changes: { input: { "cursor": number }; output: { "items": Array<{ "sequence": number; "kind": "tasks" | "occurrences"; "id": string; "revision": number; "deleted": boolean }>; "cursor": number } }
  calendar_current: { input: { "kind": "tasks" | "occurrences"; "id": string }; output: { "record": TaskEnvelope | OccurrenceEnvelope | null; "deleted": boolean; "revision": number } }
  calendar_apply: { input: { "kind": "tasks" | "occurrences"; "id": string; "expectedRevision": number; "schedule": Schedule | null; "title"?: string; "location"?: string; "notes"?: Notes; "durationMinutes"?: number; "idempotencyKey": string }; output: TaskEnvelope | OccurrenceEnvelope }
- calendar_materialize: { input: { "routineId": string; "through": string; "ids": { [key: string]: string }; "idempotencyKey": string }; output: { "items": Array<OccurrenceEnvelope> } }
  list_agenda: { input: { "date": string; "timezone": string }; output: { "items": Array<{ "kind": "tasks" | "occurrences"; "value": Task | Occurrence; "revision": number; "createdAt": string; "updatedAt": string; "scheduledAt": string }> } }
  create_task: { input: { "value": Task; "idempotencyKey": string }; output: TaskEnvelope }
  update_routine: { input: { "value": Routine; "expectedRevision": number; "idempotencyKey": string }; output: RoutineEnvelope }
@@ -54,6 +55,7 @@ export type Operations = {
  complete_occurrence: { input: { "id": string; "expectedRevision": number; "idempotencyKey": string; "completed": boolean }; output: OccurrenceEnvelope }
  preview_schedule: { input: { "changes": Array<{ "kind": "tasks" | "occurrences"; "id": string; "expectedRevision": number; "schedule": Schedule | null }> }; output: { "items": Array<TaskEnvelope | OccurrenceEnvelope>; "applied": boolean } }
  apply_schedule: { input: { "changes": Array<{ "kind": "tasks" | "occurrences"; "id": string; "expectedRevision": number; "schedule": Schedule | null }>; "idempotencyKey": string }; output: { "items": Array<TaskEnvelope | OccurrenceEnvelope>; "applied": boolean } }
+ plan_routines: { input: { "routines": Array<{ "routineId": string; "expectedRevision": number; "period": Period; "ids": { [key: string]: string } }>; "idempotencyKey": string }; output: { "routines": number; "created": number; "preserved": number } }
  materialize_routine: { input: { "routineId": string; "through": string; "ids": { [key: string]: string }; "idempotencyKey": string }; output: { "items": Array<OccurrenceEnvelope> } }
  delete_task: { input: { "id": string; "expectedRevision": number; "idempotencyKey": string }; output: { "deleted": true; "id": string } }
  bind_external_event: { input: { "kind": "tasks" | "occurrences"; "entityId": string; "expectedRevision": number; "provider": string; "calendarId": string; "eventId": string; "remoteRevision": string; "expectedRemoteRevision"?: string; "idempotencyKey": string }; output: { "bound": true } }

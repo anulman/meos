@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 import {transport,application} from './session'
 import {RepositoryError} from '../backend-contracts'
-import {addDays,dateInZone} from '../dates'
-import type {Occurrence,Routine,Preferences} from './generated'
+import type {Occurrence,Preferences} from './generated'
 type Row={id:string;_revision?:number;[key:string]:any}
 const archivedProjects=new Map<string,boolean>();const revisions=new Map<string,number>(),pending=new Map<string,string>()
 export function clearRepository(){revisions.clear();pending.clear();archivedProjects.clear()}
 const unwrap=(envelope:any)=>{if(envelope.value.id)archivedProjects.set(envelope.value.id,!!envelope.value.archived);revisions.set(envelope.value.id??'preferences',envelope.revision);return {...envelope.value,_revision:envelope.revision}}
 function value(row:Row){const {_revision,$synced,$origin,$key,$collectionId,...clean}=row;return JSON.parse(JSON.stringify(clean))}
 async function operation(name:any,input:any){const intent=JSON.stringify([name,input]);let key=pending.get(intent);if(!key){key=crypto.randomUUID();pending.set(intent,key)}try{const result=await application.call(name,{...input,idempotencyKey:key});pending.delete(intent);return result}catch(error){if(error instanceof RepositoryError&&error.code!=='unavailable'&&error.code!=='aborted'&&error.code!=='invalid_response')pending.delete(intent);throw error}}
-async function list(kind:string){const items:Row[]=[];let cursor:string|undefined;do{const page:any=await transport.request('/resources/'+kind+'?limit=250'+(cursor?'&cursor='+cursor:''),x=>x);items.push(...page.items.map(unwrap));cursor=page.nextCursor}while(cursor);return items}
+async function list(kind:string,signal?:AbortSignal){const items:Row[]=[];let cursor:string|undefined;do{const page:any=await transport.request('/resources/'+kind+'?limit=250'+(cursor?'&cursor='+cursor:''),x=>x,{signal});items.push(...page.items.map(unwrap));cursor=page.nextCursor}while(cursor);return items}
 export async function realRequest(path:string,init?:RequestInit):Promise<any>{
  const [name,id]=path.slice(1).split('/');const kind=name==='period-notes'?'periodNotes':name
- const method=init?.method??'GET';if(method==='GET'){if(kind==='occurrences')await materializeRoutines(await list('routines') as Routine[]);return list(kind)}
+ const method=init?.method??'GET';if(method==='GET')return list(kind,init?.signal??undefined)
  if(method==='DELETE'){const revision=revisions.get(id);if(!revision)throw Error('Reload this resource before deleting.');return transport.request(`/resources/${kind}/${id}?revision=${revision}`,x=>x,{method:'DELETE'})}
  const row=JSON.parse(String(init?.body)) as Row;const clean=value(row);const expectedRevision=row._revision??0
  try{
@@ -29,11 +28,6 @@ export async function realRequest(path:string,init?:RequestInit):Promise<any>{
  }catch(error){if(error instanceof RepositoryError&&error.code==='conflict'){const {queryClient}=await import('../store');await queryClient.invalidateQueries({queryKey:[name]});throw Error('This item changed elsewhere. Your draft is preserved; close and reopen it to compare the latest version before saving.')}throw error}
 }
 export async function moveOccurrence(row:Occurrence&{_revision?:number},changes:Record<string,unknown>){return unwrap(await operation('move_occurrence',{id:row.id,expectedRevision:row._revision,schedule:row.schedule??null,...changes}))}
-export async function materializeRoutines(routines:Routine[]){
- for(const routine of routines){if(routine.archived||routine.recurrenceIntent?.kind==='flexible'||routine.recurrenceIntent?.kind==='unresolved')continue
-  const today=dateInZone(Date.now(),routine.timezone),through=addDays(today,14),ids:Record<string,string>={};for(let i=0;i<=14;i++)ids[addDays(today,i)]=crypto.randomUUID()
-  await operation('materialize_routine',{routineId:routine.id,through,ids})
- }
-}
-export async function getPreferences(){return unwrap(await transport.request('/preferences',x=>x)) as Preferences&{_revision:number}}
-export async function putPreferences(row:Preferences&{_revision:number}){const {_revision,...clean}=row;return unwrap(await transport.request('/preferences',x=>x,{method:'PUT',body:{value:clean,expectedRevision:_revision}}))}
+export const preferencesOptions={queryKey:['preferences'],staleTime:30_000,queryFn:async({signal}:{signal:AbortSignal})=>unwrap(await transport.request('/preferences',x=>x,{signal})) as Preferences&{_revision:number}}
+export async function getPreferences(){const {queryClient}=await import('../store');return queryClient.ensureQueryData(preferencesOptions)}
+export async function putPreferences(row:Preferences&{_revision:number}){const {_revision,...clean}=row;const saved=unwrap(await transport.request('/preferences',x=>x,{method:'PUT',body:{value:clean,expectedRevision:_revision}}));const {queryClient}=await import('../store');queryClient.setQueryData(['preferences'],saved);return saved}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Revision-aware bridge between existing planner entities and app-calendar events.
 import {createHash} from 'node:crypto';
-import {scheduledInstant,localDay,addDays} from './scheduling.mjs';
+import {scheduledInstant} from './scheduling.mjs';
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const stableId=value=>{const h=hash(value);return `${h.slice(0,8)}-${h.slice(8,12)}-4${h.slice(13,16)}-8${h.slice(17,20)}-${h.slice(20,32)}`};
 const plain=notes=>(notes?.content??[]).map(n=>n.type==='text'?n.text??'':plain(n)).join(notes?.type==='doc'?'\n':'');
@@ -73,9 +73,7 @@ export function createCalendarPlanner({store,planner,broker,connection,accessTok
     renew();if(result&&(result.id!==mapping.eventId||!result.etag||remoteEvent(result)===undefined))throw Error('planner_receipt');
     mapping.baseline=local;mapping.localRevision=current.revision;mapping.etag=result?.etag??null;delete s.conflicts[k];save();
    }
-   // Materialization uses stable per-slot IDs and receipts, independent of browser.
-   let cursor;
-   do{const page=await invoke('calendar_inventory',{kind:'routines',...(cursor?{cursor}:{})});for(const row of page.items){const r=row.value;if(r.archived||['flexible','unresolved'].includes(r.recurrenceIntent?.kind))continue;const today=localDay(now(),r.timezone),through=addDays(today,14),ids=Object.fromEntries(Array.from({length:15},(_,i)=>{const day=addDays(today,i);return [day,stableId(r.id+':'+day)]}));await invoke('calendar_materialize',{routineId:r.id,through,ids,idempotencyKey:hash('materialize:'+r.id+':'+row.revision+':'+today)})}cursor=page.nextCursor}while(cursor);
+   // Planning explicitly creates routine instances. Sync only reconciles existing records.
    if(!s.initialized){for(const kind of ['tasks','occurrences']){let cursor;do{const page=await invoke('calendar_inventory',{kind,...(cursor?{cursor}:{})});for(const row of page.items)await reconcile(kind,row.value.id);cursor=page.nextCursor}while(cursor)}s.initialized=true;save()}
    for(let pages=0;pages<1000;pages++){const page=await invoke('calendar_changes',{cursor:s.cursor});if(!page.items.length)break;for(const item of page.items)await reconcile(item.kind,item.id);s.cursor=page.cursor;save();if(pages===999)throw Error('planner_page_limit')}
    // Read every established mapping to import Google-only changes even with no

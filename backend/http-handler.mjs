@@ -43,6 +43,8 @@ function createHttpFlow({commands,weather,bridge,origin,basePath='/api/meos/v1'}
    }
    if(bridge?.ownerFor(user.id))throw new DomainError('forbidden','Bridge identity cannot access planner resources')
    if(commands.agentGrant(user.id))throw new DomainError('forbidden','Agent identity cannot access browser APIs')
+   if(parts.length===1&&parts[0]==='bootstrap'&&method==='GET')return response({user:{id:user.id},csrf:user.csrf,...commands.bootstrap(user.id)})
+   if(parts.length===1&&parts[0]==='revisions'&&method==='GET')return response(commands.revisions(user.id))
    if(parts.length===1&&parts[0]==='calendar-window'&&method==='GET'){
     const allowed=new Set(['start','end','timezone','cursor','sequence']);
     for(const key of url.searchParams.keys())if(!allowed.has(key)||url.searchParams.getAll(key).length!==1)throw new DomainError('validation','Invalid Calendar query');
