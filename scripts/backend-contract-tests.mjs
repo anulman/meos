@@ -142,7 +142,6 @@ test('MCP initialization/discovery/calls use identical domain, owner scopes and 
   assert.equal(call({jsonrpc:'2.0',method:'notifications/initialized'}).status,202)
   const discovered=(await call({jsonrpc:'2.0',id:2,method:'tools/list'}).json()).result.tools
   assert(discovered.every(t=>t.outputSchema.type==='object'))
-  assert(discovered.find(t=>t.name==='append_event_note').outputSchema.anyOf.every(s=>s.type==='object'))
   assert.deepEqual(discovered.map(x=>x.name),['list_calendar_events','list_agenda','create_task','delete_task'])
   assert.equal(discovered[2].inputSchema.properties.value.type,'object')
   const t=task({schedule:schedule()}),args={value:t,idempotencyKey:key()}
@@ -369,6 +368,8 @@ test('MCP note scopes remain separate from notification planning reads',async()=
   assert.equal((await call('tools/call',{name:'append_period_note',arguments:input})).isError,true)
   assert.equal((await call('tools/call',{name:'append_event_note',arguments:{kind:'tasks',id:id(),expectedRevision:1,idempotencyKey:key(),author:'Agent',text:'Do not grant write authority',source:'Synthetic'}})).isError,true)
   const ownerTools=(await call('tools/list',{},f.owner)).tools
+  assert(ownerTools.every(t=>t.outputSchema.type==='object'))
+  assert(ownerTools.find(t=>t.name==='append_event_note').outputSchema.anyOf.every(s=>s.type==='object'))
   assert.equal(ownerTools.find(t=>t.name==='append_period_note').annotations.readOnlyHint,false)
   const result=await call('tools/call',{name:'append_period_note',arguments:input},f.owner)
   assert.equal(result.structuredContent.record.revision,1);assert.deepEqual(JSON.parse(result.content[0].text),result.structuredContent)
