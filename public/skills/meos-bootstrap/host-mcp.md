@@ -139,20 +139,22 @@ Write a private config using the schema in `clients/meos-host/README.md`:
 }
 ```
 
-Omit `outbox` for MCP-only access. OpenClaw installations exposing the following
-CLI can register stdio persistently. Discover `openclaw mcp --help`, `add --help`
-and `doctor --help` on the installed host first; flags and tool namespaces are
-host/version-specific. Inspect existing registration before adding it; an unchanged
-repeat must not rewrite it.
+Omit `outbox` for MCP-only access. Register the stdio command and arguments using
+the consuming host's supported persistent MCP configuration:
 
-```sh
-openclaw mcp add meos --command /usr/bin/python3 \
-  --arg /PINNED/clients/meos-host/mcp_bridge.py --arg /PRIVATE/mcp/config.json
-openclaw mcp doctor meos --probe --json
+```json
+{
+  "command": "/usr/bin/python3",
+  "args": ["/PINNED/clients/meos-host/mcp_bridge.py", "/PRIVATE/mcp/config.json"]
+}
 ```
 
-The add/probe commands connect and may refresh credentials; they are not passive
-inspection. Preserve the current private pair after the probe. Verify authenticated
+These are process-launch values, not a universal host configuration schema.
+Discover the host's registration and probe capabilities; inspect the current
+registration before adding it. An unchanged repeat must not rewrite it. The
+integration-specific setup belongs in `clients/meos-host/README.md`, not in the
+MeOS MCP contract. Registration/probing can connect and refresh credentials;
+preserve the current private pair after the probe. Verify authenticated
 initialization, tool inventory and a harmless read. Use the supported native
 `/api/meos/v1/session` read through a private authenticated client to compare the
 effective subject with the intended owner; do not invent a `whoami` MCP tool.

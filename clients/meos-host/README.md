@@ -212,3 +212,41 @@ Before production activation, additionally qualify the rebuilt native guest,
 existing-owner mint/refresh, actual socket proxy rebinding, restricted agent
 policy, TLS listener and real gateway/provider receipt shape in a disposable
 native fixture. Production delivery is a separate authorized operation.
+
+## Register MCP in OpenClaw
+
+The published bootstrap guide specifies the stdio process, not a client-specific
+registration API. For this adapter, discover `openclaw mcp --help`, `add --help`
+and `doctor --help` on the installed host; flags and tool namespaces depend on
+its version. Inspect the current registration first. An unchanged repeat must
+not rewrite it.
+
+```sh
+openclaw mcp add meos --command /usr/bin/python3 \
+  --arg /PINNED/clients/meos-host/mcp_bridge.py --arg /PRIVATE/mcp/config.json
+openclaw mcp doctor meos --probe --json
+```
+
+Replace paths with the pinned helper and private configuration. These commands
+connect and may refresh credentials; preserve the live credential pair and
+verify authenticated discovery and a harmless read.
+
+## Communication boundary
+
+MeOS emits transport-neutral event envelopes and exposes owner-scoped MCP
+operations. Its owner and delegated-principal IDs enforce authorization; they
+do not identify a named assistant, model or communication provider.
+
+This adapter selects the execution profile, the owner's primary notification
+channel and its fixed destination. The shipped sender supports Telegram through
+OpenClaw's message tool. Its `deliveryTarget`, provider receipt validation and
+`chatId` checks are adapter contracts, not MeOS API fields. Another integration
+must implement its own authorized sending and destination-bound receipts; it
+must not silently reuse this sender for another provider.
+
+The adapter retains delivery intents before sending, confirms provider receipts
+before marking constituents delivered, and leaves unknown outcomes fenced against
+replay. Internal per-event reconciliation facts stay in operator evidence;
+ordinary boundary notifications and service-health alerts retain their existing
+handling. Configuring another consuming agent or primary channel must not change
+MeOS records, event envelopes, MCP schemas or the published operating skills.
