@@ -78,7 +78,7 @@
 .calendar-detail-dialog .resource-top h2{overflow-wrap:anywhere;min-width:0}
 .calendar-detail-dialog .resource-top button{flex-shrink:0}
 
-.today-heading{text-align:center;margin-bottom:12px}.today-title-row{display:flex;align-items:center;gap:8px}.today-heading h1{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.today-date-row{display:flex;justify-content:center;align-items:center;margin-top:8px}.today-date-row .day-label{margin:0}.today-date-row .day-navigation{height:28px}.today-header-side{flex:1 0 var(--header-side-width,66px);min-width:0}.today-return{text-align:left}.today-title-row .quiet-action{display:inline-flex;align-items:center;gap:4px}.today-title-row .quiet-action span{margin:0}.today-notes{display:flex;justify-content:flex-end;align-items:center}.day-navigation{display:flex;flex:0 1 auto;min-width:0;align-items:center}.day-label{font-size:13px;line-height:1.4;color:var(--muted);text-align:center;min-width:0}.day-navigation button{flex:0 0 44px;border:0;background:transparent;min-width:44px;min-height:44px;padding:8px;color:var(--muted);border-radius:8px}.day-navigation button:hover{background:var(--soft)}
+.today-heading{text-align:center;margin-bottom:12px}.today-title-row{display:flex;align-items:center;gap:8px}.today-heading h1{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.today-date-row{display:flex;justify-content:center;align-items:center}.today-date-row .day-label{margin:0}.today-date-row .day-navigation{height:28px}.today-date-row .day-navigation button{min-height:28px;height:28px;padding:0 8px}.today-header-side{flex:1 0 var(--header-side-width,66px);min-width:0}.today-return{text-align:left}.today-title-row .quiet-action{min-height:28px;padding-block:0;display:inline-flex;align-items:center;gap:4px}.today-title-row .quiet-action span{margin:0}.today-notes{display:flex;justify-content:flex-end;align-items:center}.day-navigation{display:flex;flex:0 1 auto;min-width:0;align-items:center}.day-label{font-size:13px;line-height:1.4;color:var(--muted);text-align:center;min-width:0}.day-navigation button{flex:0 0 44px;border:0;background:transparent;min-width:44px;min-height:44px;padding:8px;color:var(--muted);border-radius:8px}.day-navigation button:hover{background:var(--soft)}
 @media(max-width:360px){.today-notes .quiet-action,.day-label{font-size:11px}.today-notes .quiet-action span{margin-left:0}}
 
 /* Calendar shares agenda geometry, with a neutral surface and a non-action marker. */
@@ -94,3 +94,8 @@
 .timeline-gap-long:before{border-top-style:dashed;width:32px}
 @media(min-width:700px){.timeline-gap{margin-left:76px}}
 @media(max-width:360px){.timeline-gap{margin-left:52px}}
+
+/* The Today rule spans the visible blocks, not their timestamp baselines. */
+.today-view .timeline{display:flow-root}
+.today-view .timeline:before{top:0;bottom:0}
+.today-view .timeline>:last-child{margin-bottom:0}

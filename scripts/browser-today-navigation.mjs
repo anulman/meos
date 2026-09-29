@@ -14,6 +14,8 @@ try{
   await page.route('**/config.js',route=>route.fulfill({contentType:'text/javascript',body:"window.MEOS_CONFIG={demo:true,timezone:'America/Toronto'}"}))
   await page.goto(base);const agenda=page.getByRole('region',{name:'Scheduled agenda'})
   await page.getByRole('button',{name:'Complete Choose herbs for the balcony',exact:true}).waitFor()
+  const rule=await agenda.evaluate(element=>{const box=element.getBoundingClientRect(),first=element.firstElementChild.getBoundingClientRect(),last=element.lastElementChild.getBoundingClientRect(),style=getComputedStyle(element,'::before');return {top:box.top+parseFloat(style.top),bottom:box.bottom-parseFloat(style.bottom),first:first.top,last:last.bottom}})
+  assert.equal(rule.top,rule.first);assert.equal(rule.bottom,rule.last)
   const date=page.locator('.day-navigation .day-label')
   assert.equal(await date.textContent(),'Saturday Mar 7')
   const rowTitles=()=>agenda.locator('.task-title,.routine-card h2').allTextContents()
@@ -30,7 +32,7 @@ try{
   assert.equal(await routine.innerText(),'✓');assert.deepEqual(await rowTitles(),before)
   await routine.click();await agenda.getByRole('button',{name:'Complete Morning care on 2026-03-07',exact:true}).waitFor()
   const previous=page.getByRole('button',{name:'Previous day',exact:true});const next=page.getByRole('button',{name:'Next day',exact:true})
-  for(const button of [previous,next]){const box=await button.boundingBox();assert.ok(box.width>=44&&box.height>=44)}
+  for(const button of [previous,next]){const box=await button.boundingBox();assert.ok(box.width>=44&&box.height>=28)}
   await next.focus();await page.keyboard.press('Enter');assert.equal(await date.textContent(),'Sunday Mar 8');assert.equal(await page.locator('.today-heading h1').textContent(),'Tomorrow')
   await next.click();assert.equal(await date.textContent(),'Monday Mar 9');assert.equal(await page.locator('.today-heading h1').textContent(),'in 2 days')
   await page.getByRole('button',{name:'Day Notes',exact:true}).click();const notes=page.getByRole('dialog',{name:'Day Notes',exact:true})
@@ -49,7 +51,7 @@ try{
   const notesButton=await page.getByRole('button',{name:'Day Notes',exact:true}).boundingBox()
   assert.ok(Math.abs(navigation.x+navigation.width/2-(header.x+header.width/2))<1)
   const title=await page.locator('.today-heading h1').boundingBox()
-  const subtitle=await date.boundingBox();assert.ok(subtitle.y-title.y-title.height>=4&&subtitle.y-title.y-title.height<=24)
+  const subtitle=await date.boundingBox();assert.ok(subtitle.y-title.y-title.height>=4&&subtitle.y-title.y-title.height<=7)
   assert.ok(Math.abs(title.x+title.width/2-(header.x+header.width/2))<1)
   assert.ok(Math.abs(title.y+title.height/2-(notesButton.y+notesButton.height/2))<1)
   assert.ok(title.x+title.width<=notesButton.x+1)
@@ -57,6 +59,7 @@ try{
   assert.ok(Math.abs((await sides[0].boundingBox()).width-(await sides[1].boundingBox()).width)<1)
   const titleRow=await page.locator('.today-title-row').boundingBox()
   assert.equal(titleRow.y,8)
+  console.log(JSON.stringify({width,titleDateGap:subtitle.y-title.y-title.height,titleRowHeight:titleRow.height,topInset:titleRow.y,headerTargetHeight:notesButton.height,timelineRule:rule}))
   const heading=await page.locator('.today-heading').boundingBox()
   const agendaBox=await agenda.boundingBox()
   assert.ok(Math.abs(agendaBox.y-heading.y-heading.height-12)<1)
@@ -83,7 +86,7 @@ try{
   await page.locator('.today-heading h1').evaluate((element,text)=>element.textContent=text,original)
 
   await next.click()
-  assert.ok(notesButton.width>=44&&notesButton.height>=44)
+  assert.ok(notesButton.width>=44&&notesButton.height>=28)
   await mkdir('artifacts',{recursive:true});await page.screenshot({path:`artifacts/today-header-${width}.png`,fullPage:true})
   assert.deepEqual(errors,[]);await context.close()
  }
