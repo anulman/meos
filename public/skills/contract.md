@@ -69,6 +69,24 @@ before linking work. If project reads/writes are unavailable, keep that priority
 as an explicit unresolved proposal rather than silently creating unlinked tasks.
 Reuse settled links across daily and weekly planning without asking again.
 
+## Event-specific follow-ups
+
+Attach preparation, people to confirm with and follow-up sequences to the existing
+MeOS task (including its commute) or occurrence when they belong to that event.
+Fresh-read `get_current`, then use `append_event_note` with the current revision,
+author, source and a stable idempotency key. Preserve existing prose. Reuse the
+exact request on an uncertain retry; on a conflict, reread and reconsider before
+writing. Verify the note and Calendar propagation separately. If this capability
+is unavailable, report the unsaved note; do not manufacture a standalone task as
+a substitute. Imported primary Calendar events remain read-only.
+
+Create a separate task only for independently tracked work or when the user asks
+for one; do not duplicate the event checklist. Retrieve current notes at the
+relevant boundary and include useful reminder context. A note saying “confirm
+with people, then send the form” is a reminder for the user, not permission for
+the notification drafter to contact people or send it. The drafter remains
+proposal-only; the host owns freshness checks and deduplicated delivery.
+
 ## Evidence and actuals
 
 Keep **intended**, **travelling**, and **settled/engaged** distinct. “Heading to practice” supports travel intent or travel, not attendance; a mid-commute position is not arrival. Use available location, time and conversation evidence together, recording provenance, freshness and confidence/uncertainty through supported state. A location near a venue alone does not prove participation, and engagement does not prove completion. Do not invent a rigid dwell-time threshold or fabricate timestamps for an unknown transition. Ask only when the uncertainty materially changes the next decision; otherwise leave it explicit and adjust the plan within authority.

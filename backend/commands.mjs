@@ -120,6 +120,14 @@ export function createCommands({begin,now=()=>Date.now()}) {
     if(spec.write){const old=db.query('SELECT operation,payload,result FROM command_receipts WHERE owner_id=? AND command_key=?',[blob(owner),input.idempotencyKey])[0];if(old){if(old[0]!==name||old[1]!==canonical(input))throw new DomainError('conflict','Idempotency key payload mismatch');return JSON.parse(old[2])}}
     let result
     if(['search','configure_search','search_index_status','search_index_batch','search_index_commit','search_query_commit'].includes(name))result=searchOperation(db,owner,name,input,now())
+    else if(name==='append_event_note'){
+     const previous=envelope(requireOwned(db,input.kind,owner,input.id))
+     if(!input.author.trim()||/[\r\n]/.test(input.author)||!input.text.trim()||!input.source.trim())throw new DomainError('validation','Author, note and source must contain text; author must be one line')
+     const paragraph=text=>({type:'paragraph',content:[{type:'text',text}]})
+     const block={type:'blockquote',content:[paragraph(input.author),...input.text.split('\n').map(text=>text?paragraph(text):{type:'paragraph'}),paragraph('Source: '+input.source)]}
+     const value={...previous.value,notes:{...previous.value.notes,content:[...(previous.value.notes.content??[]),block]},...(input.kind==='occurrences'?{edited:true}:{})}
+     result=api.update(owner,input.kind,value,input.expectedRevision)
+    }
     else if(name==='get_period_note'||name==='append_period_note'){
      period(input.period,input.kind)
      const row=db.query(`SELECT ${columns} FROM period_notes WHERE owner_id=? AND kind=? AND start_date=? AND end_date=?`,[blob(owner),input.kind,input.period.start,input.period.end])[0]
