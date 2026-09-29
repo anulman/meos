@@ -1,5 +1,5 @@
 import {startRouteReads} from '../lib/loading'
-import {WeatherStatus} from '../components/WeatherStatus'
+import {relativeDay} from '../lib/relative-day'
 import {createFileRoute} from '@tanstack/react-router'
 import {PlannerAgenda,PeriodNotesButton} from '../components/Planning'
 import {usePlannerClock} from '../lib/planner-clock'
@@ -9,7 +9,7 @@ export const Route=createFileRoute('/_app/')({loader:({context})=>{if(context.re
 function Today(){
  const clock=usePlannerClock();const [selectedDay,setSelectedDay]=useState<string|null>(null)
  const day=selectedDay??clock.today;const period=dayPeriod(day)
- const date=new Intl.DateTimeFormat('en',{weekday:'long',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z'))
+ const date=new Intl.DateTimeFormat('en',{weekday:'long',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z')).replace(',', '')
  const moveDay=(offset:number)=>setSelectedDay(current=>{const next=addDays(current??clock.today,offset);return next===clock.today?null:next})
- return <div className="today-view"><header className="page-heading"><div><div className="day-navigation"><button type="button" aria-label="Previous day" onClick={()=>moveDay(-1)}><span aria-hidden="true">👈</span></button><p className="eyebrow" aria-live="polite">{date}</p><button type="button" aria-label="Next day" onClick={()=>moveDay(1)}><span aria-hidden="true">👉</span></button></div><h1>{day===clock.today?'Today':'Day'}</h1></div><PeriodNotesButton kind="day" period={period}/></header><WeatherStatus/><PlannerAgenda period={period} compact/></div>
+ return <div className="today-view"><header className="today-heading"><h1 aria-live="polite">{relativeDay(day,clock.today)}</h1><div className="today-date-row"><div className="today-header-side" aria-hidden="true"/><div className="day-navigation"><button type="button" aria-label="Previous day" onClick={()=>moveDay(-1)}><span aria-hidden="true">👈</span></button><p className="day-label">{date}</p><button type="button" aria-label="Next day" onClick={()=>moveDay(1)}><span aria-hidden="true">👉</span></button></div><div className="today-header-side today-notes"><PeriodNotesButton kind="day" period={period}/></div></div></header><PlannerAgenda period={period} compact/></div>
 }

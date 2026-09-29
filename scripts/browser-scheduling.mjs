@@ -17,7 +17,7 @@ try {
  await page.goto(base);await page.getByRole('button',{name:'Choose herbs for the balcony',exact:true}).waitFor()
  const today=await page.evaluate(()=>new Intl.DateTimeFormat('en-CA',{timeZone:window.MEOS_CONFIG.timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))
  const absent=async()=>{assert.doesNotMatch(await page.locator('main').innerText(),/legacy-|Optional schedule regression/);assert.equal(await page.getByRole('region',{name:'Tasks needing a time'}).count(),0)}
- await absent();assert.equal(await page.locator('.agenda-progress').innerText(),'1 of 4 tasks completed')
+ await absent();assert.equal(await page.locator('.agenda-progress').count(),0)
  await page.getByRole('link',{name:'Settings',exact:true}).click()
  await page.getByRole('button',{name:'legacy-untimed',exact:true}).waitFor()
  await page.getByRole('button',{name:'New task',exact:true}).click()
@@ -39,12 +39,12 @@ try {
  await page.getByRole('button',{name:labels.find(label=>label!==`View ${today}`),exact:true}).click();await absent()
 
  await page.getByRole('link',{name:'Today',exact:true}).click();await page.getByRole('button',{name:task.title,exact:true}).waitFor()
- await page.getByRole('button',{name:`Complete ${task.title}`,exact:true}).click();await page.getByText('2 of 5 tasks completed',{exact:true}).waitFor()
+ await page.getByRole('button',{name:`Complete ${task.title}`,exact:true}).click();await page.getByRole('button',{name:`Reopen ${task.title}`,exact:true}).waitFor()
  await page.getByRole('button',{name:task.title,exact:true}).click()
  await sheet.getByRole('button',{name:'Clear schedule',exact:true}).click();await sheet.getByRole('button',{name:'Save changes',exact:true}).click();await sheet.waitFor({state:'hidden'})
- await page.getByText('1 of 4 tasks completed',{exact:true}).waitFor();await absent();task=await getTask();assert.equal(task.schedule,undefined);assert.equal(task.completed,true)
+ await page.getByRole('region',{name:'Scheduled agenda'}).getByRole('button',{name:task.title,exact:true}).waitFor({state:'hidden'});await absent();task=await getTask();assert.equal(task.schedule,undefined);assert.equal(task.completed,true)
  await page.getByRole('link',{name:'Week',exact:true}).click();await page.getByRole('button',{name:`View ${today}`,exact:true}).click();await absent()
  await page.getByRole('link',{name:'Settings',exact:true}).click();await page.getByRole('button',{name:task.title,exact:true}).waitFor()
  assert.deepEqual(errors,[])
- console.log('PASS scheduling: unscheduled create/edit/readback, legacy invalid/high-priority/completed daily exclusion, resource discovery, schedule/unschedule transitions, selected day and Today counts')
+ console.log('PASS scheduling: unscheduled create/edit/readback, legacy invalid/high-priority/completed daily exclusion, resource discovery, schedule/unschedule transitions, selected day and Today completion')
 } finally {await browser.close()}

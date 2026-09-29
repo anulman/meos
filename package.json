@@ -25,6 +25,7 @@
     "@tanstack/react-query": "5.103.2",
     "@tanstack/react-router": "1.170.39",
     "@tanstack/react-start": "1.168.58",
+    "date-fns": "4.1.0",
     "msw": "2.15.0",
     "prosemirror-commands": "1.7.2",
     "prosemirror-history": "1.5.0",
