@@ -10,6 +10,12 @@ export function offsetAt(instant,zone){
  let offset=rows[0][1];for(const row of rows){if(row[0]>instant)break;offset=row[1]}return offset
 }
 export function localDay(instant,zone){return new Date(instant+offsetAt(instant,zone)*60000).toISOString().slice(0,10)}
+// Presentation uses the same pinned rules as scheduling, not the host timezone.
+export function displayInstant(instant,zone){
+ const offsetMinutes=offsetAt(instant,zone),local=new Date(instant+offsetMinutes*60000).toISOString()
+ const hour=Number(local.slice(11,13)),time=`${hour%12||12}:${local.slice(14,16)} ${hour<12?'am':'pm'}`
+ return {date:local.slice(0,10),time,offsetMinutes}
+}
 export function scheduledInstant(schedule){
  date(schedule.date);timezone(schedule.timezone)
  if(typeof schedule.time!=='string'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(schedule.time))fail('Scheduled time requires HH:mm')

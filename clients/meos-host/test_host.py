@@ -151,7 +151,7 @@ class ProcessRecoveryTests(unittest.TestCase):
             thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
             config=temp/'config';m.save(config,{'hookHost':'127.0.0.1','hookPort':server.server_port,'hookTokenFile':str(token),'agentId':'synthetic','mode':'notifications'})
             db=d.connect(state);d.admit(db,{'id':'kill-proof','type':'boundary','at':0,'starts':[{'kind':'tasks','id':'synthetic','revision':1,'start':0,'end':60000}]},'kill-proof');db.close()
-            cmd=[sys.executable,'-c',"import dispatcher,handling;handling.current_reader=lambda c:lambda i:{'scheduledAt':'1970-01-01T00:00:00Z','record':{'revision':1,'value':{'id':'synthetic','schedule':{'date':'1970-01-01','time':'00:00','timezone':'UTC'},'durationMinutes':1}}};dispatcher.main()",'worker','--state',str(state),'--config',str(config)]
+            cmd=[sys.executable,'-c',"import dispatcher,handling;handling.current_reader=lambda c:lambda i:{'display':{'timezone':'UTC','start':{'date':'1970-01-01','time':'12:00 am','offsetMinutes':0},'end':{'date':'1970-01-01','time':'12:01 am','offsetMinutes':0}},'scheduledAt':'1970-01-01T00:00:00Z','record':{'revision':1,'value':{'id':'synthetic','schedule':{'date':'1970-01-01','time':'00:00','timezone':'UTC'},'durationMinutes':1}}};dispatcher.main()",'worker','--state',str(state),'--config',str(config)]
             first=subprocess.Popen(cmd,stdout=subprocess.DEVNULL,stderr=None)
             second=None
             try:

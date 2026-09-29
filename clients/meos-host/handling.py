@@ -48,11 +48,18 @@ def members(event):
     return result
 
 
-def draft_event(event,active):
+def draft_event(event,active,read):
     selected={(item['kind'],item['id'],item['revision'],item['boundary']) for _,item in active}
     result={k:event[k] for k in ('id','type','at')}
     for field,boundary in [('starts','start'),('ends','end'),('upcoming','pre')]:
-        result[field]=[item for item in event.get(field,[]) if (item['kind'],item['id'],item['revision'],boundary) in selected]
+        result[field]=[]
+        for item in event.get(field,[]):
+            if (item['kind'],item['id'],item['revision'],boundary) not in selected:continue
+            current=read(item)
+            display=current.get('display')
+            if not isinstance(display,dict) or not display.get('timezone') or not display.get('start') or not display.get('end'):
+                raise ValueError('configured local display times unavailable')
+            result[field].append({**item,'display':display})
     return result
 
 

@@ -1916,7 +1916,7 @@
     "/api/meos/v1/operations/get_current": {
       "post": {
         "operationId": "get_current",
-        "description": "Read the current task or occurrence, including a retained deletion tombstone, before handling a boundary.",
+        "description": "Read the current task or occurrence, including a retained deletion tombstone, before handling a boundary. Use display for user-facing dates/times in the owner configured timezone; null means preferences or schedule are unavailable, never assume host timezone. scheduledAt remains the machine instant.",
         "security": [
           {
             "browserSession": [],
@@ -1993,13 +1993,50 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "display": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "timezone": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100
+                            },
+                            "start": {
+                              "$ref": "#/components/schemas/DisplayInstant"
+                            },
+                            "end": {
+                              "anyOf": [
+                                {
+                                  "$ref": "#/components/schemas/DisplayInstant"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "timezone",
+                            "start",
+                            "end"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
                     "record",
                     "deleted",
                     "revision",
-                    "scheduledAt"
+                    "scheduledAt",
+                    "display"
                   ],
                   "additionalProperties": false
                 }
@@ -8526,6 +8563,32 @@
           "notes",
           "completed",
           "priority"
+        ],
+        "additionalProperties": false
+      },
+      "DisplayInstant": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "time": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "offsetMinutes": {
+            "type": "integer",
+            "minimum": -840,
+            "maximum": 840
+          }
+        },
+        "required": [
+          "date",
+          "time",
+          "offsetMinutes"
         ],
         "additionalProperties": false
       },
