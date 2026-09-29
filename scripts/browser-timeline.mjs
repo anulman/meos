@@ -9,7 +9,7 @@ const envelope=value=>({value,revision:1,createdAt:day+'T00:00:00Z',updatedAt:da
 const schedule=time=>({date:day,time,timezone:'America/Montreal'})
 const tasks=[{id:id(1),title:'Write the first draft',schedule:schedule('09:00'),durationMinutes:30},{id:id(2),title:'Afternoon focus',schedule:schedule('12:31'),durationMinutes:30}].map(t=>({...t,notes:{type:'doc'},completed:false,priority:'none'}))
 const routines=[{id:id(10),title:'Bedtime',notes:{type:'doc'},recurrenceIntent:{text:'every day',anchorDate:day},timezone:'America/Montreal'},{id:id(11),title:'Morning care',notes:{type:'doc'},recurrenceIntent:{text:'every day',anchorDate:day},timezone:'America/Montreal'}]
-const occurrences=routines.map((r,i)=>({id:id(20+i),routineId:r.id,title:r.title,date:day,schedule:schedule(i?'08:00':'00:00'),durationMinutes:30,completed:false,notes:{type:'doc'}}))
+const occurrences=routines.map((r,i)=>({id:id(20+i),routineId:r.id,title:r.title,date:i?day:'2026-09-26',schedule:schedule(i?'08:00':'00:00'),durationMinutes:30,completed:false,notes:{type:'doc'}}))
 const event=(name,start,end,extra={})=>({id:name,role:'primary',etag:'1',summary:name,location:'',description:'Bring your notes',start:{dateTime:`${day}T${start}:00-04:00`},end:{dateTime:`${day}T${end}:00-04:00`},linked:false,recurring:false,...extra})
 const calendar=[event('Design conversation','10:30','11:30',{location:'Studio'}),event('Nested check-in','10:45','11:00'),event('Linked duplicate','09:00','09:30',{linked:true}),event('All day reference','00:00','23:59',{start:{date:day},end:{date:'2026-09-28'}})]
 const prefs=envelope({timezone:'America/Montreal',weekStartsOn:1,weather:{enabled:false,source:'latest',units:'celsius'}})
@@ -38,11 +38,18 @@ try{
   await page.goto(`http://127.0.0.1:${server.address().port}`)
   const agenda=page.getByRole('region',{name:'Scheduled agenda'})
   await agenda.getByRole('button',{name:'Design conversation',exact:true}).waitFor({timeout:10000}).catch(async e=>{console.log(await page.locator('body').innerText());throw e})
-  await agenda.getByRole('button',{name:'Complete Bedtime on '+day,exact:true}).waitFor()
+  await agenda.getByRole('button',{name:'Complete Bedtime on 2026-09-26',exact:true}).waitFor()
   assert.deepEqual(await agenda.locator('.timeline-gap').allTextContents(),['7 hr 30 min gap','30 min gap','1 hr gap','1 hr 1 min gap'])
   assert.deepEqual(await agenda.locator('.timeline-gap-long').allTextContents(),['7 hr 30 min gap','1 hr 1 min gap'])
   assert.equal(await agenda.getByText('All day reference').count(),0);assert.equal(await agenda.getByText('Linked duplicate').count(),0)
-  assert.deepEqual(await agenda.locator('.task-title,.routine-card h2').allTextContents(),['Bedtime','Morning care','Write the first draft30 min','Design conversation','Nested check-in','Afternoon focus30 min'])
+  assert.deepEqual(await agenda.locator('.task-title,.routine-card h2 button>span').allTextContents(),['Bedtime','Morning care','Write the first draft30 min','Design conversation','Nested check-in','Afternoon focus30 min'])
+  for(const button of await agenda.locator('.task-title,.agenda-card-details').all()){
+   const title=await button.locator(':scope > span').boundingBox(),meta=await button.locator(':scope > small').boundingBox()
+   assert.equal(await button.locator('small').evaluate(e=>getComputedStyle(e).marginTop),'4px')
+   assert.ok(Math.abs(meta.y-title.y-title.height-5)<1)
+   assert.ok((await button.boundingBox()).height>=44)
+  }
+  assert.equal(await agenda.getByRole('button',{name:'Edit instance Bedtime'}).locator('small').innerText(),'30 min · Routine')
   const gapBoxes=await agenda.locator('.timeline-gap').evaluateAll(es=>es.map(e=>e.getBoundingClientRect().height))
   assert.deepEqual(gapBoxes,[48,28,28,48])
   const card=agenda.locator('.calendar-card').first()
