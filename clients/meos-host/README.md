@@ -161,6 +161,7 @@ run IDs. Constituent receipts survive changes in event grouping.
 
 Inspect the private SQLite `constituents`, `deliveries` and `proposals` tables
 when reconciling a blocked run. Never delete delivery intents to force a retry.
+
 Unknown external delivery requires provider/transcript investigation. No unsafe
 retry command is supplied. Journal alerts identify blocked events once; wire
 service/journal failure monitoring to the installation's notification route.
@@ -171,6 +172,20 @@ outbox with atomic claims. For ephemeral/serverless deployments use a durable
 managed queue/store. Do not share this SQLite file across hosts or put it on
 container scratch storage.
 
+### Reconciliation alert routing
+
+`owner_alert.py` sends bounded pipeline-health alerts for service failures and
+monitoring failures. It does not send per-event reconciliation facts to the
+owner's chat. Blocked events remain in the outbox and dispatcher journal for
+operator inspection; suppression does not acknowledge, complete, or replay them.
+Confirmed and unknown alert receipts remain durable across restarts. Normal
+boundary notifications continue through the dispatcher's freshness and receipt
+checks, independently of this alert filter.
+
+The MCP endpoint declares an explicit `type: object` root for structured
+output schemas, including object-valued `anyOf` unions. Every variant constraint
+remains intact. This allows strict MCP clients to discover event-note operations
+and the host's proposal tool.
 ## Verify the candidate
 
 The trusted launchers isolate tests from host credentials, production data,
