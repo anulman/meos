@@ -70,6 +70,19 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(self.state(),'blocked_terminal')
 
 class BridgeTests(unittest.TestCase):
+    def test_object_union_discovery_keeps_constraints_and_proposal_tool(self):
+        variants = [{'type':'object','required':['task']}, {'type':'object','required':['occurrence']}]
+        schemas = [{'anyOf':variants}, {'type':'object','required':['value']},
+                   {'anyOf':[{'type':'object'}, {'type':'null'}]}]
+        response = {'result':{'tools':[{'name':str(i),'outputSchema':s} for i,s in enumerate(schemas)]}}
+        self.b.c['outbox'] = '/synthetic'
+        with patch.object(m,'private',side_effect=pathlib.Path),patch.object(self.b,'request',side_effect=[self.identity,(200,response)]):
+            tools = self.b.call({'id':1,'method':'tools/list'})['result']['tools']
+        self.assertEqual(tools[0]['outputSchema'], {'type':'object','anyOf':variants})
+        self.assertEqual(tools[1]['outputSchema'], {'type':'object','required':['value']})
+        self.assertNotIn('type', tools[2]['outputSchema'])
+        self.assertEqual(tools[-1]['name'], 'propose_boundary')
+
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.p=pathlib.Path(self.tmp.name)/'credentials.json'
         m.save(self.p,{'authToken':'old','refreshToken':'refresh'})
