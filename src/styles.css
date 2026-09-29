@@ -50,8 +50,6 @@
 :is(.today-view,.week-view,.settings-view) .routine-card h2{font-size:15px}
 :is(.today-view,.week-view,.settings-view) .routine-card p{font-size:11px;margin-top:3px}
 .agenda-progress{color:var(--muted);font-size:12px;margin:0 0 14px}
-.completed-tasks{margin-top:16px;border-top:1px solid var(--line)}
-.completed-tasks summary{cursor:pointer;color:var(--muted);font-size:13px;min-height:44px;display:list-item;padding:14px 0}
 
 :is(.week-view,.settings-view) .routine-edit{min-height:56px;padding:10px 12px}
 :is(.week-view,.settings-view) .routine-edit span{font-size:11px;margin-top:3px}
@@ -80,3 +78,5 @@
 .calendar-detail-dialog .calendar-detail-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;margin-top:8px}
 .calendar-detail-dialog .resource-top h2{overflow-wrap:anywhere;min-width:0}
 .calendar-detail-dialog .resource-top button{flex-shrink:0}
+
+.day-navigation{display:flex;align-items:center;gap:4px;margin-left:-12px}.day-navigation .eyebrow{margin:0}.day-navigation button{border:0;background:transparent;min-width:44px;min-height:44px;padding:8px;color:var(--muted);border-radius:8px}.day-navigation button:hover{background:var(--soft)}
