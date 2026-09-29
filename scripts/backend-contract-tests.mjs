@@ -410,3 +410,52 @@ test('reporting uses pinned DST offsets, date rollover and non-hour IANA zones',
   const {display}=f.invoke('get_current',{kind:'tasks',id:value.id});assert.equal(display.start.time,'9:30 pm');assert.equal(display.start.offsetMinutes,345)
  }finally{f.close()}
 })
+
+test('schedule duration previews and applies task/occurrence intervals without rewriting estimate, actuals or siblings',async()=>{
+ const {plannerEvent}=await import('../backend/calendar-planner.mjs')
+ const f=fixture();try{
+  const r=routine({durationIntent:'Originally about an hour'});const template=f.commands.create(f.owner,'routines',r)
+  const [occurrence,sibling]=materialize(f,r).items
+  const t=task({durationIntent:'Originally 90 minutes',actualDurationMinutes:23,durationMinutes:90,schedule:schedule()})
+  const original=f.commands.create(f.owner,'tasks',t)
+  const o=f.invoke('move_occurrence',{id:occurrence.value.id,expectedRevision:1,schedule:schedule(),durationMinutes:60,actualDurationMinutes:17,idempotencyKey:key()})
+  const changes=[{kind:'tasks',id:t.id,expectedRevision:1,schedule:schedule('2026-09-26','12:00'),durationMinutes:30},{kind:'occurrences',id:o.value.id,expectedRevision:o.revision,schedule:schedule('2026-09-27','13:00'),durationMinutes:45}]
+  const count=()=>f.db.prepare('SELECT count(*) n FROM sync_outbox').get().n,before=count()
+  const preview=f.invoke('preview_schedule',{changes});assert.equal(preview.applied,false)
+  for(const [i,row] of preview.items.entries()){
+   const event=plannerEvent(row)
+   assert.equal(Date.parse(event.end.dateTime)-Date.parse(event.start.dateTime),changes[i].durationMinutes*60000)
+   assert.deepEqual(row.value.schedule,changes[i].schedule)
+  }
+  assert.deepEqual(f.commands.get(f.owner,'tasks',t.id),original);assert.deepEqual(f.commands.get(f.owner,'occurrences',o.value.id),o);assert.equal(count(),before)
+  const input={changes,idempotencyKey:key()},applied=f.invoke('apply_schedule',input)
+  for(const [i,row] of applied.items.entries()){
+   assert.deepEqual(row.value,preview.items[i].value);assert.equal(row.revision,changes[i].expectedRevision+1)
+   assert.deepEqual(plannerEvent(row),plannerEvent(preview.items[i]))
+  }
+  assert.equal(applied.items[0].value.durationIntent,t.durationIntent);assert.equal(applied.items[0].value.actualDurationMinutes,23)
+  assert.equal(applied.items[1].value.durationIntent,r.durationIntent);assert.equal(applied.items[1].value.actualDurationMinutes,17);assert.equal(applied.items[1].value.date,o.value.date)
+  assert.deepEqual(f.commands.get(f.owner,'routines',r.id),template);assert.deepEqual(f.commands.get(f.owner,'occurrences',sibling.value.id),sibling)
+  assert.equal(count(),before+2);assert.deepEqual(f.invoke('apply_schedule',input),applied);assert.equal(count(),before+2)
+  assert.throws(()=>f.invoke('apply_schedule',{...input,changes:[{...changes[0],durationMinutes:31},changes[1]]}),{code:'conflict'})
+  const retained=f.invoke('apply_schedule',{changes:[{kind:'tasks',id:t.id,expectedRevision:2,schedule:null}],idempotencyKey:key()}).items[0]
+  assert.equal(retained.value.durationMinutes,30);assert.equal(retained.value.schedule,undefined)
+ }finally{f.close()}
+})
+
+test('schedule durations reject invalid inputs and roll back mixed batches, receipts and outbox on stale or duplicate targets',()=>{
+ const f=fixture();try{
+  const a=task({durationMinutes:90}),b=task({durationMinutes:60});for(const t of [a,b])f.commands.create(f.owner,'tasks',t)
+  const change=t=>({kind:'tasks',id:t.id,expectedRevision:1,schedule:schedule(),durationMinutes:30})
+  const snapshot=()=>JSON.stringify({a:f.commands.get(f.owner,'tasks',a.id),b:f.commands.get(f.owner,'tasks',b.id),outbox:f.db.prepare('SELECT * FROM sync_outbox').all(),receipts:f.db.prepare('SELECT * FROM command_receipts').all()})
+  const before=snapshot()
+  for(const durationMinutes of [null,0,-1,1441,1.5,'30'])for(const name of ['preview_schedule','apply_schedule']){
+   assert.throws(()=>f.invoke(name,{changes:[change(a),{...change(b),durationMinutes}],...(name==='apply_schedule'?{idempotencyKey:key()}:{})}),{code:'validation'});assert.equal(snapshot(),before)
+  }
+  for(const second of [{...change(b),expectedRevision:2},change(a)]){
+   assert.throws(()=>f.invoke('apply_schedule',{changes:[change(a),second],idempotencyKey:key()}));assert.equal(snapshot(),before)
+  }
+  const valid=f.invoke('apply_schedule',{changes:[{...change(a),durationMinutes:1},{...change(b),durationMinutes:1440}],idempotencyKey:key()})
+  assert.deepEqual(valid.items.map(x=>x.value.durationMinutes),[1,1440])
+ }finally{f.close()}
+})
