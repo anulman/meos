@@ -3629,7 +3629,7 @@
     "/api/meos/v1/operations/preview_schedule": {
       "post": {
         "operationId": "preview_schedule",
-        "description": "Validate a proposed schedule atomically without writing. Preferences do not automatically assign times.",
+        "description": "Validate proposed starts and optional planned durationMinutes (1–1440) atomically without writing. Omitted duration preserves the current duration. Returns proposed intervals; does not detect overlaps or assign times from preferences. Preserves durationIntent estimates and actualDurationMinutes.",
         "security": [
           {
             "browserSession": [],
@@ -3672,6 +3672,11 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "durationMinutes": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1440
                         }
                       },
                       "required": [
@@ -3795,7 +3800,7 @@
     "/api/meos/v1/operations/apply_schedule": {
       "post": {
         "operationId": "apply_schedule",
-        "description": "Atomically apply explicit scheduling decisions with per-record revisions and retry protection.",
+        "description": "Atomically apply starts and optional planned durationMinutes (1–1440) with per-record revisions and retry protection. Omitted duration preserves the current duration; schedule null unschedules. Preserves durationIntent estimates and actualDurationMinutes. Calendar synchronization follows the commit separately.",
         "security": [
           {
             "browserSession": [],
@@ -3838,6 +3843,11 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "durationMinutes": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1440
                         }
                       },
                       "required": [

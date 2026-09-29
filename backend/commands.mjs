@@ -217,6 +217,7 @@ export function createCommands({begin,now=()=>Date.now()}) {
      for(const item of input.changes){const key=item.kind+':'+item.id;if(seen.has(key))throw new DomainError('validation','Duplicate schedule target');seen.add(key)
       const old=envelope(requireOwned(db,item.kind,owner,item.id));if(old.revision!==item.expectedRevision)throw new DomainError('conflict','Record changed',{currentRevision:old.revision})
       const value={...old.value};if(item.schedule===null)delete value.schedule;else value.schedule=item.schedule
+      if(item.durationMinutes!==undefined)value.durationMinutes=item.durationMinutes
       if(item.kind==='occurrences')value.edited=true
       const valid=validateResource(item.kind,value);foreign(db,item.kind,owner,valid)
       items.push(name==='apply_schedule'?write(db,item.kind,owner,valid,item.expectedRevision):{...old,value:valid})

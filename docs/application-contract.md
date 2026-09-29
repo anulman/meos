@@ -52,6 +52,15 @@ outside that range. Regenerate and qualify those rules when updating tzdata.
 checks revisions and writes assignments, outbox entries, and the retry receipt
 in one transaction. It is not an AI optimizer. Calendar synchronization is a
 separate private-worker operation; a local commit does not prove provider delivery.
+Each change supplies `kind`, `id`, `expectedRevision`, and `schedule` (or `null`
+to unschedule). Optional `durationMinutes` sets the planned interval length to an
+integer from 1 through 1440; omission preserves its current value. This changes
+neither the original estimate in `durationIntent` nor `actualDurationMinutes`.
+The preview returns the proposed start and duration together, without changing
+revisions or emitting sync work. It validates records, not overlaps: callers must
+compare proposed intervals with the fresh agenda and Calendar context. On apply,
+one stale or invalid change rolls back the entire batch. Routine changes affect
+only the selected occurrence, not its original slot, template, or siblings.
 See [Calendar cache](calendar-cache.md) for publication and freshness boundaries.
 
 ## Separate browser and agent authentication
