@@ -6,7 +6,7 @@ import {SessionGate} from '../components/SessionGate'
 import {PlanningProvider} from '../components/Planning'
 import {establishDataSession} from '../lib/loading'
 import * as stylex from '@stylexjs/stylex'
-const styles=stylex.create({frame:{maxWidth:'760px',marginInline:'auto',padding:'24px 22px 140px'},today:{paddingTop:'8px'}})
+const styles=stylex.create({frame:{maxWidth:'760px',marginInline:'auto',padding:'24px 22px 140px'},today:{paddingTop:'12px'}})
 // SPA's document is prerendered; identity and private state are strictly browser-owned.
 export const Route=createFileRoute('/_app')({ssr:false,beforeLoad:()=>establishDataSession(),component:AuthenticatedLayout})
 function AuthenticatedLayout(){const bootstrap=Route.useRouteContext();const location=useLocation();const isWeek=location.pathname==='/week';const showAdd=location.pathname==='/'||isWeek;return <QueryClientProvider client={queryClient}><SessionGate bootstrap={bootstrap}><PlanningProvider><ResourceProvider><div {...stylex.props(styles.frame,location.pathname==='/'&&styles.today)}><main id="main-content"><Outlet/></main><nav aria-label="Main navigation"><Link to="/" activeOptions={{exact:true}}>Today</Link><Link to="/week" search={{week:'this'}}>Week</Link><Link to="/settings">Settings</Link></nav></div>{showAdd&&<FloatingAdd kind={isWeek?'outcome':'task'}/>}</ResourceProvider></PlanningProvider></SessionGate></QueryClientProvider>}
