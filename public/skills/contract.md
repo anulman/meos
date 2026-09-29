@@ -13,6 +13,27 @@ not operating rituals. Bootstrap uses the release's pinned source installer or a
 previously admitted age runtime. Do not install Go, rebuild encryption, rotate
 recovery keys, or enable backup schedules as a side effect of planning/review.
 
+## Primary communication channel
+
+Use the user's configured **primary communication/notification channel** for
+user-facing results and reminders, unless the user explicitly selects another
+available channel. Discover the host's authorized delivery capability; do not
+assume that a normal assistant response reaches the user.
+
+MeOS records, MCP operations and event envelopes do not select a messaging
+provider or consuming agent. The integration adapter owns channel and recipient
+routing, execution-profile selection, provider-specific sending and receipt
+validation. Owner and delegated-principal identities remain authorization
+boundaries, not assistant names. Do not add provider destinations or agent
+configuration to event notes, proposals or generic MeOS API arguments.
+
+A generated message is a proposal, not a delivery receipt. Preserve durable
+constituent IDs, delivery intents and confirmed receipts; reconcile uncertain
+outcomes without replaying them. Keep internal per-event reconciliation notices
+in operational evidence, not user messages. This does not suppress normal
+start/end reminders, useful advance prompts or actionable service-health alerts;
+apply the user's boundary preferences and the host's delivery contract.
+
 ## User-facing dates and times
 
 Read the user's configured MeOS display timezone from preferences. Use that IANA
@@ -102,7 +123,7 @@ Follow the [learning-loop reference](learning-loop.md) for small qualitative ref
 3. Identify the smallest necessary decisions. Distinguish observed facts, inferred possibilities and proposals. If state is stale or unavailable, qualify the plan and avoid changes requiring that missing evidence.
 4. Preview a capacity-aware change set through available tools (for example, `preview_schedule`, only if discovered). Show what moves, what remains unscheduled, and what no longer fits. Apply only authorized choices, using expected revisions and stable idempotency keys where supported (for example, a discovered `apply_schedule`). On conflicts, refresh and reconsider; do not blindly replay. If a tool cannot provide safe retry/revision semantics, do not simulate them with prose: report the limit and withhold affected automated writes.
 5. Reconcile uncertain writes by retrieving their status or live state before retrying. Preserve partial successes and retry only unresolved operations. Verify each applied change against tool receipts/live state; intention is not success.
-6. Save decisions, applied changes, unresolved questions, deferrals and next action in durable MeOS state. Include scope/coverage and anything skipped. Deliver a concise result through the host's user-visible messaging capability when the mode calls for one. Record delivery success separately from mutation success; do not repeat already-delivered prompts on resume.
+6. Save decisions, applied changes, unresolved questions, deferrals and next action in durable MeOS state. Include scope/coverage and anything skipped. Deliver a concise result through the host's authorized capability on the primary communication/notification channel when the mode calls for one. Record delivery success separately from mutation success; do not repeat already-delivered prompts on resume.
 
 ## Scheduling and completion invariants
 
