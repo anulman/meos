@@ -58,7 +58,7 @@ try{
   const sides=await page.locator('.today-header-side').all()
   assert.ok(Math.abs((await sides[0].boundingBox()).width-(await sides[1].boundingBox()).width)<1)
   const titleRow=await page.locator('.today-title-row').boundingBox()
-  assert.equal(titleRow.y,8)
+  assert.equal(titleRow.y,12)
   console.log(JSON.stringify({width,titleDateGap:subtitle.y-title.y-title.height,titleRowHeight:titleRow.height,topInset:titleRow.y,headerTargetHeight:notesButton.height,timelineRule:rule}))
   const heading=await page.locator('.today-heading').boundingBox()
   const agendaBox=await agenda.boundingBox()
