@@ -14,6 +14,7 @@ class HandlingTests(unittest.TestCase):
         self.item={'kind':'tasks','id':'11111111-1111-4111-8111-111111111111','revision':1,'start':self.start,'end':self.start+1800000}
         self.event={'id':'first','type':'boundary','at':self.start,'starts':[self.item],'ends':[],'upcoming':[]}
         self.current={'deleted':False,'revision':1,'scheduledAt':stamp.isoformat(),'record':{'revision':1,'value':{'id':self.item['id'],'schedule':{'date':stamp.strftime('%Y-%m-%d'),'time':stamp.strftime('%H:%M'),'timezone':'UTC'},'durationMinutes':30}}}
+        self.current['display']={'timezone':'America/Toronto','start':{'date':'2026-09-29','time':'11:45 am','offsetMinutes':-240},'end':{'date':'2026-09-29','time':'12:45 pm','offsetMinutes':-240}}
         self.read=lambda item:self.current
         self.receipt={'provider':'telegram','messageId':'42','chatId':'synthetic'}
     def tearDown(self):self.db.close();self.tmp.cleanup()
@@ -22,6 +23,43 @@ class HandlingTests(unittest.TestCase):
         capability=self.db.execute('SELECT capability FROM proposals WHERE event_id=?',(identity,)).fetchone()[0]
         h.propose(self.db,identity,capability,{'eventId':identity,'message':'Synthetic boundary','constituents':[k for k,_ in h.members(json.loads(payload))]})
         return {'ok':True,'runId':'run-verified','completion':{'status':'ok'}}
+    def test_local_display_survives_advance_start_end_and_adjacent_delivery(self):
+        for field in ('upcoming','starts','ends'):
+            with self.subTest(field=field):
+                event={**self.event,'id':field,'type':'pre' if field=='upcoming' else 'boundary','starts':[],'ends':[],'upcoming':[]}
+                event[field]=[self.item]
+                if field=='upcoming':event['at']=self.start-900000
+                if field=='ends':event['at']=self.item['end']
+                active=h.members(event)
+                draft=h.draft_event(event,active,self.read)
+                self.assertEqual(draft[field][0]['display'],self.current['display'])
+                self.assertEqual(h.members(draft),active)
+        # Real worker -> proposal -> delivery adapter, with adjacent constituents.
+        event={**self.event,'ends':[{**self.item,'id':'22222222-2222-4222-8222-222222222222','start':self.start-1800000,'end':self.start}]}
+        def read(item):
+            from datetime import datetime,timezone
+            return {**self.current,'scheduledAt':datetime.fromtimestamp(item['start']/1000,timezone.utc).isoformat(),'record':{'revision':1,'value':{**self.current['record']['value'],'id':item['id']}}}
+        sent=[]
+        def hook(config,identity,payload):
+            draft=json.loads(payload)
+            self.assertIn('ALL user-facing clock times',config['_proposalPrompt'])
+            self.assertEqual(len(draft['starts']),1);self.assertEqual(len(draft['ends']),1)
+            display=draft['starts'][0]['display']
+            capability=self.db.execute('SELECT capability FROM proposals WHERE event_id=?',(identity,)).fetchone()[0]
+            h.propose(self.db,identity,capability,{'eventId':identity,'message':'Previous block ended. Walk starts at '+display['start']['time']+', until '+display['end']['time']+'.','constituents':[k for k,_ in h.members(draft)]})
+            return {'runId':'local-proof','completion':{'status':'ok'}}
+        d.admit(self.db,event,event['id'])
+        d.step(self.db,{'mode':'notifications'},hook,read,lambda *args:sent.append(args[-1]) or self.receipt)
+        self.assertEqual(self.state(),'handled_delivered')
+        self.assertEqual(sent,['Previous block ended. Walk starts at 11:45 am, until 12:45 pm.'])
+        self.assertEqual(self.db.execute("SELECT count(*) FROM constituents WHERE state='delivered'").fetchone()[0],2)
+
+    def test_missing_display_context_does_not_guess_utc_or_send(self):
+        self.current['display']=None
+        d.admit(self.db,self.event,self.event['id']);sent=[]
+        d.step(self.db,{'mode':'notifications'},self.proposed_hook,self.read,lambda *args:sent.append(args) or self.receipt)
+        self.assertEqual(self.state(),'blocked_unknown');self.assertEqual(sent,[])
+
     def test_verified_delivery_survives_restart_and_regrouping(self):
         d.admit(self.db,self.event,'first');sent=[]
         d.step(self.db,{'mode':'notifications'},self.proposed_hook,self.read,lambda *a:sent.append(a) or self.receipt)

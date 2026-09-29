@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { DomainError, canonical, uuid, date, period, timezone, validatePreferences, validateResource } from './domain.mjs'
-import {addDays,localDay,scheduledInstant,horizon,occursOn} from './scheduling.mjs'
+import {addDays,localDay,displayInstant,scheduledInstant,horizon,occursOn} from './scheduling.mjs'
 import {publishCalendarCache,readCalendarCache,listCalendarCache,readCalendarWindow} from './calendar-cache.mjs'
 import {delegatedPrincipal} from './delegation.mjs'
 import {operations,validateSchema} from './contract.mjs'
@@ -143,7 +143,13 @@ export function createCommands({begin,now=()=>Date.now()}) {
      result={items:rows.map(r=>({sequence:r[0],kind:r[1],id:r[2],revision:r[3],deleted:r[4]==='delete'})),cursor:rows.at(-1)?.[0]??input.cursor}
     }else if(name==='calendar_current'||name==='get_current'){
      const row=owned(db,input.kind,owner,input.id);const tombstone=db.query('SELECT revision FROM deletion_tombstones WHERE owner_id=? AND kind=? AND entity_id=?',[blob(owner),input.kind,input.id])[0];
-     if(!row&&!tombstone)throw new DomainError('not_found','Sync entity not found');result={record:row?envelope(row):null,deleted:!row,revision:row?Number(row[1]):Number(tombstone[0])};if(name==='get_current'){const value=result.record?.value;result.scheduledAt=value?.schedule?new Date(scheduledInstant(value.schedule)).toISOString():null}
+     if(!row&&!tombstone)throw new DomainError('not_found','Sync entity not found');result={record:row?envelope(row):null,deleted:!row,revision:row?Number(row[1]):Number(tombstone[0])};if(name==='get_current'){
+      const value=result.record?.value,start=value?.schedule?scheduledInstant(value.schedule):null
+      result.scheduledAt=start===null?null:new Date(start).toISOString()
+      const preferences=db.query('SELECT doc FROM preferences WHERE owner_id=?',[blob(owner)])[0]
+      const zone=preferences?JSON.parse(preferences[0]).timezone:null
+      result.display=zone&&start!==null?{timezone:zone,start:displayInstant(start,zone),end:value.durationMinutes?displayInstant(start+value.durationMinutes*60000,zone):null}:null
+     }
     }else if(name==='calendar_apply'){
      const old=envelope(requireOwned(db,input.kind,owner,input.id));if(old.revision!==input.expectedRevision)throw new DomainError('conflict','Local event changed');
      const value={...old.value};if(input.schedule===null)delete value.schedule;else value.schedule=input.schedule;

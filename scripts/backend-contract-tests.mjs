@@ -376,3 +376,37 @@ test('MCP note scopes remain separate from notification planning reads',async()=
   assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM command_receipts').get().n,1)
  }finally{f.close()}
 })
+
+
+test('configured reporting timezone is owner-scoped, current and independent of schedule/host zone',()=>{
+ const f=fixture();try{
+  const value=task({schedule:schedule('2026-09-29','15:45','UTC'),durationMinutes:60})
+  f.invoke('create_task',{value,idempotencyKey:key()})
+  const read=()=>f.invoke('get_current',{kind:'tasks',id:value.id})
+  assert.equal(read().display,null)
+  f.commands.savePreferences(f.owner,{timezone:'America/Toronto',weekStartsOn:1,weather:{enabled:false,source:'latest',units:'celsius'}},0)
+  assert.deepEqual(read().display,{timezone:'America/Toronto',start:{date:'2026-09-29',time:'11:45 am',offsetMinutes:-240},end:{date:'2026-09-29',time:'12:45 pm',offsetMinutes:-240}})
+  f.commands.savePreferences(f.owner,{timezone:'Asia/Tokyo',weekStartsOn:1,weather:{enabled:false,source:'latest',units:'celsius'}},1)
+  assert.deepEqual(read().display,{timezone:'Asia/Tokyo',start:{date:'2026-09-30',time:'12:45 am',offsetMinutes:540},end:{date:'2026-09-30',time:'1:45 am',offsetMinutes:540}})
+  assert.equal(read().scheduledAt,'2026-09-29T15:45:00.000Z');assert.equal(read().revision,1)
+  assert.throws(()=>f.commands.invoke(f.other,'get_current',{kind:'tasks',id:value.id}),{code:'not_found'})
+ }finally{f.close()}
+})
+test('reporting uses pinned DST offsets, date rollover and non-hour IANA zones',()=>{
+ const f=fixture();try{
+  f.commands.savePreferences(f.owner,{timezone:'America/Toronto',weekStartsOn:1,weather:{enabled:false,source:'latest',units:'celsius'}},0)
+  for(const [date,time,start,end,offsetStart,offsetEnd]of [
+   ['2026-11-01','05:30','1:30 am','1:30 am',-240,-300],
+   ['2026-03-08','06:30','1:30 am','3:30 am',-300,-240],
+   ['2026-01-02','04:30','11:30 pm','12:30 am',-300,-300]]){
+   const value=task({schedule:schedule(date,time,'UTC'),durationMinutes:60});f.invoke('create_task',{value,idempotencyKey:key()})
+   const {display}=f.invoke('get_current',{kind:'tasks',id:value.id})
+   assert.equal(display.start.time,start);assert.equal(display.end.time,end)
+   assert.equal(display.start.offsetMinutes,offsetStart);assert.equal(display.end.offsetMinutes,offsetEnd)
+   if(date==='2026-01-02'){assert.equal(display.start.date,'2026-01-01');assert.equal(display.end.date,'2026-01-02')}
+  }
+  f.commands.savePreferences(f.owner,{timezone:'Asia/Kathmandu',weekStartsOn:1,weather:{enabled:false,source:'latest',units:'celsius'}},1)
+  const value=task({schedule:schedule('2026-09-29','15:45','UTC'),durationMinutes:60});f.invoke('create_task',{value,idempotencyKey:key()})
+  const {display}=f.invoke('get_current',{kind:'tasks',id:value.id});assert.equal(display.start.time,'9:30 pm');assert.equal(display.start.offsetMinutes,345)
+ }finally{f.close()}
+})
