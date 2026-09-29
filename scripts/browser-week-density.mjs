@@ -13,9 +13,9 @@ try {
   await page.getByRole('button',{name:`View ${today}`,exact:true}).click()
   const agenda=page.getByRole('region',{name:'Scheduled agenda'});const card=agenda.locator('.task').first()
   assert.ok((await card.boundingBox()).height<=80);assert.equal(await card.locator('.task-kind').count(),0)
-  await agenda.getByText('10:00',{exact:true}).waitFor();assert.equal(await page.locator('.completed-tasks').getAttribute('open'),null)
+  await agenda.getByText('10:00',{exact:true}).waitFor();assert.equal(await page.locator('.completed-tasks').count(),0)
   await agenda.getByRole('button',{name:'Complete Choose herbs for the balcony',exact:true}).click();await page.getByText('2 of 4 tasks completed',{exact:true}).waitFor()
-  await page.locator('.completed-tasks summary').click();await page.locator('.completed-tasks').getByRole('button',{name:'Reopen Choose herbs for the balcony',exact:true}).click();await page.getByText('1 of 4 tasks completed',{exact:true}).waitFor()
+  await page.locator('.timeline').getByRole('button',{name:'Reopen Choose herbs for the balcony',exact:true}).click();await page.getByText('1 of 4 tasks completed',{exact:true}).waitFor()
   await outcome.getByRole('button',{name:'Choose herbs for the balcony',exact:true}).click();const sheet=page.getByRole('dialog',{name:'Edit task',exact:true});assert.equal(await sheet.getByLabel('Time (required when scheduled)',{exact:true}).inputValue(),'10:00');await page.keyboard.press('Escape')
   // Weekly outcomes remain independent of scheduling and absent from the daily agenda.
   await page.getByRole('button',{name:'Add outcome',exact:true}).click();const add=page.getByRole('dialog',{name:'Add outcome',exact:true});const title='Make space for a peaceful afternoon with a very long descriptive outcome title'

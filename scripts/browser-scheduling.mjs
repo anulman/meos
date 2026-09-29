@@ -40,7 +40,7 @@ try {
 
  await page.getByRole('link',{name:'Today',exact:true}).click();await page.getByRole('button',{name:task.title,exact:true}).waitFor()
  await page.getByRole('button',{name:`Complete ${task.title}`,exact:true}).click();await page.getByText('2 of 5 tasks completed',{exact:true}).waitFor()
- await page.locator('.completed-tasks summary').click();await page.getByRole('button',{name:task.title,exact:true}).click()
+ await page.getByRole('button',{name:task.title,exact:true}).click()
  await sheet.getByRole('button',{name:'Clear schedule',exact:true}).click();await sheet.getByRole('button',{name:'Save changes',exact:true}).click();await sheet.waitFor({state:'hidden'})
  await page.getByText('1 of 4 tasks completed',{exact:true}).waitFor();await absent();task=await getTask();assert.equal(task.schedule,undefined);assert.equal(task.completed,true)
  await page.getByRole('link',{name:'Week',exact:true}).click();await page.getByRole('button',{name:`View ${today}`,exact:true}).click();await absent()

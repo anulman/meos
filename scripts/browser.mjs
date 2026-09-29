@@ -9,7 +9,7 @@ try {
  await page.reload();await page.getByRole('button',{name:'Complete Choose herbs for the balcony'}).waitFor();
  const patch=page.waitForResponse(r=>r.url().endsWith('/api/tasks/0dd996fc-092d-4dbb-bac1-165e0d559c44')&&r.request().method()==='PATCH'&&r.status()===200)
  await page.getByRole('button',{name:'Complete Choose herbs for the balcony'}).click();await patch;
- await page.getByRole('link',{name:'Today',exact:true}).click();await page.locator('details.completed-tasks summary').click();await page.getByRole('button',{name:'Reopen Choose herbs for the balcony'}).waitFor();
+ await page.getByRole('link',{name:'Today',exact:true}).click();await page.getByRole('button',{name:'Reopen Choose herbs for the balcony'}).waitFor();
  const other=await context.newPage();await other.goto(base);await other.getByRole('button',{name:'Complete Choose herbs for the balcony'}).waitFor();await other.close();
  await page.reload();await page.getByRole('button',{name:'Complete Choose herbs for the balcony'}).waitFor();
  if(await page.evaluate(()=>localStorage.length))throw Error('Unexpected localStorage')
