@@ -59,7 +59,7 @@ def draft_event(event,active,read):
             display=current.get('display')
             if not isinstance(display,dict) or not display.get('timezone') or not display.get('start') or not display.get('end'):
                 raise ValueError('configured local display times unavailable')
-            result[field].append({**item,'display':display})
+            result[field].append({**item,'title':current['record']['value'].get('title',''),'notes':current['record']['value'].get('notes',{'type':'doc'}),'display':display})
     return result
 
 

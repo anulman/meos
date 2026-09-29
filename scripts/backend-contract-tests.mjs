@@ -362,9 +362,10 @@ test('MCP note scopes remain separate from notification planning reads',async()=
   const handle=createMcpHandler({commands:f.commands,origin:'https://acceptance.invalid',readText:r=>r.text})
   const call=async(method,params,user=f.agent)=>(await handle({method:'POST',headers:new Headers({Authorization:'Bearer synthetic','Content-Type':'application/json',Accept:'application/json, text/event-stream'}),text:JSON.stringify({jsonrpc:'2.0',id:1,method,params})},{id:user}).json()).result
   const discovered=(await call('tools/list')).tools
-  assert.ok(discovered.some(t=>t.name==='get_period_note'));assert.ok(!discovered.some(t=>t.name==='append_period_note'))
+  assert.ok(discovered.some(t=>t.name==='get_period_note'));assert.ok(!discovered.some(t=>t.name==='append_period_note'));assert.ok(!discovered.some(t=>t.name==='append_event_note'))
   const input={kind:'day',period:{start:'2026-09-26',end:'2026-09-26'},id:id(),expectedRevision:0,idempotencyKey:key(),author:'Agent',text:'Reflection',source:'Synthetic'}
   assert.equal((await call('tools/call',{name:'append_period_note',arguments:input})).isError,true)
+  assert.equal((await call('tools/call',{name:'append_event_note',arguments:{kind:'tasks',id:id(),expectedRevision:1,idempotencyKey:key(),author:'Agent',text:'Do not grant write authority',source:'Synthetic'}})).isError,true)
   const ownerTools=(await call('tools/list',{},f.owner)).tools
   assert.equal(ownerTools.find(t=>t.name==='append_period_note').annotations.readOnlyHint,false)
   const result=await call('tools/call',{name:'append_period_note',arguments:input},f.owner)
@@ -457,5 +458,28 @@ test('schedule durations reject invalid inputs and roll back mixed batches, rece
   }
   const valid=f.invoke('apply_schedule',{changes:[{...change(a),durationMinutes:1},{...change(b),durationMinutes:1440}],idempotencyKey:key()})
   assert.deepEqual(valid.items.map(x=>x.value.durationMinutes),[1,1440])
+ }finally{f.close()}
+})
+
+test('event note append preserves rich notes and event state; receipts fence retries and owners',()=>{
+ const f=fixture();try{
+  const original={type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'Human prose',marks:[{type:'strong'}]}]}]}
+  const t=task({type:'commute',notes:original,schedule:schedule(),durationMinutes:30})
+  f.commands.create(f.owner,'tasks',t)
+  const input={kind:'tasks',id:t.id,expectedRevision:1,idempotencyKey:key(),author:'Aidan',source:'user report',text:'Confirm with Jamie and Steve; then send the form to Meyer.'}
+  const result=f.invoke('append_event_note',input)
+  assert.equal(result.revision,2);assert.deepEqual(result.value.notes.content[0],original.content[0])
+  assert.deepEqual({...result.value,notes:original},t)
+  assert.deepEqual(f.invoke('append_event_note',input),result)
+  assert.throws(()=>f.invoke('append_event_note',{...input,idempotencyKey:key()}),{code:'conflict'})
+  assert.throws(()=>f.invoke('append_event_note',{...input,text:'changed'}),{code:'conflict'})
+  assert.throws(()=>f.commands.invoke(f.other,'append_event_note',{...input,idempotencyKey:key()}),{code:'not_found'})
+  assert.equal(f.commands.get(f.owner,'tasks',t.id).value.notes.content.length,2)
+  for(const patch of [{kind:'routines'},{text:' '},{author:'a\nb'},{expectedRevision:0}])assert.throws(()=>f.invoke('append_event_note',{...input,...patch,idempotencyKey:key()}),{code:'validation'})
+  const r=routine();const template=f.commands.create(f.owner,'routines',r);const [a,b]=materialize(f,r).items
+  const saved=f.invoke('append_event_note',{...input,kind:'occurrences',id:a.value.id,expectedRevision:a.revision,idempotencyKey:key()})
+  assert.equal(saved.value.edited,true);assert.equal(saved.value.routineId,r.id)
+  assert.deepEqual(f.commands.get(f.owner,'occurrences',b.value.id),b)
+  assert.deepEqual(f.commands.get(f.owner,'routines',r.id),template)
  }finally{f.close()}
 })
