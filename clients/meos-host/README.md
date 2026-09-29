@@ -182,10 +182,10 @@ Confirmed and unknown alert receipts remain durable across restarts. Normal
 boundary notifications continue through the dispatcher's freshness and receipt
 checks, independently of this alert filter.
 
-The stdio bridge adds the MCP-required `type: object` annotation to output
-schemas whose `anyOf` alternatives are all objects. It preserves every variant
-constraint and leaves non-object unions unchanged. This allows strict MCP
-clients to discover event-note operations and the host's proposal tool.
+The MCP endpoint declares an explicit `type: object` root for structured
+output schemas, including object-valued `anyOf` unions. Every variant constraint
+remains intact. This allows strict MCP clients to discover event-note operations
+and the host's proposal tool.
 ## Verify the candidate
 
 The trusted launchers isolate tests from host credentials, production data,

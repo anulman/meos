@@ -141,6 +141,8 @@ test('MCP initialization/discovery/calls use identical domain, owner scopes and 
   let result=call({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'test',version:'1'}}});assert.equal((await result.json()).result.protocolVersion,'2025-11-25')
   assert.equal(call({jsonrpc:'2.0',method:'notifications/initialized'}).status,202)
   const discovered=(await call({jsonrpc:'2.0',id:2,method:'tools/list'}).json()).result.tools
+  assert(discovered.every(t=>t.outputSchema.type==='object'))
+  assert(discovered.find(t=>t.name==='append_event_note').outputSchema.anyOf.every(s=>s.type==='object'))
   assert.deepEqual(discovered.map(x=>x.name),['list_calendar_events','list_agenda','create_task','delete_task'])
   assert.equal(discovered[2].inputSchema.properties.value.type,'object')
   const t=task({schedule:schedule()}),args={value:t,idempotencyKey:key()}

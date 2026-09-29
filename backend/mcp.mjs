@@ -28,7 +28,7 @@ export function createMcpHandler({commands,origin,readText}){
     return json({jsonrpc:'2.0',id,result:{protocolVersion:versions.includes(message.params.protocolVersion)?message.params.protocolVersion:versions[0],capabilities:{tools:{listChanged:false}},serverInfo:{name:'meos',version:'0.2.0'}}})
    }
    if(message.method==='ping')return json({jsonrpc:'2.0',id,result:{}})
-   if(message.method==='tools/list')return json({jsonrpc:'2.0',id,result:{tools:Object.entries(operations).filter(([,op])=>grant.scopes.includes(op.scope)).map(([name,op])=>({name,description:op.description,inputSchema:inlineSchema(op.input),outputSchema:inlineSchema(op.output),annotations:{readOnlyHint:!op.write&&!op.mutates,destructiveHint:name==='delete_task',idempotentHint:name!=='search_index_batch',openWorldHint:false}}))}})
+   if(message.method==='tools/list')return json({jsonrpc:'2.0',id,result:{tools:Object.entries(operations).filter(([,op])=>grant.scopes.includes(op.scope)).map(([name,op])=>({name,description:op.description,inputSchema:inlineSchema(op.input),outputSchema:{type:'object',...inlineSchema(op.output)},annotations:{readOnlyHint:!op.write&&!op.mutates,destructiveHint:name==='delete_task',idempotentHint:name!=='search_index_batch',openWorldHint:false}}))}})
    if(message.method==='tools/call'){
     const name=message.params?.name,spec=Object.hasOwn(operations,name)?operations[name]:undefined
     if(!spec)return error(id,-32602,'Unknown tool')

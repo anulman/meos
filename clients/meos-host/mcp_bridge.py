@@ -86,14 +86,6 @@ class Bridge:
                 save(p, {'authToken':tokens['auth_token'],'refreshToken':credentials['refreshToken']})
                 status, result = self.request('/api/meos/v1/mcp', message, tokens['auth_token'])
             if status not in (200, 202): raise ValueError('upstream rejected')
-            if message.get('method')=='tools/list' and isinstance(result,dict) and 'result' in result:
-                # MCP requires an explicit object root, including object-only unions.
-                # Keep every variant constraint; never coerce non-object outputs.
-                for tool in result['result']['tools']:
-                    schema = tool.get('outputSchema', {})
-                    variants = schema.get('anyOf', [])
-                    if 'type' not in schema and variants and all(v.get('type') == 'object' for v in variants):
-                        schema['type'] = 'object'
             if self.c.get('outbox') and message.get('method')=='tools/list' and isinstance(result,dict) and 'result' in result:
                 result['result']['tools'].append({'name':'propose_boundary','description':'Persist a notification proposal for the exact host-issued event capability. Does not send or change plans.','inputSchema':{'type':'object','properties':{'eventId':{'type':'string'},'capability':{'type':'string'},'body':{'type':'object','properties':{'eventId':{'type':'string'},'message':{'type':'string','maxLength':3500},'constituents':{'type':'array','items':{'type':'string'}}},'required':['eventId','message','constituents'],'additionalProperties':False}},'required':['eventId','capability','body'],'additionalProperties':False}})
             return result
