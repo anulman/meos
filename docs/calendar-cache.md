@@ -30,6 +30,24 @@ that window are not proof of free time. Full non-recurring imported records are
 retained, including all-day context. Event descriptions, locations and times are
 available in the cache; no OAuth tokens or provider sync tokens are exposed.
 
+
+### Owner attendance
+
+`selfResponseStatus` records the owner's RSVP: `accepted`, `declined`,
+`tentative`, `needsAction`, or `unknown`. It is independent of `eventStatus`
+(`confirmed`, `tentative`, `cancelled`, or `unknown`): an event can be confirmed
+while its owner has declined. Declined invitations remain available as context
+but must not reserve time, create scheduling conflicts, or trigger preparation
+for attendance. The Today timeline omits them; Calendar labels them declined.
+
+Missing or `unknown` RSVP is not acceptance. Do not promote tentative or
+unanswered invitations to confirmed attendance. These optional fields allow
+older cached records during rollout. The first poll of a snapshot without
+attendance data performs a full provider refresh before committing its sync
+token and attendance version; subsequent polls remain incremental. On the primary calendar, RSVP comes from the
+self attendee. On the managed calendar, it comes from the configured owner's
+email, not the managed calendar's own attendee. Other attendees are not exposed.
+
 ## Publication and recovery
 
 `calendar_cache_publish` is a sync-only, bounded paged projection. Its durable

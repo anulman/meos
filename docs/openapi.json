@@ -1801,7 +1801,7 @@
     "/api/meos/v1/operations/list_calendar_events": {
       "post": {
         "operationId": "list_calendar_events",
-        "description": "Read owner-scoped cached Calendar context, including all-day and linked events, for an inclusive date range. Check status, lastSyncAt and recurrence window; unavailable is not empty. Primary events are read-only. Follow nextCursor.",
+        "description": "Read owner-scoped cached Calendar context, including all-day and linked events, for an inclusive date range. Check status, lastSyncAt and recurrence window; unavailable is not empty. Primary events are read-only. selfResponseStatus is owner RSVP, separate from eventStatus: declined events are context only, never busy commitments. Missing/unknown RSVP is not acceptance; tentative and needsAction are not confirmed attendance. Follow nextCursor.",
         "security": [
           {
             "browserSession": [],
@@ -9344,6 +9344,23 @@
       "CalendarEvent": {
         "type": "object",
         "properties": {
+          "eventStatus": {
+            "enum": [
+              "confirmed",
+              "tentative",
+              "cancelled",
+              "unknown"
+            ]
+          },
+          "selfResponseStatus": {
+            "enum": [
+              "accepted",
+              "declined",
+              "tentative",
+              "needsAction",
+              "unknown"
+            ]
+          },
           "id": {
             "type": "string",
             "minLength": 1,

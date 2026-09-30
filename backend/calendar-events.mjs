@@ -11,12 +11,15 @@ function content(value){
  return {summary:value.summary.trim(),location:value.location??'',description:value.description??'',start:{dateTime:new Date(start.dateTime).toISOString()},end:{dateTime:new Date(end.dateTime).toISOString()}};
 }
 function equal(a,b){try{return JSON.stringify(content(a))===JSON.stringify(content(b))}catch{return false}}
-function publicEvent(event,role){return {id:event.id,role,etag:event.etag??'',summary:event.summary??'(Untitled)',location:event.location??'',description:event.description??'',start:event.start,end:event.end,linked:!!event.extendedProperties?.private?.meosEntity,recurring:!!event.recurringEventId||!!event.recurrence}}
-export function createCalendarEvents({store,connection,broker,accessToken,now=Date.now}){
+function publicEvent(event,role,ownerEmail){
+ const attendee=event.attendees?.find(a=>role==='primary'?a.self===true:typeof ownerEmail==='string'&&a.email?.toLowerCase()===ownerEmail.toLowerCase());
+ const selfResponseStatus=['accepted','declined','tentative','needsAction'].includes(attendee?.responseStatus)?attendee.responseStatus:'unknown';
+ return {id:event.id,role,eventStatus:['confirmed','tentative','cancelled'].includes(event.status)?event.status:'unknown',selfResponseStatus,etag:event.etag??'',summary:event.summary??'(Untitled)',location:event.location??'',description:event.description??'',start:event.start,end:event.end,linked:!!event.extendedProperties?.private?.meosEntity,recurring:!!event.recurringEventId||!!event.recurrence}}
+export function createCalendarEvents({store,connection,broker,accessToken,ownerEmail,now=Date.now}){
  function snapshot(role){return store.get('snapshot:'+role)}
  function drafts(){return store.get('event-outbox')??{}}
  return {
-  list(){return {items:['primary','managed'].flatMap(role=>[...Object.values(snapshot(role)?.events??{}).filter(e=>!e.recurrence&&!e.recurringEventId),...(snapshot(role)?.expanded??[]).filter(e=>e.recurringEventId)].filter(e=>e.status!=='cancelled').map(e=>publicEvent(e,role))),drafts:Object.values(drafts()).map(d=>({id:d.id,event:d.event,state:d.state,operation:d.operation}))}},
+  list(){return {items:['primary','managed'].flatMap(role=>[...Object.values(snapshot(role)?.events??{}).filter(e=>!e.recurrence&&!e.recurringEventId),...(snapshot(role)?.expanded??[]).filter(e=>e.recurringEventId)].filter(e=>e.status!=='cancelled').map(e=>publicEvent(e,role,ownerEmail))),drafts:Object.values(drafts()).map(d=>({id:d.id,event:d.event,state:d.state,operation:d.operation}))}},
   mutate(input){
    const c=connection();if(!c.credentials||!c.managedCalendarId)throw Error('not_connected');
    if(input.role!=='managed'||!['create','update','delete','discard','retry'].includes(input.operation))throw Error('primary_read_only');

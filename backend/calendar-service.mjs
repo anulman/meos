@@ -26,7 +26,7 @@ export function createCalendarService({config,store,broker,planner,now=Date.now}
  };
  const oauth=createCalendarOAuth({config,store:oauthStore,tokenExchange:broker.tokenExchange,refreshExchange:broker.refreshExchange,verifyIdentity:broker.verifyIdentity,now});
  async function accessToken(){let c=connection();if(!c.credentials)throw Error('reconnect_required');if(c.credentials.expiresAt<=now()+60000){await oauth.refresh({owner});c=connection()}if(!c.credentials||c.credentials.expiresAt<=now())throw Error('reconnect_required');return c.credentials.accessToken}
- const events=createCalendarEvents({store,connection,broker,accessToken,now});
+ const events=createCalendarEvents({store,connection,broker,accessToken,ownerEmail:config.ownerEmail,now});
  const bridge=createCalendarPlanner({store,planner,broker,connection,accessToken,now});
  const polling=createCalendarPolling({store,broker,connection,connectionKey,accessToken,now,flush:async context=>{await events.flush(context);await bridge.sync(context)},initialize:()=>service.initializeManagedCalendar()});
  const mirror=createCalendarMirror({store,planner,connection,now,snapshot(){
