@@ -24,8 +24,8 @@ test('Calendar synchronization never inventories templates or materializes routi
 
 test('commute classification does not remove or duplicate calendar events and survives remote edits',async()=>{
  const f=fixture();await f.sync();const [id,event]=[...f.remotes][0];
- f.change(v=>{v.type='commute';v.projectId='f891342e-df5d-43fd-8815-00a751d44061'});await f.sync();
+ f.change(v=>{v.type='commute';v.transportMode='bicycle';v.projectId='f891342e-df5d-43fd-8815-00a751d44061'});await f.sync();
  assert.equal(f.remotes.size,1);assert.equal(f.remotes.get(id).status,'confirmed');assert.deepEqual(f.remotes.get(id).start,event.start);
  f.remotes.set(id,{...f.remotes.get(id),summary:'Moved commute',etag:'remote'});await f.sync();
- assert.equal(f.current.record.value.type,'commute');assert.equal(f.current.record.value.projectId,'f891342e-df5d-43fd-8815-00a751d44061');assert.equal(f.current.record.value.title,'Moved commute');
+ assert.equal(f.current.record.value.transportMode,'bicycle');assert.equal(f.current.record.value.type,'commute');assert.equal(f.current.record.value.projectId,'f891342e-df5d-43fd-8815-00a751d44061');assert.equal(f.current.record.value.title,'Moved commute');
 });
