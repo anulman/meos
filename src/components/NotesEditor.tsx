@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { schema } from 'prosemirror-schema-basic'
 import { EditorState } from 'prosemirror-state'
-import { EditorView } from 'prosemirror-view'
+import { Decoration, DecorationSet, EditorView } from 'prosemirror-view'
 import { baseKeymap, chainCommands, exitCode, toggleMark } from 'prosemirror-commands'
 import { history, undo, redo } from 'prosemirror-history'
 import { keymap } from 'prosemirror-keymap'
@@ -34,9 +34,20 @@ export function NotesEditor({value,onChange,label='Notes'}:{value:Notes;onChange
    ]}),
    attributes:{role:'textbox','aria-label':label,'aria-multiline':'true',class:'notes-editor'},
    dispatchTransaction(transaction){
-    const state=editor.state.apply(transaction);editor.updateState(state);updateFormatting(state)
+    const state=editor.state.apply(transaction);editor.updateState(state);updateFormatting(editor)
     if(transaction.docChanged)change.current(state.doc.toJSON() as Notes)
    },
+   decorations(state){
+    const blocks:Decoration[]=[]
+    state.doc.descendants((node,pos)=>{
+     // Agent append commands already store this explicit attribution. Decorate
+     // its block without changing the document or treating human quotes as agents.
+     if(node.type.name==='blockquote'&&node.firstChild?.textContent.startsWith('🤖 '))
+      blocks.push(Decoration.node(pos,pos+node.nodeSize,{class:'agent-note'}))
+    })
+    return DecorationSet.create(state.doc,blocks)
+   },
+   handleDOMEvents:{focus:()=>{queueMicrotask(()=>updateFormatting(editor));return false},blur:()=>{queueMicrotask(()=>updateFormatting(editor));return false}},
    handleKeyDown(current,event){
     // ProseMirror suppresses native Escape; delegate to the modal's existing
     // cancel handler so dirty-draft confirmation and focus restoration still run.
@@ -47,12 +58,17 @@ export function NotesEditor({value,onChange,label='Notes'}:{value:Notes;onChange
     return false
    },
   })
-  updateFormatting(editor.state)
+  updateFormatting(editor)
   view.current=editor
-  return()=>{editor.destroy();view.current=null}
+  const selectionChange=()=>updateFormatting(editor)
+  document.addEventListener('selectionchange',selectionChange)
+  return()=>{document.removeEventListener('selectionchange',selectionChange);editor.destroy();view.current=null}
  },[label])
- function updateFormatting(state:EditorState) {
-  const {from,to,empty}=state.selection
+ function updateFormatting(editor:EditorView) {
+  const state=editor.state,{from,to,empty}=state.selection
+  const selection=window.getSelection()
+  const selected=selection&&!selection.isCollapsed&&editor.dom.contains(selection.anchorNode)&&editor.dom.contains(selection.focusNode)
+  if(!editor.hasFocus()&&!selected){setFormatting({strong:false,em:false});return}
   const active=(name:'strong'|'em')=>Boolean(empty
    ? schema.marks[name].isInSet(state.storedMarks??state.selection.$from.marks())
    : state.doc.rangeHasMark(from,to,schema.marks[name]))

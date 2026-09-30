@@ -19,22 +19,55 @@ const PlanningContext=createContext<{next:boolean;setNext:(v:boolean)=>void;open
 export const usePlanning=()=>useContext(PlanningContext)
 export function PlanningProvider({children}:{children:ReactNode}) {
  const [next,setNext]=useState(false);const [outcomePeriod,setOutcomePeriod]=useState<DatePeriod|null>(null);const [noteDraft,setNoteDraft]=useState<PeriodNote|null>(null);const clock=usePlannerClock()
- return <PlanningContext.Provider value={{next,setNext,openPeriodNote:setNoteDraft,openOutcome:()=>setOutcomePeriod(Object.freeze({...next?clock.nextWeek:clock.thisWeek}))}}>{children}{outcomePeriod&&<OutcomeEditor period={outcomePeriod} onClose={()=>setOutcomePeriod(null)}/ >}{noteDraft&&<PeriodNoteEditor initial={noteDraft} onClose={()=>setNoteDraft(null)}/>}</PlanningContext.Provider>
+ return <PlanningContext.Provider value={{next,setNext,openPeriodNote:setNoteDraft,openOutcome:()=>setOutcomePeriod(Object.freeze({...next?clock.nextWeek:clock.thisWeek}))}}>{children}{outcomePeriod&&<OutcomeEditor period={outcomePeriod} onClose={()=>setOutcomePeriod(null)}/ >}{noteDraft&&<PeriodNoteEditor key={noteDraft.id} initial={noteDraft} onClose={()=>setNoteDraft(null)}/>}</PlanningContext.Provider>
 }
-export function Sheet({title,onClose,dirty=false,children}:{title:string;onClose:()=>void;dirty?:boolean;children:ReactNode}) {
- const ref=useRef<HTMLDialogElement>(null);const backdrop=useRef(false)
+export function Sheet({title,onClose,dirty=false,note=false,subtitle,children}:{title:string;onClose:()=>void;dirty?:boolean;note?:boolean;subtitle?:string;children:ReactNode}) {
+ const ref=useRef<HTMLDialogElement>(null);const backdrop=useRef(false);const trigger=useRef(typeof document==='undefined'?null:document.activeElement as HTMLElement|null)
  const close=()=>{if(!dirty||window.confirm('Discard unsaved changes?'))onClose()}
- useEffect(()=>{const trigger=document.activeElement as HTMLElement|null;ref.current?.showModal();return()=>{ref.current?.close();trigger?.focus()}},[])
+ useEffect(()=>{const dialog=ref.current;dialog?.showModal();return()=>{dialog?.close();trigger.current?.focus()}},[])
  function outside(event:React.PointerEvent<HTMLDialogElement>){const r=event.currentTarget.getBoundingClientRect();return event.target===event.currentTarget&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)}
- return <dialog ref={ref} className="resource-dialog" aria-label={title} onCancel={e=>{e.preventDefault();close()}} onPointerDown={e=>{backdrop.current=outside(e)}} onPointerUp={e=>{if(backdrop.current&&outside(e))close();backdrop.current=false}}><div className="resource-top"><h2>{title}</h2><button className="quiet-action" onClick={close} aria-label="Close planner details">Close ×</button></div>{children}</dialog>
+ return <dialog ref={ref} className={`resource-dialog${note?' period-note-dialog':''}`} aria-label={title} onCancel={e=>{e.preventDefault();close()}} onPointerDown={e=>{backdrop.current=outside(e)}} onPointerUp={e=>{if(backdrop.current&&outside(e))close();backdrop.current=false}}><div className="resource-top"><div><h2 tabIndex={note?-1:undefined} autoFocus={note}>{title}</h2>{subtitle&&<p className="muted">{subtitle}</p>}</div><button className="quiet-action" onClick={close} aria-label="Close planner details">Close ×</button></div>{children}</dialog>
 }
 export function PeriodNotesButton({kind,period}:{kind:'day'|'week';period:DatePeriod}) {
  const {data:notes=[],isLoading,isError}=useLiveQuery(q=>q.from({note:periodNotesCollection}));const {openPeriodNote}=usePlanning()
  return <><button className="quiet-action" aria-label={`${kind==='day'?'Day':'Week'} Notes`} disabled={isLoading||isError} onClick={()=>{const existing=notes.find(n=>n.kind===kind&&samePeriod(n.period,period));openPeriodNote(existing?{...existing,period:Object.freeze({...existing.period})}:{id:crypto.randomUUID(),kind,period:Object.freeze({...period}),notes:{type:'doc'}})}}>{kind==='day'?'Notes':'Week Notes'} <span aria-hidden="true">{kind==='day'?'📝':'↗'}</span></button>{isError&&<span role="alert">Notes unavailable</span>}</>
 }
 function PeriodNoteEditor({initial,onClose}:{initial:PeriodNote;onClose:()=>void}) {
- const [notes,setNotes]=useState(initial.notes);const [dirty,setDirty]=useState(false);const [error,setError]=useState('');const [saving,setSaving]=useState(false)
- return <Sheet title={`${initial.kind==='day'?'Day':'Week'} Notes`} onClose={onClose} dirty={dirty}><form className="resource-form" onSubmit={async e=>{e.preventDefault();setSaving(true);setError('');try{await savePlanner('period-notes',{...initial,notes});onClose()}catch(e){setError(String(e))}finally{setSaving(false)}}}><div className="resource-body"><p className="muted">{initial.period.start}{initial.kind==='week'?` – ${initial.period.end}`:''}</p><Suspense fallback={<p role="status">Opening notes…</p>}><NotesEditor value={notes} onChange={value=>{setNotes(value);setDirty(true)}} label="Period notes"/></Suspense>{error&&<p role="alert">{error} Your draft is preserved.</p>}</div><div className="resource-actions"><button className="save-button" disabled={saving}>Save notes</button></div></form></Sheet>
+ const [status,setStatus]=useState<'saved'|'saving'|'error'>('saved');const [error,setError]=useState('')
+ const draft=useRef(initial.notes),saved=useRef(initial),pending=useRef(false)
+ const timer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined)
+ const flight=useRef<Promise<boolean>|null>(null)
+ // One writer per open note. Each write uses the revision returned by the last,
+ // never a refreshed collection row that could mask another author's update.
+ function flush():Promise<boolean> {
+  clearTimeout(timer.current)
+  if(flight.current)return flight.current
+  if(!pending.current)return Promise.resolve(true)
+  setStatus('saving');setError('')
+  const run=async()=>{
+   try {
+    while(pending.current){
+     const notes=draft.current
+     saved.current=await savePlanner('period-notes',{...saved.current,notes})
+     pending.current=draft.current!==notes
+    }
+    setStatus('saved');return true
+   }catch(e){setError(String(e));setStatus('error');return false}
+   finally{flight.current=null}
+  }
+  flight.current=run();return flight.current
+ }
+ function change(notes:PeriodNote['notes']) {
+  draft.current=notes;pending.current=true;setStatus('saving');setError('')
+  clearTimeout(timer.current);timer.current=setTimeout(()=>void flush(),500)
+ }
+ async function close(){if(await flush())onClose()}
+ useEffect(()=>{
+  const guard=(event:BeforeUnloadEvent)=>{if(pending.current){event.preventDefault();event.returnValue=''}}
+  window.addEventListener('beforeunload',guard)
+  return()=>{clearTimeout(timer.current);window.removeEventListener('beforeunload',guard)}
+ },[])
+ return <Sheet title={`${initial.kind==='day'?'Day':'Week'} Notes`} onClose={()=>void close()} note subtitle={initial.period.start+(initial.kind==='week'?` – ${initial.period.end}`:'')}><div className="resource-form"><div className="resource-body"><Suspense fallback={<p role="status">Opening notes…</p>}><NotesEditor value={initial.notes} onChange={change} label="Period notes"/></Suspense></div><div className="notes-save-state" role={status==='error'?'alert':'status'}>{status==='error'?<>{error} Your draft is preserved. <button type="button" onClick={()=>void flush()}>Retry</button><button type="button" onClick={()=>{if(window.confirm('Discard unsaved changes?'))onClose()}}>Discard draft</button></>:status==='saving'?'Saving…':'Saved'}</div></div></Sheet>
 }
 export const samePeriod=(a:DatePeriod,b:DatePeriod)=>a.start===b.start&&a.end===b.end
 export function OutcomeEditor({period,onClose}:{period:DatePeriod;onClose:()=>void}) {
