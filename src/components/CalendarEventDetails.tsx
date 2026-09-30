@@ -2,7 +2,7 @@
 import {useEffect,useId,useRef} from 'react'
 import {addDays} from '../lib/dates'
 
-export type CalendarDetailEvent={id:string;role:'primary'|'managed';summary:string;location:string;description:string;start?:{dateTime?:string;date?:string};end?:{dateTime?:string;date?:string};linked?:boolean;recurring:boolean}
+export type CalendarDetailEvent={id:string;role:'primary'|'managed';summary:string;location:string;description:string;start?:{dateTime?:string;date?:string};end?:{dateTime?:string;date?:string};linked?:boolean;recurring:boolean;selfResponseStatus?:'accepted'|'declined'|'tentative'|'needsAction'|'unknown'}
 
 /** Date-only values are calendar dates, not UTC instants. Provider ends are exclusive. */
 export function calendarDetailTime(event:CalendarDetailEvent,timezone:string):string {
@@ -30,6 +30,7 @@ export function CalendarEventDetails({event,timezone,onClose,onEdit}:{event:Cale
   <div className="resource-top"><h2 id={title}>{event.summary||'Untitled event'}</h2><button type="button" className="quiet-action" onClick={onClose} aria-label="Close event details">Close ×</button></div>
   <div className="resource-body">
    <p>{calendarDetailTime(event,timezone)}</p>
+   {event.selfResponseStatus&&event.selfResponseStatus!=='unknown'&&<p>Your response: {{accepted:'Accepted',declined:'Declined — not attending',tentative:'Tentative',needsAction:'Not responded'}[event.selfResponseStatus]}</p>}
    {event.location?.trim()&&<section><h3>Location</h3><p className="calendar-detail-text"><CalendarText text={event.location}/></p></section>}
    {event.description?.trim()&&<section><h3>Description</h3><p className="calendar-detail-text"><CalendarText text={event.description}/></p></section>}
   </div>

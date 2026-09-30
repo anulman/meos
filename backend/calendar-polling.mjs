@@ -19,7 +19,7 @@ export function createCalendarPolling({store,broker,connection,connectionKey,acc
   try {
    renew();const managed=await initialize();
    for(const [role,calendarId] of [['primary','primary'],['managed',managed]]) {
-    const previous=store.get(snapshotKey(role));let syncToken=previous?.generation===generation?previous.syncToken:undefined,recovered=false;
+    const previous=store.get(snapshotKey(role));let syncToken=previous?.generation===generation&&previous.attendanceVersion===1?previous.syncToken:undefined,recovered=false;
     for(;;){
      let pageToken;const pages=new Set(),events=new Map(syncToken?Object.entries(previous.events):[]);let finalToken;
      try {
@@ -27,7 +27,7 @@ export function createCalendarPolling({store,broker,connection,connectionKey,acc
        renew();const token=await accessToken();renew();
        const page=await broker.listEvents({calendarId,accessToken:token,syncToken,pageToken});
        if(!Array.isArray(page?.items)||page.items.length>2500)throw Error('invalid_page');
-       for(const event of page.items){if(!valid(event?.id)||!['confirmed','tentative','cancelled'].includes(event.status))throw Error('invalid_event');events.set(event.id,Object.fromEntries(['id','etag','status','summary','description','location','start','end','recurrence','recurringEventId','originalStartTime','updated','extendedProperties'].filter(k=>event[k]!==undefined).map(k=>[k,event[k]])))}
+       for(const event of page.items){if(!valid(event?.id)||!['confirmed','tentative','cancelled'].includes(event.status))throw Error('invalid_event');events.set(event.id,Object.fromEntries(['id','etag','status','summary','description','location','start','end','recurrence','recurringEventId','originalStartTime','updated','extendedProperties','attendees'].filter(k=>event[k]!==undefined).map(k=>[k,event[k]])))}
        if(events.size>100000)throw Error('collection_limit');
        pageToken=page.nextPageToken;
        if(pageToken!==undefined){if(!valid(pageToken)||pages.has(pageToken)||pages.size>=10000||page.nextSyncToken!==undefined)throw Error('invalid_pagination');pages.add(pageToken)}
@@ -41,7 +41,7 @@ export function createCalendarPolling({store,broker,connection,connectionKey,acc
       const timeMin=new Date(now()-32*86400000).toISOString(),timeMax=new Date(now()+64*86400000).toISOString();let pageToken;const seen=new Set();windowStart=timeMin;windowEnd=timeMax;
       do{renew();const token=await accessToken();renew();const page=await broker.listWindow({calendarId,accessToken:token,timeMin,timeMax,pageToken});if(!Array.isArray(page?.items))throw Error('invalid_window');expanded.push(...page.items);if(expanded.length>100000)throw Error('window_limit');pageToken=page.nextPageToken;if(pageToken!==undefined){if(!valid(pageToken)||seen.has(pageToken)||seen.size>=10000)throw Error('invalid_window_page');seen.add(pageToken)}}while(pageToken!==undefined);
      }
-     store.transaction(tx=>{fenced(tx);tx.set(snapshotKey(role),{generation,calendarId,syncToken:finalToken,events:Object.fromEntries(events),expanded,windowStart,windowEnd,revision:(previous?.revision??0)+1,updatedAt:now()})});break;
+     store.transaction(tx=>{fenced(tx);tx.set(snapshotKey(role),{generation,calendarId,attendanceVersion:1,syncToken:finalToken,events:Object.fromEntries(events),expanded,windowStart,windowEnd,revision:(previous?.revision??0)+1,updatedAt:now()})});break;
     }
    }
    await flush({renew,fenced,generation});

@@ -177,3 +177,7 @@ are preserved. The summary reports created and preserved counts, not Calendar
 publication or target-day commitment. Verify relevant agenda/instance reads
 separately. If the operation or grant is unavailable, disclose missing routine
 coverage; do not invoke a sync-only capability or imply routines were planned.
+
+## Calendar attendance
+
+When reading `list_calendar_events`, distinguish `selfResponseStatus` (the owner’s RSVP) from `eventStatus` (the provider event’s lifecycle). A confirmed event can be declined. Retain declined invitations only as context: never treat them as busy commitments, conflicts, or reasons for attendance preparation. Missing or `unknown` RSVP is not acceptance; `tentative` and `needsAction` are not confirmed attendance. Preserve freshness and recurrence-window checks. Do not change invitations or user plans merely to reconcile RSVP context.

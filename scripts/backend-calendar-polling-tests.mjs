@@ -9,3 +9,13 @@ test('410 resets only after complete fresh snapshot; absent old events disappear
 test('durable lease prevents concurrent instances and stale results after disconnect',async()=>{const f=fixture();let release,entered;const ready=new Promise(r=>entered=r);f.broker.listEvents=async()=>{entered();return new Promise(r=>release=r)};const pending=f.core.poll();await ready;assert.equal((await createCalendarPolling(f.args).poll()).skipped,true);f.store.transaction(tx=>tx.set('connection',{generation:'g2'}));release({items:[event('stale')],nextSyncToken:'bad'});await assert.rejects(pending);assert.equal(f.store.get('snapshot:primary'),undefined)});
 test('repeated pagination and missing final token fail closed',async()=>{for(const page of [{items:[]},{items:[],nextPageToken:'loop'}]){const f=fixture();f.broker.listEvents=async()=>page;await assert.rejects(f.core.poll());assert.equal(f.store.get('snapshot:primary'),undefined)}});
 test('restart preserves cadence and snapshots; reconnect discards old tokens',async()=>{const f=fixture();await f.core.poll();const restarted=createCalendarPolling(f.args);assert.equal((await restarted.poll()).skipped,true);f.store.transaction(tx=>tx.set('connection',{generation:'g2',credentials:{}}));f.broker.listEvents=async i=>{assert.equal(i.syncToken,undefined);return {items:[],nextSyncToken:'fresh'}};await restarted.poll();assert.equal(f.store.get('snapshot:primary').generation,'g2')});
+test('pre-attendance snapshots refresh once; failed refresh retains old token and successful refresh preserves RSVP',async()=>{
+ const f=fixture(),old={generation:'g1',syncToken:'legacy-token',events:{invitation:event('invitation')},revision:4};
+ f.store.transaction(tx=>{tx.set('snapshot:primary',old);tx.set('snapshot:managed',old)});
+ f.broker.listEvents=async i=>{assert.equal(i.syncToken,undefined);throw Error('offline')};
+ await assert.rejects(f.core.poll());assert.deepEqual(f.store.get('snapshot:primary'),old);
+ f.setTime(2000000);f.broker.listEvents=async i=>{assert.equal(i.syncToken,undefined);return {items:[{...event('invitation'),attendees:[{self:true,responseStatus:'declined'}]}],nextSyncToken:'attendance-token'}};
+ await f.core.poll();const fresh=f.store.get('snapshot:primary');assert.equal(fresh.attendanceVersion,1);assert.equal(fresh.events.invitation.attendees[0].responseStatus,'declined');
+ f.setTime(2060000);f.broker.listEvents=async i=>{assert.equal(i.syncToken,'attendance-token');return {items:[],nextSyncToken:'next'}};
+ await createCalendarPolling(f.args).poll();assert.equal(f.store.get('snapshot:primary').events.invitation.attendees[0].responseStatus,'declined');
+});
