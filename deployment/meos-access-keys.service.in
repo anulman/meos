@@ -5,7 +5,7 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/python3 @RELEASE@/scripts/production-access-keys.py @ACCESS_KEYS@
+ExecStart=/usr/bin/python3 @RELEASE@/scripts/production-access-keys.py @IDENTITY@ @ACCESS_KEYS@
 User=root
 UMask=0022
 NoNewPrivileges=yes

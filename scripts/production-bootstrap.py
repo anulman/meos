@@ -3,13 +3,12 @@
 
 Only explicit root-owned reviewed plans can allocate a fresh named target. Secret
 input is a root0700-directory/root0600 JSON file, never argv/env/chat/logs. This
-source passed independent review and isolated synthetic qualification. Production
-policy/input admission remains separate. No automatic resets.
+source must receive independent review and isolated synthetic qualification.
+Production policy/input admission remains separate. No automatic resets.
 """
 import argparse,base64,fcntl,hashlib,http.client,json,os,pathlib,re,secrets,socket,sqlite3,stat,subprocess,time,uuid
 from zoneinfo import ZoneInfo
-IMAGE='sha256:70e887448c5458d9735835a47bb3f1d2586a16cab1560df8f899cc55702bc63d'
-ORIGIN='https://meos.aidans.computer'
+from deployment_config import origin as validated_origin
 CLEAN={'PATH':'/usr/bin:/bin'}
 def secure_dir(path,private=False):
  i=path.lstat();assert stat.S_ISDIR(i.st_mode) and i.st_uid==0 and not i.st_mode&0o022
@@ -42,7 +41,7 @@ def inspect(kind,name):
   return None
  return json.loads(p.stdout)[0]
 class UDS(http.client.HTTPConnection):
- def __init__(self,root,part):super().__init__('meos.aidans.computer',timeout=15);self.root=root;self.part=part
+ def __init__(self,root,part,origin):super().__init__(origin.removeprefix('https://'),timeout=15);self.root=root;self.part=part
  def connect(self):
   fd=os.open(self.root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
   try:
@@ -57,7 +56,9 @@ def main():
  lease=os.open(out/'bootstrap.lock',os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600);assert os.fstat(lease).st_uid==0;fcntl.flock(lease,fcntl.LOCK_EX|fcntl.LOCK_NB)
  plan=read_root_json(plan_path)
  assert set(plan)=={'schema','environment','instanceId','image','origin','timezone','reviewStatus','reviewer','reviewEvidence','releaseManifestSHA256','releaseManifestFile','ownerInputKind'}
- assert plan['schema']==1 and plan['environment'] in ['production','acceptance'] and plan['image']==IMAGE and plan['origin']==ORIGIN
+ assert plan['schema']==1 and plan['environment'] in ['production','acceptance']
+ assert re.fullmatch('sha256:[a-f0-9]{64}',plan['image'])
+ IMAGE=plan['image'];ORIGIN=validated_origin(plan['origin'])
  assert re.fullmatch('[a-f0-9]{32}',plan['instanceId']) and re.fullmatch('[a-f0-9]{64}',plan['releaseManifestSHA256'])
  assert plan['reviewer'] and plan['reviewEvidence'];ZoneInfo(plan['timezone'])
  production=plan['environment']=='production'
@@ -94,6 +95,7 @@ def main():
   _,root=verify(True)
   with sqlite3.connect('file:'+str(root/'data/main.db')+'?mode=ro',uri=True) as conn:
    assert conn.execute('SELECT instance_id,environment FROM _meos_instance').fetchall()==[(run,'production')]
+   assert conn.execute('SELECT origin FROM _meos_deployment').fetchall()==[(ORIGIN,)]
    row=conn.execute('SELECT hex(id),admin FROM _user WHERE email=?',(receipt['ownerEmail'],)).fetchone();assert row==(uuid.UUID(receipt['ownerId']).hex.upper(),0)
   print(json.dumps({'status':'already-complete-no-reset','instanceId':run}));return
  owner=read_root_json(owner_path,secret=True);assert set(owner)=={'email','password'}
@@ -125,7 +127,7 @@ def main():
  assert root.stat().st_uid==10001
  def db():verify(True);return sqlite3.connect(root/'data/main.db')
  def request(part,method,route,body=None,headers=None):
-  verify(True);client=UDS(root,part)
+  verify(True);client=UDS(root,part,ORIGIN)
   try:
    client.request(method,route,body,headers or {});response=client.getresponse();data=response.read(65537);assert len(data)<=65536;return response.status,data
   finally:client.close()
@@ -133,6 +135,9 @@ def main():
   rows=conn.execute('SELECT instance_id,environment FROM _meos_instance').fetchall()
   if not rows:conn.execute('INSERT INTO _meos_instance VALUES(1,?,?)',(run,'production'))
   else:assert rows==[(run,'production')]
+  origins=conn.execute('SELECT origin FROM _meos_deployment').fetchall()
+  if not origins:conn.execute('INSERT INTO _meos_deployment VALUES(1,?)',(ORIGIN,))
+  else:assert origins==[(ORIGIN,)], 'Origin mismatch; never rewrite a sealed deployment'
   row=conn.execute('SELECT id,admin,unverified_email FROM _user WHERE email=?',(owner['email'],)).fetchone()
  if row is None:
   assert receipt['ownerId'] is None, 'Recorded owner disappeared; recovery is separate'

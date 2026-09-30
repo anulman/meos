@@ -87,9 +87,11 @@ and load only affected stages. These are reading paths, not a new workflow servi
 ## Installation target
 
 The current shipped path is Linux/systemd with a Docker native runtime and a
-protected web adapter. It is not a portable production installer: another host
-needs reviewed configuration support and qualified artifacts. Reuse a verified
-instance when available. See [application prerequisites](application.md#installation-target)
+protected web adapter. The native installation procedure uses per-owner identity
+and a sealed deployment origin, with pinned reviewed artifacts. It is an operator
+procedure, not a one-command installer or a Compose/Helm alternative. Read
+`docs/native-installation.md` in the pinned checkout; reuse a verified instance
+when available. See [application prerequisites](application.md#installation-target)
 and the [host/MCP runbook](host-mcp.md); never replace missing packaging with the
 root demo Compose file or copied owner identifiers.
 

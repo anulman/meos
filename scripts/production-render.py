@@ -4,6 +4,7 @@ Arguments are nonsecret paths: --state FILE --release DIR --output DIR.
 The root-owned state comes from trusted bootstrap (production) or acceptance proof.
 """
 import argparse,hashlib,json,os,pathlib,re,stat,subprocess
+from deployment_config import origin as validated_origin, issuer as validated_issuer, email as validated_email
 assert os.geteuid()==0
 parser=argparse.ArgumentParser();parser.add_argument('--state',required=True);parser.add_argument('--release',required=True);parser.add_argument('--output',required=True);parser.add_argument('--access-config');parser.add_argument('--owner-file');parser.add_argument('--access-keys-dir');parser.add_argument('--calendar',action='store_true');args=parser.parse_args()
 repo=pathlib.Path(__file__).resolve().parents[1]
@@ -17,7 +18,7 @@ secure(state_path);secure(release,True)
 state=json.loads(state_path.read_text());assert set(state)=={'environment','instanceId','image','containerId','volume','origin'}
 run=state['instanceId'];assert re.fullmatch('[a-f0-9]{32}',run)
 assert re.fullmatch('sha256:[a-f0-9]{64}',state['image']) # Exact independently reviewed manifest below is authoritative.
-assert state['origin']=='https://meos.aidans.computer' and state['environment'] in ['production','acceptance']
+validated_origin(state['origin']);assert state['environment'] in ['production','acceptance']
 name='meos-'+state['environment']+'-'+run;assert state['volume']==name+'-data'
 assert re.fullmatch('[a-f0-9]{64}',state['containerId'])
 manifest_path=release/'manifest.json';secure(manifest_path)
@@ -41,9 +42,8 @@ assert stat.S_IMODE(owner_path.stat().st_mode)==0o600 and owner_path.stat().st_n
 access=json.loads(access_path.read_text());owner=json.loads(owner_path.read_text())
 assert set(owner)=={'email','password'} and access['email']==owner['email'] and len(owner['password'])>=32
 assert set(access)=={'issuer','audience','email','ownerId'}
-if state['environment']=='production':
- assert access['issuer']=='https://anulman.cloudflareaccess.com' and access['email']=='anulman@gmail.com'
-else:assert access['issuer']=='https://synthetic.cloudflareaccess.com' and access['email'].endswith('@example.invalid')
+validated_issuer(access['issuer']);validated_email(access['email'])
+assert access['email'].endswith('@example.invalid') is (state['environment']=='acceptance')
 assert re.fullmatch('[a-f0-9]{64}',access['audience']) and re.fullmatch('[a-f0-9-]{36}',access['ownerId'])
 assert not output.exists();output.mkdir(mode=0o700,parents=False)
 identity=output/'web-identity.json';identity.write_text(json.dumps({'environment':'production','instanceId':run,'origin':state['origin'],'access':access})+'\n');os.chmod(identity,0o644)

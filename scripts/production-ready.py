@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Trusted systemd readiness/ACL helper. No credentials, SQL, or repository tests."""
 import http.client,json,os,pathlib,socket,stat,subprocess,time,pwd,grp
+from deployment_config import origin as validated_origin
 assert os.geteuid()==0
 # Reserved socket-only relay identity must not alias a human/service account.
 for lookup in [pwd.getpwuid,grp.getgrgid]:
@@ -11,7 +12,7 @@ config=pathlib.Path('/etc/meos/runtime-state.json');info=config.lstat()
 assert stat.S_ISREG(info.st_mode) and info.st_uid==0 and not info.st_mode&0o022
 state=json.loads(config.read_text());assert set(state)=={'environment','instanceId','image','containerId','volume','origin'}
 environment=state['environment'];run=state['instanceId'];assert environment in ['production','acceptance'] and len(run)==32 and all(c in '0123456789abcdef' for c in run)
-assert state['origin']=='https://meos.aidans.computer' and state['image'].startswith('sha256:')
+validated_origin(state['origin']);assert state['image'].startswith('sha256:')
 name='meos-'+environment+'-'+run;assert state['volume']==name+'-data'
 clean={'PATH':'/usr/bin:/bin'}
 def inspect(kind,target):return json.loads(subprocess.check_output(['/usr/bin/docker','--host','unix:///var/run/docker.sock',kind,'inspect',target],env=clean,stderr=subprocess.DEVNULL))[0]
@@ -28,7 +29,7 @@ def verify():
  mounts=[m for m in c['Mounts'] if m['Type']!='tmpfs'];assert len(mounts)==1 and mounts[0]['Name']==v['Name'] and mounts[0]['Destination']=='/data'
  return pathlib.Path(v['Mountpoint'])
 class UDS(http.client.HTTPConnection):
- def __init__(self,root):super().__init__('meos.aidans.computer',timeout=2);self.root=root
+ def __init__(self,root):super().__init__(state['origin'].removeprefix('https://'),timeout=2);self.root=root
  def connect(self):
   self.sock=socket.socket(socket.AF_UNIX);self.sock.settimeout(self.timeout)
   fd=os.open(self.root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
