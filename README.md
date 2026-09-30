@@ -66,7 +66,7 @@ not a second setup ledger.
    devices, and private or public access. Should it work from your phone and keep
    running when your laptop is off? Have the operator inspect the actual host and
    explain supported options and maintenance needs. Reuse a verified instance;
-   for a new one, resolve the [installation prerequisites and gaps](public/skills/meos-bootstrap/SKILL.md#installation-target)
+   for a new one, resolve the [installation prerequisites and gaps](public/skills/meos-bootstrap/application.md#installation-target)
    before claiming setup is available.
 2. **Choose Calendar and planning authority.** If connecting Google Calendar,
    use secure browser consent for the intended account, choose the calendars used
@@ -75,14 +75,14 @@ not a second setup ledger.
    permission to manage MeOS-owned blocks within your constraints; imported
    commitments stay protected. If Calendar is deferred, state that its context
    and synchronization are unverified and use a proposal based on known commitments.
-   See the [authority procedure](public/skills/meos-bootstrap/SKILL.md#configure-per-install-planning-authority).
+   See the [authority procedure](public/skills/meos-bootstrap/agent.md#configure-per-install-planning-authority).
 3. **Choose cadence and contact.** A starter rhythm could be morning launch,
    evening preparation, and weekly review, adjusted to your waking and working
    hours. Choose a delivery destination, quiet hours, and whether advance, start,
    or end-of-event messages are useful. These choices do not grant planning
    authority. The host must support durable schedules, execution, and proactive
    delivery; otherwise use honest on-demand assistance. The
-   [agent setup procedure](public/skills/meos-bootstrap/SKILL.md#stage-4--configure-the-operating-agent)
+   [agent setup procedure](public/skills/meos-bootstrap/agent.md)
    covers capability discovery, missed runs, and selected jobs.
 
 ### Make a useful first plan

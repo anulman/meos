@@ -18,6 +18,13 @@ grant planner writes, external communications or infrastructure changes.
 
 ## Match the user's intent
 
+For an open-ended first planning conversation, ask whether the user wants to
+talk about **today, tomorrow, this week, or next week**. Reuse an explicit horizon
+already given. Route today to morning launch (or rescue for a disrupted plan),
+tomorrow to evening close's tomorrow preparation, and either week to weekly
+review focused on the chosen period. Do not invent today's actuals merely to
+prepare tomorrow or load every procedure before the user chooses.
+
 | Request | Procedure |
 | --- | --- |
 | “Triage my day,” “What should I focus on today?” or “Help me get started” | [Morning launch](../meos-morning-launch/SKILL.md) |
