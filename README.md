@@ -1,120 +1,160 @@
 # MeOS
 
 MeOS is a mobile-first personal planner for tasks, projects, routines, and daily
-and weekly plans. A person can work in the browser; an AI agent can work through
-MCP. Both use the same validated application commands and persistent planning
-records. Google Calendar supplies external context and synchronizes scheduled
-items through a separate private service.
+and weekly plans, shared by you and your AI assistant.
 
-This guide is for contributors and coding agents who know JavaScript or
-TypeScript. It explains the model, shows where behavior lives, and gets you into
-the local UI. It describes the source in this checkout—not the state of a live
-installation. Local development starts in an in-memory demo; production uses
-TrailBase and SQLite.
+- **USER:** [Quickstart](#user-quickstart) — set up a persistent planner for your
+  real days. [More user information](#user-guide) covers your
+  first plan, assistant cadence, verification, and daily use.
+- **CONTRIBUTOR:** [Quickstart](#contributor-quickstart) — run the local demo to
+  explore or change the code. [More contributor information](#contributor-guide)
+  covers the planning model, architecture, codebase, and deployment boundaries.
 
-## Find your path
+## Purpose and design goals
 
-| You want to… | Start here |
+A task list records what you could do. MeOS helps turn that intent into a
+realistic day or week, then revise the plan as circumstances change. You can
+work in the browser; an agent can help through MCP. Both use the same validated
+application commands and planning records rather than maintaining separate plans.
+
+The design keeps a few distinctions explicit:
+
+- **Intent is not a schedule.** Tasks and routines can exist without assigned
+  times. Planning creates routine instances; scheduling gives them concrete slots.
+- **Your commitments constrain the plan.** Google Calendar can supply external
+  context and synchronize MeOS-owned blocks. Imported commitments remain
+  read-only; missing Calendar context means unknown availability, not a free day.
+- **Assistance has boundaries.** You choose what the agent may change and when
+  it may contact you. A working app does not by itself provide proactive help.
+- **Saved, synchronized, and delivered are different outcomes.** Persistent
+  installations store planning records in TrailBase/SQLite; a separate private
+  service handles Calendar, and the agent host handles scheduled work and delivery.
+  Each selected capability needs its own verification.
+
+## USER quickstart
+
+Start with your real days. Reuse a verified persistent instance if you have one;
+otherwise work with your agent or operator through [personal setup](#personal-setup)
+and the [bootstrap procedure](public/skills/meos-bootstrap/SKILL.md).
+
+**Current installation limit:** self-hosting on a new host requires engineering
+work; this repository does not yet ship a portable production installer. The
+shipped path is Linux/systemd with a Docker native runtime and protected web
+adapter. Its helpers have owner-specific assumptions and need reviewed
+configuration support for another host. Do not copy another owner's identity or
+disable trust checks to make installation pass. The in-memory demo and root
+Compose preview are contributor fixtures, not a personal installation.
+
+You can give your agent this starting request:
+
+> Help me use MeOS for my real days. First check whether I have a verified
+> persistent instance and what your host can actually do. Guide me through the
+> choices below, recommend a small first-day plan, and tell me what is verified
+> or blocked. Do not count a temporary demo as completed personal setup.
+
+## USER guide
+
+### Personal setup
+
+You do not need to design the infrastructure or inventory your whole life first.
+Work through these decisions with your agent or operator. Reuse known preferences;
+record missing answers, explicit deferrals, and verified results in the bootstrap
+procedure's [existing completion checklist](public/skills/meos-bootstrap/SKILL.md#keep-one-completion-checklist),
+not a second setup ledger.
+
+1. **Choose access and hosting.** Confirm the data owner, local timezone, intended
+   devices, and private or public access. Should it work from your phone and keep
+   running when your laptop is off? Have the operator inspect the actual host and
+   explain supported options and maintenance needs. Reuse a verified instance;
+   for a new one, resolve the [installation prerequisites and gaps](public/skills/meos-bootstrap/SKILL.md#installation-target)
+   before claiming setup is available.
+2. **Choose Calendar and planning authority.** If connecting Google Calendar,
+   use secure browser consent for the intended account, choose the calendars used
+   as context and the dedicated MeOS planning calendar, and verify read/sync status.
+   Never paste credentials into chat. Explicitly choose proposal-only planning or
+   permission to manage MeOS-owned blocks within your constraints; imported
+   commitments stay protected. If Calendar is deferred, state that its context
+   and synchronization are unverified and use a proposal based on known commitments.
+   See the [authority procedure](public/skills/meos-bootstrap/SKILL.md#configure-per-install-planning-authority).
+3. **Choose cadence and contact.** A starter rhythm could be morning launch,
+   evening preparation, and weekly review, adjusted to your waking and working
+   hours. Choose a delivery destination, quiet hours, and whether advance, start,
+   or end-of-event messages are useful. These choices do not grant planning
+   authority. The host must support durable schedules, execution, and proactive
+   delivery; otherwise use honest on-demand assistance. The
+   [agent setup procedure](public/skills/meos-bootstrap/SKILL.md#stage-4--configure-the-operating-agent)
+   covers capability discovery, missed runs, and selected jobs.
+
+### Make a useful first plan
+
+Ask: **“Would you like to talk about today, tomorrow, this week, or next week?”**
+Use the selected horizon to load the relevant planning procedure, not every skill:
+
+| Horizon | Procedure |
 | --- | --- |
-| Understand the system | [Planning model](#planning-model), then [architecture](#architecture) |
-| Explore or change the UI | [Run the local demo](#run-the-local-demo), then [codebase map](#codebase-map) |
-| Change behavior or an API | [Contributor guide](docs/CONTRIBUTING.md): change paths, contracts, and verification |
-| Build an agent integration | [Agent entry points](#agent-entry-points), then discover the installed MCP tools |
-| Operate an installation | [Deployment boundaries](#deployment-boundaries); do not use the demo as a production installer |
+| Today | [Morning launch](public/skills/meos-morning-launch/SKILL.md), or [Rescue the day](public/skills/meos-rescue-day/SKILL.md) when a plan needs repair |
+| Tomorrow | [Evening close + tomorrow prep](public/skills/meos-evening-close/SKILL.md), focusing on tomorrow rather than inventing today's actuals |
+| This week | [Weekly review](public/skills/meos-weekly-review/SKILL.md), focused on the current week |
+| Next week | [Weekly review + 14-day look-ahead](public/skills/meos-weekly-review/SKILL.md), focused on next week |
 
-## Planning model
+Bring one to three current outcomes, essential routines, fixed commitments, work
+windows, and room for interruptions. Ask the agent for a rough day or week and a
+concrete next action. Refine that small proposal before entering a large backlog.
 
-The central distinction is **intent versus assignment**. A routine says what
-should recur. An occurrence records one instance. A schedule assigns a concrete
-time; reading the planner does not make that decision.
+With planning authority, place a small real block and verify its saved schedule
+and, if selected, its Calendar result. Without that authority, keep the result a
+proposal—no Calendar writes are needed to see whether the plan is useful. A routine
+template is intent, not proof that an occurrence or event has been scheduled.
 
-| Record | Meaning | Consequence |
-| --- | --- | --- |
-| Task | A unit of work, optionally linked to a project and a schedule | Unscheduled means no assigned instant, not midnight |
-| Project | A grouping of tasks with its own notes and optional target date | Archiving a project unassigns its tasks in one transaction |
-| Routine | Recurrence, duration, and preferred-time intent in a timezone | Saving a template does not create occurrences or Calendar events |
-| Occurrence | A routine instance linked by `routineId`, with snapshot content and completion | Moving it preserves its ID and original recurrence `date`; template edits do not rewrite it |
-| Weekly outcome | A task-linked commitment for an inclusive week period | It is separate from task priority and scheduled time |
-| Period note | Notes for an inclusive day or week period | It records reflection or context, not an executable schedule |
+### Verify the first day
 
-A commute is a task with `type: "commute"`. It stays in the agenda and any linked
-project but is excluded from **No project**. Routine occurrences are their own
-records, not unassigned tasks; their editor links back to the routine.
+Before calling setup complete, check the capabilities you selected:
 
-### From routine to calendar
+- **Persistent planner:** the correct owner can sign in from the intended device,
+  and real planning data survives an operator-controlled restart.
+- **Agent access:** the actual agent can discover its tools and read your planner.
+  If scheduled work is selected, verify access in that execution context too.
+- **Calendar:** the intended context is available and fresh; an authorized real
+  planning change reaches the chosen MeOS calendar. A saved app record alone is
+  not synchronization proof.
+- **Proactive assistance:** selected jobs are registered and an execution is
+  verified; the chosen message route works. Verify event handoff separately when
+  event messages are selected. Do not send test messages or make synthetic
+  Calendar writes without test authority.
 
-**Figure 1. Planning creates instances; scheduling assigns time; synchronization publishes it.**
+Finish with a clear next action, when and where the next check-in will happen,
+what the agent may change, how to pause its jobs through the host, and any exact
+blocker or unverified feature. A registered job is configured, not proven. Keep
+manual mode explicit when the host cannot provide proactive assistance.
 
-```mermaid
-flowchart LR
-    R[Routine intent] -->|Explicit plan_routines| O[Unscheduled occurrence]
-    O -->|Explicit schedule and duration| S[Scheduled occurrence]
-    S -->|Private Calendar worker| G[Managed Google event]
-    G -->|Google-wins reconciliation| S
-```
+### Continue using MeOS
 
-For example, a daily walk routine can express a minimum duration and a preferred
-time without fixing every day's clock time. Explicit planning materializes
-missing fixed-recurrence slots within a bounded window: today through at most
-14 days ahead in the routine's timezone. New instances are unscheduled; existing
-slots retain their identity and state. Flexible frequency targets and unresolved
-recurrence need deliberate planning rather than arbitrary expansion.
+Use ordinary requests such as “help me plan today,” “prepare tomorrow,” or “this
+day has gone off track.” The agent needs both its MCP connection and installed
+operating procedures; a published skill file does not install itself.
 
-The person or agent then chooses a schedule and concrete duration. The backend
-validates revisions and assignments; it is not an AI scheduling optimizer.
-`preview_schedule` checks assignments without writing; `apply_schedule` commits
-the assignment batch and retry receipt atomically. Calendar publication happens
-later. A saved schedule is not proof that Google has received it.
+- [Assistant entry point](public/skills/meos-assistant/SKILL.md): daily triage,
+  priorities, and next actions in ordinary chat.
+- [Operating procedures](llms.txt): morning, evening, weekly review, event support,
+  and recovery when plans change.
+- [Shared operating contract](public/skills/contract.md): protected commitments,
+  authority, evidence-aware actuals, and delivery rules.
+- [Bootstrap and maintenance](public/skills/meos-bootstrap/SKILL.md): finish partial
+  setup, enable selected features, inspect, repair, update, or pause without
+  resetting working state.
 
-Schedules use a local date, clock time, and IANA timezone. Nonexistent daylight
-saving times are rejected; ambiguous times require a matching offset. Displaying
-an item in another timezone does not change its original routine slot.
+Use the first day and week to tune cadence and estimates. Do not inherit another
+person's schedule, quiet hours, or grants of autonomy.
 
-## Architecture
+## CONTRIBUTOR quickstart
 
-**Figure 2. Browser and agent commands meet at the application layer; provider credentials stay outside the browser.**
+This path is for contributors and coding agents familiar with JavaScript or
+TypeScript. It describes the checked-out source, not a live installation. Start
+with the demo below, then use the [contributor guide](docs/CONTRIBUTING.md) to
+trace a change and choose focused checks. No persistent setup is required for
+sample-data UI work.
 
-```mermaid
-flowchart TB
-    UI[React browser] --> Q[Session-owned Query and DB collections]
-    Q --> HTTP[Same-origin application HTTP API]
-    A[AI agent] --> MCP[Authenticated MCP endpoint]
-    HTTP --> C[Shared validation and commands]
-    MCP --> C
-    C --> DB[(TrailBase / SQLite)]
-    CW[Private Calendar service] <-->|Planner operations and cache publication| C
-    CW <-->|OAuth and provider requests| G[Google Calendar]
-    DB --> N[Notification long poll]
-    N --> NC[Native agent client]
-    NC --> D[Durable host dispatcher]
-```
-
-The browser uses React, TanStack Start in SPA mode, Router, Query, and DB
-collections. Base UI and StyleX provide interface primitives and styling;
-ProseMirror provides notes. The protected layout establishes the session before
-private reads. Collections share the Query cache; session changes cancel reads
-and dispose the previous owner's data. Private entity data and credentials are
-not persisted in browser storage.
-
-The production application runs authored JavaScript as a compiled WASI component
-inside TrailBase. HTTP and MCP adapters call the same command layer, backed by
-SQLite transactions. Runtime-authenticated identity determines the owner;
-request JSON cannot choose one. A separate Node web entry point handles the
-protected browser boundary and private service routing.
-
-The Calendar service owns OAuth credentials, provider polling, and managed-event
-reconciliation. It publishes a credential-free, owner-scoped cache into the main
-database for browser and agent reads. Primary Calendar events are read-only
-context. Managed events use Google-wins conflict handling. An unavailable cache
-means unknown availability, not a free day.
-
-Optional notifications deliver work to an agent client and durable dispatcher.
-Delivery is at least once: acknowledgment means durable handoff, not completion
-of the agent's task. Keyword search needs no embedding provider; semantic search
-requires an explicitly enabled external producer. Neither an embedding worker
-nor an agent schedule starts merely because these files exist.
-
-## Run the local demo
+### Run the local demo
 
 Use **Node.js 24** and **pnpm 10.30.3**, as configured in
 [package.json](package.json) and [CI](.github/workflows/check.yml). Run from the
@@ -161,7 +201,104 @@ uses different values. Success prints `PASS A` and writes a screenshot under
 behavior; use the [verification map](docs/CONTRIBUTING.md#choose-verification)
 for real-mode fixtures and backend changes.
 
-## Codebase map
+## CONTRIBUTOR guide
+
+Read the model before changing planning behavior; use the codebase map and
+linked contracts for direct lookup.
+
+### Planning model
+
+The central distinction is **intent versus assignment**. A routine says what
+should recur. An occurrence records one instance. A schedule assigns a concrete
+time; reading the planner does not make that decision.
+
+| Record | Meaning | Consequence |
+| --- | --- | --- |
+| Task | A unit of work, optionally linked to a project and a schedule | Unscheduled means no assigned instant, not midnight |
+| Project | A grouping of tasks with its own notes and optional target date | Archiving a project unassigns its tasks in one transaction |
+| Routine | Recurrence, duration, and preferred-time intent in a timezone | Saving a template does not create occurrences or Calendar events |
+| Occurrence | A routine instance linked by `routineId`, with snapshot content and completion | Moving it preserves its ID and original recurrence `date`; template edits do not rewrite it |
+| Weekly outcome | A task-linked commitment for an inclusive week period | It is separate from task priority and scheduled time |
+| Period note | Notes for an inclusive day or week period | It records reflection or context, not an executable schedule |
+
+A commute is a task with `type: "commute"`. It stays in the agenda and any linked
+project but is excluded from **No project**. Routine occurrences are their own
+records, not unassigned tasks; their editor links back to the routine.
+
+#### From routine to calendar
+
+**Figure 1. Planning creates instances; scheduling assigns time; synchronization publishes it.**
+
+```mermaid
+flowchart LR
+    R[Routine intent] -->|Explicit plan_routines| O[Unscheduled occurrence]
+    O -->|Explicit schedule and duration| S[Scheduled occurrence]
+    S -->|Private Calendar worker| G[Managed Google event]
+    G -->|Google-wins reconciliation| S
+```
+
+For example, a daily walk routine can express a minimum duration and a preferred
+time without fixing every day's clock time. Explicit planning materializes
+missing fixed-recurrence slots within a bounded window: today through at most
+14 days ahead in the routine's timezone. New instances are unscheduled; existing
+slots retain their identity and state. Flexible frequency targets and unresolved
+recurrence need deliberate planning rather than arbitrary expansion.
+
+The person or agent then chooses a schedule and concrete duration. The backend
+validates revisions and assignments; it is not an AI scheduling optimizer.
+`preview_schedule` checks assignments without writing; `apply_schedule` commits
+the assignment batch and retry receipt atomically. Calendar publication happens
+later. A saved schedule is not proof that Google has received it.
+
+Schedules use a local date, clock time, and IANA timezone. Nonexistent daylight
+saving times are rejected; ambiguous times require a matching offset. Displaying
+an item in another timezone does not change its original routine slot.
+
+### Architecture
+
+**Figure 2. Browser and agent commands meet at the application layer; provider credentials stay outside the browser.**
+
+```mermaid
+flowchart TB
+    UI[React browser] --> Q[Session-owned Query and DB collections]
+    Q --> HTTP[Same-origin application HTTP API]
+    A[AI agent] --> MCP[Authenticated MCP endpoint]
+    HTTP --> C[Shared validation and commands]
+    MCP --> C
+    C --> DB[(TrailBase / SQLite)]
+    CW[Private Calendar service] <-->|Planner operations and cache publication| C
+    CW <-->|OAuth and provider requests| G[Google Calendar]
+    DB --> N[Notification long poll]
+    N --> NC[Native agent client]
+    NC --> D[Durable host dispatcher]
+```
+
+The browser uses React, TanStack Start in SPA mode, Router, Query, and DB
+collections. Base UI and StyleX provide interface primitives and styling;
+ProseMirror provides notes. The protected layout establishes the session before
+private reads. Collections share the Query cache; session changes cancel reads
+and dispose the previous owner's data. Private entity data and credentials are
+not persisted in browser storage.
+
+The production application runs authored JavaScript as a compiled WASI component
+inside TrailBase. HTTP and MCP adapters call the same command layer, backed by
+SQLite transactions. Runtime-authenticated identity determines the owner;
+request JSON cannot choose one. A separate Node web entry point handles the
+protected browser boundary and private service routing.
+
+The Calendar service owns OAuth credentials, provider polling, and managed-event
+reconciliation. It publishes a credential-free, owner-scoped cache into the main
+database for browser and agent reads. Primary Calendar events are read-only
+context. Managed events use Google-wins conflict handling. An unavailable cache
+means unknown availability, not a free day.
+
+Optional notifications deliver work to an agent client and durable dispatcher.
+Delivery is at least once: acknowledgment means durable handoff, not completion
+of the agent's task. Keyword search needs no embedding provider; semantic search
+requires an explicitly enabled external producer. Neither an embedding worker
+nor an agent schedule starts merely because these files exist.
+
+### Codebase map
 
 | Path | Responsibility |
 | --- | --- |
@@ -181,7 +318,7 @@ for real-mode fixtures and backend changes.
 | [scripts/](scripts/), [.github/workflows/](.github/workflows/) | Generation, focused checks, isolated qualification, and release tooling |
 | [deployment/](deployment/), [tools/backup/](tools/backup/) | Native service templates and optional recovery tooling |
 
-## Agent entry points
+### Agent entry points
 
 There are two different reading paths for agents:
 
@@ -204,7 +341,7 @@ Operating procedures are served from `public/skills/` at `/skills/`; the deploye
 index comes from [public/llms.txt](public/llms.txt). Publishing a skill does not
 install a recurring job, authorize a mutation, or activate notifications.
 
-## Deployment boundaries
+### Deployment boundaries
 
 The root [Dockerfile](Dockerfile), [compose.yml](compose.yml), and
 `pnpm preview:deploy` package the **demo** as static nginx content. They are not
@@ -223,7 +360,7 @@ behavior; retained license and machine-readable admission records serve their
 specific consumers. See the [documentation lifecycle](docs/CONTRIBUTING.md#keep-documentation-current)
 for retention and removal rules.
 
-## Continue
+### Continue
 
 - [Contribute a change](docs/CONTRIBUTING.md): trace behavior, choose checks, and diagnose common failures.
 - [Application contract](docs/application-contract.md): operation ownership, retries, and scheduling invariants.
