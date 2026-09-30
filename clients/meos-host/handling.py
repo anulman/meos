@@ -145,15 +145,26 @@ def send_message(config,identity,text):
 
 
 def deliver(db,config,event,active,proposal,read,send=send_message):
-    if not isinstance(proposal,dict) or set(proposal)!={'eventId','message','constituents'} or proposal['eventId']!=event['id']:
+    if not isinstance(proposal,dict) or set(proposal)-{'eventId','message','constituents','reason'} or not {'eventId','message','constituents'}<=set(proposal) or proposal['eventId']!=event['id']:
         raise ValueError('invalid handling proposal')
     keys=[k for k,_ in active]
-    if proposal['constituents']!=keys or not isinstance(proposal['message'],str) or not 1<=len(proposal['message'])<=3500:
+    if proposal['constituents']!=keys or not isinstance(proposal['message'],str) or not 0<=len(proposal['message'])<=3500:
         raise ValueError('proposal membership mismatch')
+    advance=event['type']=='pre' and all(item['boundary']=='pre' for _,item in active)
+    reason=proposal.get('reason')
+    if advance and (not isinstance(reason,str) or not 1<=len(reason.strip())<=1000):
+        raise ValueError('advance decision requires reason')
+    if not proposal['message'].strip() and (not advance or proposal['message']!=''):
+        raise ValueError('only advance events support explicit no-op')
     # A second fresh read immediately precedes the external effect. If any
     # member changed, discard the whole generated text (it may mention it).
     latest=eligible(db,event,read)
     if [k for k,_ in latest]!=keys:raise ValueError('boundary changed while drafting')
+    if advance and proposal['message']=='':
+        receipt={'outcome':'noop','reason':reason}
+        with db:
+            for key,_ in active:db.execute('INSERT INTO constituents VALUES(?,?,?,?,?)',(key,event['id'],'noop',json.dumps(receipt),time.time()))
+        return receipt
     identity=hashlib.sha256(json.dumps(keys).encode()).hexdigest()
     with db:
         db.execute('BEGIN IMMEDIATE')

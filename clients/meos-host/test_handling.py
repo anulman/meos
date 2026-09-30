@@ -117,6 +117,56 @@ class HandlingTests(unittest.TestCase):
         del current['scheduledAt']
         with self.assertRaises(ValueError):h.freshness(item,current,start+1000)
 
+    def advance(self):
+        from datetime import datetime,timezone
+        self.item.update(start=self.start+900000,end=self.start+2700000)
+        self.current['scheduledAt']=datetime.fromtimestamp(self.item['start']/1000,timezone.utc).isoformat()
+        self.event.update(type='pre',starts=[],upcoming=[self.item])
+
+    def decision_hook(self,message,reason):
+        def hook(config,identity,payload):
+            cap=self.db.execute('SELECT capability FROM proposals WHERE event_id=?',(identity,)).fetchone()[0]
+            body={'eventId':identity,'message':message,'constituents':[k for k,_ in h.members(json.loads(payload))]}
+            if reason is not None:body['reason']=reason
+            h.propose(self.db,identity,cap,body)
+            return {'runId':'decision','completion':{'status':'ok'}}
+        return hook
+
+    def test_silent_advance_durable_noop_does_not_consume_start(self):
+        self.advance();d.admit(self.db,self.event,'first')
+        d.step(self.db,{'mode':'notifications'},self.decision_hook('','No preparation or supported travel concern.'),self.read,lambda *a:self.fail('must stay silent'))
+        self.assertEqual(self.state(),'handled_noop')
+        self.assertEqual(self.db.execute('SELECT count(*) FROM deliveries').fetchone()[0],0)
+        self.db.close();self.db=d.connect(self.tmp.name)
+        regrouped={**self.event,'id':'again'};d.admit(self.db,regrouped,'again')
+        d.step(self.db,{'mode':'notifications'},lambda *a:self.fail('no repeated draft'),self.read)
+        start={**self.event,'id':'start','type':'boundary','at':self.item['start'],'starts':[self.item],'upcoming':[]}
+        d.admit(self.db,start,'start')
+        with patch('handling.time.time',return_value=self.item['start']/1000+1):
+            d.step(self.db,{'mode':'notifications'},self.proposed_hook,self.read,lambda *a:self.receipt)
+        self.assertEqual(self.db.execute('SELECT state FROM events WHERE id="start"').fetchone()[0],'handled_delivered')
+
+    def test_actionable_advance_can_deliver(self):
+        self.advance();d.admit(self.db,self.event,'first');sent=[]
+        d.step(self.db,{'mode':'notifications'},self.decision_hook('Pack your required equipment now.','Event checklist requires equipment preparation before departure.'),self.read,lambda *a:sent.append(a) or self.receipt)
+        self.assertEqual(self.state(),'handled_delivered');self.assertEqual(len(sent),1)
+
+    def test_advance_without_reason_and_boundary_noop_fail_closed(self):
+        for advance in (False,True):
+            with self.subTest(advance=advance):
+                if advance:self.advance()
+                self.event['id']=str(advance);d.admit(self.db,self.event,self.event['id'])
+                d.step(self.db,{'mode':'notifications'},self.decision_hook('','No reason' if not advance else None),self.read,lambda *a:self.fail('no delivery'))
+                self.assertEqual(self.state(),'blocked_unknown')
+
+    def test_changed_advance_cannot_be_marked_successfully_skipped(self):
+        self.advance();d.admit(self.db,self.event,'first')
+        original=self.decision_hook('','No actionable reason.')
+        def hook(*args):
+            result=original(*args);self.current['record']['revision']=2;return result
+        d.step(self.db,{'mode':'notifications'},hook,self.read,lambda *a:self.fail('no delivery'))
+        self.assertEqual(self.state(),'blocked_unknown')
+
     def test_capability_and_proposal_are_not_completion(self):
         d.admit(self.db,self.event,'first');d.claim(self.db);cap=h.prepare_proposal(self.db,'first')
         with self.assertRaises(ValueError):h.propose(self.db,'first','wrong',{})

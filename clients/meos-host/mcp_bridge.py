@@ -87,7 +87,7 @@ class Bridge:
                 status, result = self.request('/api/meos/v1/mcp', message, tokens['auth_token'])
             if status not in (200, 202): raise ValueError('upstream rejected')
             if self.c.get('outbox') and message.get('method')=='tools/list' and isinstance(result,dict) and 'result' in result:
-                result['result']['tools'].append({'name':'propose_boundary','description':'Persist a notification proposal for the exact host-issued event capability. Does not send or change plans.','inputSchema':{'type':'object','properties':{'eventId':{'type':'string'},'capability':{'type':'string'},'body':{'type':'object','properties':{'eventId':{'type':'string'},'message':{'type':'string','maxLength':3500},'constituents':{'type':'array','items':{'type':'string'}}},'required':['eventId','message','constituents'],'additionalProperties':False}},'required':['eventId','capability','body'],'additionalProperties':False}})
+                result['result']['tools'].append({'name':'propose_boundary','description':'Persist a notification decision for the exact host-issued event capability. Pre events require reason; an empty message records an advance-only no-op. Does not send or change plans.','inputSchema':{'type':'object','properties':{'eventId':{'type':'string'},'capability':{'type':'string'},'body':{'type':'object','properties':{'eventId':{'type':'string'},'message':{'type':'string','maxLength':3500},'reason':{'type':'string','minLength':1,'maxLength':1000},'constituents':{'type':'array','items':{'type':'string'}}},'required':['eventId','message','constituents'],'additionalProperties':False}},'required':['eventId','capability','body'],'additionalProperties':False}})
             return result
         finally: os.close(fd)
 
