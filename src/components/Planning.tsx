@@ -24,9 +24,9 @@ export function PlanningProvider({children}:{children:ReactNode}) {
 export function Sheet({title,onClose,dirty=false,note=false,subtitle,children}:{title:string;onClose:()=>void;dirty?:boolean;note?:boolean;subtitle?:string;children:ReactNode}) {
  const ref=useRef<HTMLDialogElement>(null);const backdrop=useRef(false);const trigger=useRef(typeof document==='undefined'?null:document.activeElement as HTMLElement|null)
  const close=()=>{if(!dirty||window.confirm('Discard unsaved changes?'))onClose()}
- useEffect(()=>{const dialog=ref.current;dialog?.showModal();return()=>{dialog?.close();trigger.current?.focus()}},[])
+ useEffect(()=>{const dialog=ref.current;dialog?.showModal();if(note)dialog?.focus({preventScroll:true});return()=>{dialog?.close();trigger.current?.focus()}},[])
  function outside(event:React.PointerEvent<HTMLDialogElement>){const r=event.currentTarget.getBoundingClientRect();return event.target===event.currentTarget&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)}
- return <dialog ref={ref} className={`resource-dialog${note?' period-note-dialog':''}`} aria-label={title} onCancel={e=>{e.preventDefault();close()}} onPointerDown={e=>{backdrop.current=outside(e)}} onPointerUp={e=>{if(backdrop.current&&outside(e))close();backdrop.current=false}}><div className="resource-top"><div><h2 tabIndex={note?-1:undefined} autoFocus={note}>{title}</h2>{subtitle&&<p className="muted">{subtitle}</p>}</div><button className="quiet-action" onClick={close} aria-label="Close planner details">Close ×</button></div>{children}</dialog>
+ return <dialog ref={ref} className={`resource-dialog${note?' period-note-dialog':''}`} aria-label={title} onCancel={e=>{e.preventDefault();close()}} onPointerDown={e=>{backdrop.current=outside(e)}} onPointerUp={e=>{if(backdrop.current&&outside(e))close();backdrop.current=false}}><div className="resource-top"><div><h2>{title}</h2>{subtitle&&<p className="muted">{subtitle}</p>}</div><button className="quiet-action" onClick={close} aria-label="Close planner details">Close ×</button></div>{children}</dialog>
 }
 export function PeriodNotesButton({kind,period}:{kind:'day'|'week';period:DatePeriod}) {
  const {data:notes=[],isLoading,isError}=useLiveQuery(q=>q.from({note:periodNotesCollection}));const {openPeriodNote}=usePlanning()
