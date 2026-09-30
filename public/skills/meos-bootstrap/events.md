@@ -4,6 +4,8 @@ Read the [bootstrap entry point](SKILL.md) first. Resume the same
 [completion checklist](SKILL.md#keep-one-completion-checklist); this page neither
 creates a second ledger nor expands authority. Record actual state, evidence,
 next action, execution owner and delivery route before leaving this step.
+For maintenance, follow the [mode safeguards](maintain.md#mode-safeguards) before
+using any feature instructions; inspection does not authorize installation or repair.
 
 ## Configure the event long-poller
 
@@ -98,4 +100,7 @@ If the API, supervision, durable state, or necessary permissions are unavailable
 After explicitly enabling external embedding work, the delegated-owner session (or an existing service principal with both `notifications:consume` and `search:index`) can configure `recordUpdates:true`. Route only `record.updated` to [meos-on-event-updated](../meos-on-event-updated/SKILL.md) in the durable host dispatcher; keep timed-boundary routing unchanged. The installed long-poller alone does not install that routing. Use the delegated-owner session within the executor’s private credential boundary and an already-authorized matching embedding capability; no extra identity is required. No capability is a normal no-op. Reconcile pending jobs in bounded batches at explicit setup/startup or retention gaps; notification acknowledgement is not embedding completion. See [search](../search.md) for interactive query embeddings.
 
 
-Next: [verify and hand off](verify.md).
+Next: new personal setup continues through the
+[first planning horizon](conversation.md#choose-the-first-planning-horizon), then
+[verification](verify.md). Maintenance or an already-completed first plan can go
+directly to verification.

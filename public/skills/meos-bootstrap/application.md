@@ -4,6 +4,8 @@ Read the [bootstrap entry point](SKILL.md) first. Resume the same
 [completion checklist](SKILL.md#keep-one-completion-checklist); this page neither
 creates a second ledger nor expands authority. Record actual state, evidence,
 next action, execution owner and delivery route before leaving this step.
+For maintenance, follow the [mode safeguards](maintain.md#mode-safeguards) before
+using any feature instructions; inspection does not authorize installation or repair.
 
 ## Installation target
 
@@ -82,4 +84,9 @@ wait for the user to prompt “And?” merely to refresh a turn’s tool catalog
 A missing connection is setup work when the supported procedure and authority are available, not a reason to stop at discovery. If the release requires a separate principal but the user chose delegated identity, report an implementation capability mismatch and route authorized coding work to an owner; do not provision against that decision. If MCP or an event API is unavailable, distinguish missing configuration, an exact missing grant, and an unsupported capability; apply the continuation rule above and proceed with compatible parts of agent setup. Never substitute an unrelated service's credential to bypass a missing grant.
 
 
-Next: [configure the operating agent](agent.md) when selected, or [verify and hand off](verify.md). Load [recovery](recovery.md) only when selected or needed for an existing-instance migration.
+Next: [configure the operating agent](agent.md) when selected. Once the selected
+setup stages are complete, new personal setup continues through the
+[first planning horizon](conversation.md#choose-the-first-planning-horizon), then
+[verification](verify.md). Maintenance or an already-completed first plan can go
+directly to verification. Load [recovery](recovery.md) only when selected or needed
+for an existing-instance migration.

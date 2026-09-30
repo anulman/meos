@@ -4,6 +4,8 @@ Read the [bootstrap entry point](SKILL.md) first. Resume the same
 [completion checklist](SKILL.md#keep-one-completion-checklist); this page neither
 creates a second ledger nor expands authority. Record actual state, evidence,
 next action, execution owner and delivery route before leaving this step.
+For maintenance, follow the [mode safeguards](maintain.md#mode-safeguards) before
+using any feature instructions; inspection does not authorize installation or repair.
 
 ## Recovery planning and verification
 

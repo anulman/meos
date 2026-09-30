@@ -4,6 +4,8 @@ Read the [bootstrap entry point](SKILL.md) first. Resume the same
 [completion checklist](SKILL.md#keep-one-completion-checklist); this page neither
 creates a second ledger nor expands authority. Record actual state, evidence,
 next action, execution owner and delivery route before leaving this step.
+For maintenance, follow the [mode safeguards](maintain.md#mode-safeguards) before
+using any feature instructions; inspection does not authorize installation or repair.
 
 ## Stage 4 — Configure the operating agent
 
@@ -49,36 +51,9 @@ Install the [chief-of-staff / executive-assistant entry point](../meos-assistant
 
 Recommend installing operating skills as lightweight proxies to the verified deployment's stable published URLs. Follow [Keep operating skills current](../skill-updates.md) to resolve and record the published content at each invocation without editing jobs after each deployment. A local-copy installation is an explicit alternative: configure invocation-time periodic upstream checks and a durable, deduplicated upgrade-offer sentinel; never overwrite it silently. Audit and repair stale/pinned saved jobs within existing authority, preserving every unrelated scheduler field. An intentional pin remains until the user changes that policy.
 
-Bootstrap is an ongoing maintenance workflow, not a one-time setup. Select the
-requested mode before acting: install, enable a named feature, inspect, repair,
-update, pause, or uninstall. An unchanged repeat must make no changes: do not
-reinstall matching artifacts, restart healthy services, rewrite configuration,
-or recreate jobs, recipients, registrations or seed data merely to rerun this skill.
-
-- **Inspect:** compare the ledger with current versions, feature configuration
-  and observable health using read-only host tools. Command names do not prove
-  read-only behavior. In this release, `meos-agent doctor` can initialize local
-  state, refresh credentials and plan events or renew a server lease; it is an
-  active verification step, not read-only diagnosis. `status` reads local state
-  but its loader can create a missing state directory. Inspect existing files
-  and service metadata directly when no mutation is authorized.
-- **Enable or repair:** change only the selected feature and necessary
-  dependencies. Reuse existing authority, but do not treat diagnosis as a grant
-  to repair or broaden activation/migration authority. Preserve configuration,
-  secrets, user data, cursors, acknowledgements and accepted-work receipts.
-- **Resume partial setup:** reconcile actual effects with the ledger before
-  retrying. Reuse completed resources; do not replay an uncertain external or
-  destructive action. Record the next safe step and exact unresolved effect.
-  Reconcile persisted mint/refresh intents and native session state; reuse the
-  live private rotating credential file, never restore an obsolete issuance copy
-  or remint blindly. Record the runtime owner/run ID, verified state, last
-  progress, next action and configured delivery route; resume only missing steps.
-- **Keep planning independent:** installation maintenance must not reset
-  planning state or overwrite local operating skills. Pin application artifacts
-  and bootstrap independently. Operating proxies follow their recorded published
-  source policy; replacing a local copy requires the user’s upgrade decision.
-  Coordinate changes to shared resources, but let unrelated planning runs continue. Stop only the affected
-  client when its documented operation requires exclusive state ownership.
+For inspect, repair, resume, update, pause or removal, follow the mandatory
+[maintenance mode safeguards](maintain.md#mode-safeguards) before these feature
+instructions. Do not replay installation steps during read-only inspection.
 
 Keep the installation ledger current with the pinned MeOS release and installation-manifest reference, artifact verification, host/deployment path, service IDs, persistent-storage references, non-secret access endpoints, workspace/account identity, skill versions, job IDs, triggers, timezone, execution settings, authority, status, verification receipts, and remaining blockers. Never store tokens or secret values in it. A job created successfully is **configured**, not proof of a successful execution. Install authorized morning/evening/review schedules independently of the event pipeline. Missing MCP access may block a ritual's planning execution, not its schedule installation: require an access preflight, explicit blocked reporting and no invented plans. Reuse known times and ordering; when a weekly review follows evening close, sequence them in one execution rather than creating concurrent jobs.
 
@@ -96,4 +71,7 @@ Use the [reflection workflow](reflections.md) during normal planning, not as an 
 Read the [learning-loop reference](../learning-loop.md) and discover `get_period_note` (`planning:read`) and `append_period_note` (`notes:write`) in the selected release. The owner MCP principal receives both; existing delegated service grants retain their explicit scopes and require separately authorized provisioning if note writes are needed. Verify actual tool availability and the effective grant rather than borrowing owner credentials. If note access is unavailable, record the precise blocker and deliver reflections unsaved (or persistence unverified after an uncertain write). Verify saved-note readback separately from planning and notification readiness; no learning service or new schema is needed.
 
 
-Next: [event delivery](events.md) only when selected; otherwise [verify and hand off](verify.md).
+Next: [event delivery](events.md) only when selected. Otherwise, new personal
+setup continues through the [first planning horizon](conversation.md#choose-the-first-planning-horizon),
+then [verification](verify.md). Maintenance or an already-completed first plan can
+go directly to verification.
