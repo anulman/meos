@@ -30,8 +30,11 @@ try {
    assert.equal(await dialog.evaluate(e=>e.scrollHeight>e.clientHeight),false)
   }
   assert.equal(await editor.evaluate(e=>e.scrollHeight>e.clientHeight),true)
-  await editor.press('Control+End')
+  const toolbar=dialog.locator('.notes-toolbar'),toolbarBefore=await toolbar.boundingBox()
+  await editor.press('Control+Home');await editor.press('Control+End')
   assert.ok(await editor.evaluate(e=>e.scrollTop>0))
+  assert.deepEqual(await toolbar.boundingBox(),toolbarBefore)
+  assert.equal(await toolbar.getByRole('button',{name:'Bold',exact:true}).isVisible(),true)
   await editor.press('Escape');await dialog.waitFor({state:'hidden'})
   assert.equal(await page.getByRole('button',{name:'Day Notes',exact:true}).evaluate(e=>e===document.activeElement),true)
   await page.getByRole('link',{name:'Week',exact:true}).click()
