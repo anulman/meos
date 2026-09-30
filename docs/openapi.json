@@ -8680,6 +8680,16 @@
           "type": {
             "const": "commute"
           },
+          "transportMode": {
+            "enum": [
+              "car",
+              "walk",
+              "bicycle",
+              "plane",
+              "boat"
+            ],
+            "description": "Commute transport mode. Omitted modes display as car."
+          },
           "completed": {
             "type": "boolean"
           },

@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import { useForm } from '@tanstack/react-form'
-import type { Notes, Project, Task, Priority, LinkedReference } from '../lib/contracts'
+import type { Notes, Project, Task, Priority, LinkedReference, TransportMode } from '../lib/contracts'
 import { usePlannerClock } from '../lib/planner-clock'
 import { saveProject, saveTask } from '../lib/store'
 import { TimezoneSelect } from './TimezoneSelect'
+import { TransportIcon, transportModes } from './TransportIcon'
 import { NotesEditor } from './NotesEditor'
 
 export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNotesChange,children}:{kind:'task'|'project';resource:Task|Project;projects?:Project[];isNew?:boolean;onSaved:(resource:Task|Project)=>void;onNotesChange?:()=>void;children?:ReactNode}) {
@@ -14,7 +15,7 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNo
  const form=useForm({defaultValues:{
   title:resource.title,completed:resource.completed??false,notes:resource.notes,
   references:resource.references??[] as LinkedReference[],
-  type:task.type??'' as ''|'commute',projectId:task.projectId??'',priority:task.priority??'none' as Priority,
+  type:task.type??'' as ''|'commute',transportMode:task.transportMode??'car' as TransportMode,projectId:task.projectId??'',priority:task.priority??'none' as Priority,
   date:task.schedule?.date??'',time:task.schedule?.time??'',timezone:task.schedule?.timezone??clock.preferences.timezone,
   preferredTime:task.preferredTime?.text??'',offset:task.schedule?.offsetMinutes?.toString()??'',
   location:task.location??'',durationIntent:task.durationIntent??'',actualDuration:task.actualDurationMinutes?.toString()??'',
@@ -25,7 +26,7 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNo
    if(kind==='task'&&value.time&&!value.date)throw new Error('Choose a scheduled date before adding a time.')
    if(kind==='task'&&value.date&&!value.time)throw new Error('Choose a time for this scheduled task.');
    const base={_revision:resource._revision,id:resource.id,title:value.title,completed:value.completed,notes:value.notes,references:value.references,archived:resource.archived??false}
-   const saved=kind==='task'?await saveTask({...base,type:value.type||undefined,location:value.location,durationIntent:value.durationIntent,actualDurationMinutes:value.actualDuration?Number(value.actualDuration):undefined,preferredTime:value.preferredTime?{text:value.preferredTime}:undefined,priority:value.priority,projectId:value.projectId||undefined,schedule:value.date?{date:value.date,time:value.time,timezone:value.timezone,...(value.offset?{offsetMinutes:Number(value.offset)}:{})}:undefined,durationMinutes:value.duration?Number(value.duration):undefined},isNew):await saveProject({...base,targetDate:value.targetDate||undefined},isNew)
+   const saved=kind==='task'?await saveTask({...base,type:value.type||undefined,transportMode:value.type==='commute'?value.transportMode:undefined,location:value.location,durationIntent:value.durationIntent,actualDurationMinutes:value.actualDuration?Number(value.actualDuration):undefined,preferredTime:value.preferredTime?{text:value.preferredTime}:undefined,priority:value.priority,projectId:value.projectId||undefined,schedule:value.date?{date:value.date,time:value.time,timezone:value.timezone,...(value.offset?{offsetMinutes:Number(value.offset)}:{})}:undefined,durationMinutes:value.duration?Number(value.duration):undefined},isNew):await saveProject({...base,targetDate:value.targetDate||undefined},isNew)
    onSaved(saved)
   }catch(cause){setError(cause instanceof Error?cause.message:'Could not save. Your draft is still here.')}
   finally{setSaving(false)}
@@ -39,7 +40,7 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNo
  }
  return <form className="resource-form" onSubmit={event=>{event.preventDefault();event.stopPropagation();void form.handleSubmit()}}>
   <div className="resource-body"><div className="resource-title-row">
-   <form.Field name="completed">{field=><button className="status-icon" type="button" aria-label={field.state.value?'Mark incomplete':'Mark complete'} aria-pressed={field.state.value} onClick={()=>field.handleChange(!field.state.value)}>{field.state.value?'✓':'○'}</button>}</form.Field>
+   <form.Subscribe selector={state=>[state.values.type,state.values.transportMode] as const}>{([type,mode])=>kind==='task'&&type==='commute'?<TransportIcon mode={mode}/>:<form.Field name="completed">{field=><button className="status-icon" type="button" aria-label={field.state.value?'Mark incomplete':'Mark complete'} aria-pressed={field.state.value} onClick={()=>field.handleChange(!field.state.value)}>{field.state.value?'✓':'○'}</button>}</form.Field>}</form.Subscribe>
    <form.Field name="title">{field=><input className="resource-title-input" aria-label={`${kind==='task'?'Task':'Project'} name`} placeholder={`Name this ${kind}`} value={field.state.value} onChange={e=>field.handleChange(e.target.value)} required maxLength={200}/>}</form.Field>
   </div>
   <details className="resource-section" open>
@@ -47,6 +48,7 @@ export function ResourceForm({kind,resource,projects=[],isNew=false,onSaved,onNo
    <div className="plan-fields">
     {kind==='task'?<>
      <form.Field name="type">{field=><label>Task type<select aria-label="Task type" value={field.state.value} onChange={e=>field.handleChange(e.target.value as ''|'commute')}><option value="">Task</option><option value="commute">Commute</option></select></label>}</form.Field>
+     <form.Subscribe selector={state=>state.values.type}>{type=>type==='commute'&&<form.Field name="transportMode">{field=><label>Mode of transport<select value={field.state.value} onChange={e=>field.handleChange(e.target.value as TransportMode)}>{transportModes.map(mode=><option key={mode.value} value={mode.value}>{mode.label}</option>)}</select></label>}</form.Field>}</form.Subscribe>
      <p className="muted">Commutes stay on the calendar and in their project, but not in No project.</p>
      <form.Field name="projectId">{field=><label>Project<select value={field.state.value} onChange={e=>field.handleChange(e.target.value)}><option value="">No project</option>{projects.filter(p=>!p.archived).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>}</form.Field>
      <p className="muted">Scheduling is optional. Tasks without a date and time stay in the task lists in Settings, outside daily views.</p>

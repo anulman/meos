@@ -87,7 +87,7 @@ function cloneData(value) {
 const base=['id','title','notes']
 const fields={
  projects:[...base,'completed','archived','targetDate','references'],
- tasks:[...base,'type','completed','priority','projectId','schedule','durationMinutes','location','durationIntent','actualDurationMinutes','archived','references','preferredTime'],
+ tasks:[...base,'type','transportMode','completed','priority','projectId','schedule','durationMinutes','location','durationIntent','actualDurationMinutes','archived','references','preferredTime'],
  routines:[...base,'timezone','location','durationIntent','archived','preferredTime','recurrenceIntent'],
  occurrences:['id','routineId','date','completed','title','notes','durationMinutes','location','durationIntent','actualDurationMinutes','schedule','preferredTime','skipped','edited','templateRevision'],outcomes:['id','taskId','period','position'],periodNotes:['id','kind','period','notes']
 }

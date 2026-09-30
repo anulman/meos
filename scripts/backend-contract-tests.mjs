@@ -311,6 +311,22 @@ test('explicit commute classification preserves project and schedule, without cl
  }finally{f.close()}
 });
 
+test('commute transport modes round-trip through create/update; legacy records stay unchanged',()=>{
+ const f=fixture();try{
+  const old=task({type:'commute',completed:true});const legacy=f.commands.create(f.owner,'tasks',old);
+  assert.deepEqual(legacy.value,old);assert.equal(legacy.value.transportMode,undefined);
+  for(const mode of ['car','walk','bicycle','plane','boat']){
+   const saved=f.commands.create(f.owner,'tasks',task({type:'commute',transportMode:mode}));
+   assert.equal(saved.value.transportMode,mode);
+   const updated=f.commands.update(f.owner,'tasks',{...saved.value,transportMode:'walk'},saved.revision);
+   assert.equal(updated.value.transportMode,'walk');assert.equal(updated.value.completed,false);
+  }
+  for(const transportMode of ['train','',null,1])assert.throws(()=>f.commands.create(f.owner,'tasks',task({type:'commute',transportMode})),/Schema/);
+  const updated=f.commands.update(f.owner,'tasks',{...legacy.value,transportMode:'boat'},legacy.revision);
+  assert.equal(updated.value.completed,true);
+ }finally{f.close()}
+});
+
 test('period reflections preserve human prose, isolate owners and retry atomically',()=>{
  const f=fixture();try{
   const selector={kind:'day',period:{start:'2026-09-26',end:'2026-09-26'}}
