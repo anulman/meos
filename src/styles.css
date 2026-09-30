@@ -99,3 +99,16 @@
 .today-view .timeline{display:flow-root}
 .today-view .timeline:before{top:0;bottom:0}
 .today-view .timeline>:last-child{margin-bottom:0}
+
+/* Period notes retain the existing sheet scrolling and compact Today hierarchy. */
+.period-note-dialog .resource-top{margin-bottom:0;align-items:flex-start}
+.period-note-dialog .resource-top h2{line-height:1.16;padding-top:8px}
+.period-note-dialog .resource-body{padding-right:0}
+.period-note-dialog .resource-body>.notes-surface{margin-top:12px}
+.period-note-dialog .ProseMirror{padding:8px}
+.notes-editor blockquote{margin:10px 0;padding-left:12px;border-left:2px solid var(--line)}
+.notes-editor .agent-note{color:var(--muted);font-style:italic}
+.notes-save-state{flex-shrink:0;color:var(--muted);font-size:11px;line-height:1.4;padding-top:6px;min-height:22px}
+.period-note-dialog .notes-save-state[role=alert]{font-size:12px;padding:6px 0;background:none;border-radius:0}
+.notes-save-state button{background:none;border:0;color:var(--olive);text-decoration:underline;min-height:44px;padding:0 8px}
+@media(max-width:420px){.period-note-dialog{padding:14px 10px}.period-note-dialog .ProseMirror{padding:6px}.period-note-dialog .notes-editor blockquote{padding-left:8px}}
