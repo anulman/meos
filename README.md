@@ -60,7 +60,7 @@ You do not need to design the infrastructure or inventory your whole life first.
 Work through these decisions with your agent or operator. Reuse known preferences;
 record missing answers, explicit deferrals, and verified results in the bootstrap
 procedure's [existing completion checklist](public/skills/meos-bootstrap/SKILL.md#keep-one-completion-checklist),
-not a second setup ledger.
+not a second setup ledger. For a JSON host record, the [read-only setup inspector](docs/setup-inspector.md) reports missing decisions and the next applicable procedure.
 
 1. **Choose access and hosting.** Confirm the data owner, local timezone, intended
    devices, and private or public access. Should it work from your phone and keep
