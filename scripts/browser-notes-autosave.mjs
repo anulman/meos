@@ -11,12 +11,12 @@ try {
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message))
   await page.goto(base);await page.getByRole('button',{name:'Day Notes',exact:true}).click()
   const sheet=page.getByRole('dialog',{name:'Day Notes',exact:true}),editor=sheet.getByRole('textbox',{name:'Period notes'})
-  await editor.waitFor();assert.equal(await sheet.getByRole('heading').evaluate(e=>e===document.activeElement),true)
+  await editor.waitFor();assert.equal(await sheet.evaluate(e=>e===document.activeElement),true)
   assert.equal(await sheet.getByRole('button',{name:'Save notes'}).count(),0)
   await editor.fill('Human thoughts');await editor.press('Control+a');await editor.press('Control+b')
   const bold=sheet.getByRole('button',{name:'Bold',exact:true})
   assert.equal(await bold.getAttribute('aria-pressed'),'true')
-  await sheet.getByRole('heading').evaluate(e=>e.focus()) // genuine selected text remains active when editor loses focus
+  await sheet.evaluate(e=>e.focus()) // genuine selected text remains active when editor loses focus
   assert.equal(await bold.getAttribute('aria-pressed'),'true')
   await page.evaluate(()=>window.getSelection().removeAllRanges())
   await page.waitForFunction(()=>document.querySelector('[aria-label="Bold"]').getAttribute('aria-pressed')==='false')
@@ -40,11 +40,11 @@ try {
   assert.equal(await sheet.locator('.agent-note').evaluate(e=>getComputedStyle(e).fontStyle),'italic')
   const title=await sheet.getByRole('heading').boundingBox(),date=await sheet.locator('p.muted').boundingBox();assert.ok(date.y-title.y-title.height<=3)
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false)
-  await sheet.getByRole('status').filter({hasText:'Saved'}).waitFor();await sheet.getByRole('heading').evaluate(e=>{getSelection().removeAllRanges();e.focus()})
+  await sheet.getByRole('status').filter({hasText:'Saved'}).waitFor();await sheet.evaluate(e=>{getSelection().removeAllRanges();e.focus()})
   await page.screenshot({path:`${artifacts}/notes-${width}.png`,fullPage:true})
   await editor.press('Escape');await sheet.waitFor({state:'hidden'})
   await page.getByRole('button',{name:'Next day',exact:true}).click();await page.getByRole('button',{name:'Day Notes',exact:true}).click();assert.equal((await editor.innerText()).trim(),'');await editor.press('Escape')
   assert.deepEqual(errors,[]);await context.close()
  }
- console.log('PASS notes: heading focus/restore, selection and toolbar, serialized rapid autosave, close/reopen/date isolation, failed-save retry, attribution, compact mobile/desktop layout')
+ console.log('PASS notes: neutral dialog focus/restore, selection and toolbar, serialized rapid autosave, close/reopen/date isolation, failed-save retry, attribution, compact mobile/desktop layout')
 }finally{await browser.close()}
