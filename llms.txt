@@ -8,7 +8,7 @@
 
 - [Keep operating skills current](public/skills/skill-updates.md): Install published-source proxies, audit pinned saved jobs, or check local copies periodically and offer upgrades without overwriting them.
 
-- [Install and bootstrap](public/skills/meos-bootstrap/SKILL.md): Install a post-cutover production release (Compose first, Helm later), install optional backup encryption from pinned source or an admitted runtime, plan and verify recovery, then configure agent schedules, per-install planning authority and event long-polling.
+- [Install and bootstrap](public/skills/meos-bootstrap/SKILL.md): Discover or maintain a verified persistent installation, then configure selected integrations, agent schedules, planning authority and event delivery. The shipped Linux/systemd path uses a Docker native runtime and host-specific helpers; a new host requires reviewed configuration support, not the demo Compose preview. Start with desired use, access, Calendar, cadence and quiet hours; track verification in the existing completion checklist.
 
 - [Shared operating contract](public/skills/contract.md): Required authority, tentative/target-day planning, Google-wins reconciliation, evidence-aware actuals, weekly reflection, tool discovery and delivery rules.
 - [Learning-loop reference](public/skills/learning-loop.md): Small qualitative reflections using available context and authorized notes; explicit unsaved fallback when note tools are unavailable.
