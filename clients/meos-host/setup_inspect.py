@@ -101,7 +101,7 @@ def inspect(ledger):
         key = missing[0]
         result['next'] = {'kind': 'question', 'key': key, 'question': QUESTIONS[key],
                           'procedure': '/skills/meos-bootstrap/conversation.md'}
-    elif pending and pending[0] != 'firstPlan':
+    elif pending and (pending[0] != 'firstPlan' or components.get(pending[0], {}).get('state') == 'blocked'):
         key = pending[0]
         result['next'] = {'kind': 'component', 'key': key,
                           'action': 'Reconcile the recorded blocker and next owner/action in the ledger.' if components.get(key, {}).get('state') == 'blocked' else 'Resume this component and record its separate verification evidence.',

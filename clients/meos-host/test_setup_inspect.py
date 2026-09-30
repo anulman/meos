@@ -67,6 +67,25 @@ class SetupInspectorTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             inspect(ledger(timezone='Not/A_Timezone'))
 
+    def test_blocked_first_plan_preserves_reconciliation_before_horizon(self):
+        for horizon in [None, 'today']:
+            with self.subTest(horizon=horizon):
+                record = ledger(**({'horizon': horizon} if horizon else {}))
+                for key in ['application', 'mcp', 'skills']:
+                    record['meosSetup']['components'][key] = {'state': 'verified', 'evidence': ['synthetic:receipt']}
+                record['meosSetup']['components']['firstPlan'] = {
+                    'state': 'blocked', 'blocker': 'Uncertain prior write',
+                    'owner': 'operator', 'nextAction': 'Reconcile receipt before retry'}
+                before = copy.deepcopy(record)
+                result = inspect(record)
+                self.assertEqual(result['next']['kind'], 'component')
+                self.assertEqual(result['next']['key'], 'firstPlan')
+                self.assertEqual(result['next']['recordedBlocker'], 'Uncertain prior write')
+                self.assertEqual(result['next']['recordedOwner'], 'operator')
+                self.assertEqual(result['next']['recordedNextAction'], 'Reconcile receipt before retry')
+                self.assertNotIn('horizon', result['missingDecisions'])
+                self.assertEqual(record, before)
+
     def test_malformed_component_and_schema_are_rejected(self):
         record = ledger()
         record['meosSetup']['schema'] = True
