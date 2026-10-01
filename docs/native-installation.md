@@ -155,7 +155,23 @@ A retained database upgraded to this runtime needs the new migration and a
 trusted insertion of its **already verified** origin before guest readiness.
 The immutable instance identity, existing owner, data, grants, receipts and
 Calendar context must remain unchanged. This is controlled deployment work;
-`production-bootstrap.py` is not an existing-instance migration tool.
+`production-bootstrap.py` is not an existing-instance migration tool. The
+[`calendar-upgrade.py`](../scripts/calendar-upgrade.py) controller accepts the
+reviewed existing state, release, admission, output and runtime paths. It verifies
+physical container/volume identity and unchanged applied migrations before
+stopping the backend. After native migration, it checks the stored instance
+identity and seals only the origin from that admitted state before asking the
+guest for readiness. An existing different origin fails closed; it is not
+replaced.
+
+The controller retains the old container, cold data copy and runtime bytes. Its
+`backend-upgraded-web-held` receipt verifies unchanged owner/domain rows and the
+runtime visible through the new container's mount namespace; it does not activate
+the web or Calendar services. The controlled host deployment must stop all
+writers, preserve provider state, and verify adapter readiness before resuming
+notification workers. An existing transition directory or interrupted operation
+requires reconciliation of retained evidence, not an automatic retry. Do not use
+fresh bootstrap or a new volume to recover an existing installation.
 
 The release stager now takes explicit `--node-runtime` and `--node-notices`
 paths alongside its qualification/admission/output inputs. It still verifies the
