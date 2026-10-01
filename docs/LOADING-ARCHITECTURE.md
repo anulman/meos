@@ -51,7 +51,7 @@ Existing instances remain editable, including their link back to the routine.
   the command receipt commit atomically. Replaying an identical key and payload
   returns the original summary even after the local day changes; key reuse with
   different input conflicts. The response counts routines, created instances and
-  preserved instances; it does not assert Calendar publication or commitment.
+  preserved instances; it does not assert Calendar publication.
 - `materialize_routine` remains an explicit compatibility operation. The former
   sync-only `calendar_materialize` capability is removed.
 - Week selection and selected day use validated URL search state, so route intent

@@ -59,7 +59,7 @@ Use the discovered note tool’s actual schema and revision/retry rules. `append
 
 On timeout or uncertain success, read back before retrying. If the entry is already present, do not append again. If another writer changed the note, refresh and reconcile against that content; never replay a stale whole-note replacement. If safe read/merge/revision semantics are unavailable, do not attempt another write. Label a reflection unsaved only when no write was attempted; if a write may have succeeded, report persistence as unverified until safe readback resolves it. Verify the stored result before saying “saved.”
 
-A saved reflection is not a calendar commitment, boundary acknowledgment or message-delivery receipt. Reconcile each operation separately after partial success. An inaccessible checkpoint cannot support a claim that questions or messages will be deduplicated across runs.
+A saved reflection is not proof of an applied schedule, Calendar propagation, boundary acknowledgment or message delivery. Reconcile each operation separately after partial success. An inaccessible checkpoint cannot support a claim that questions or messages will be deduplicated across runs.
 
 ## Reconcile timing separately
 

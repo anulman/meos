@@ -250,3 +250,10 @@ replay. Internal per-event reconciliation facts stay in operator evidence;
 ordinary boundary notifications and service-health alerts retain their existing
 handling. Configuring another consuming agent or primary channel must not change
 MeOS records, event envelopes, MCP schemas or the published operating skills.
+
+## Inspect installation progress
+
+Use [the setup inspector](../../docs/setup-inspector.md) to read the `meosSetup`
+section of the existing JSON host ledger and identify missing decisions or the
+next procedure. This read-only command neither runs setup nor performs a fresh
+runtime health check; it does not replace the durable completion checklist.

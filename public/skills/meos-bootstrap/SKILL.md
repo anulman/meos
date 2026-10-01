@@ -18,6 +18,12 @@ host records; this procedure requires no MeOS schema, receipt API or new polling
 service. If durable storage is unavailable, report that blocker instead of
 claiming resumable setup.
 
+For a JSON host ledger, the read-only setup inspector (`clients/meos-host/setup_inspect.py`)
+can report missing decisions and the next procedure from a `meosSetup` section
+in that same record. It does not execute setup or verify live state. For a hosted
+skill URL where repository docs are unavailable, use the checklist below; the
+operator can read `docs/setup-inspector.md` in the pinned checkout.
+
 List each requested component and its installation and verification steps. Use
 the stages below to select the applicable work:
 
