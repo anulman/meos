@@ -10,7 +10,7 @@
 
 - [Install and bootstrap](skills/meos-bootstrap/SKILL.md): Discover or maintain a verified persistent installation, then configure selected integrations, agent schedules, planning authority and event delivery. The Linux/systemd path uses a Docker native runtime, per-owner reviewed configuration and a sealed deployment origin; read docs/native-installation.md in the pinned checkout for required artifacts and steps, not the demo Compose preview. Start with desired use, access, Calendar, cadence and quiet hours; track verification in the existing completion checklist.
 
-- [Shared operating contract](skills/contract.md): Required authority, tentative/target-day planning, Google-wins reconciliation, evidence-aware actuals, weekly reflection, tool discovery and delivery rules.
+- [Shared operating contract](skills/contract.md): Required authority, authorized scheduling, Google-wins reconciliation, evidence-aware actuals, weekly reflection, tool discovery and delivery rules.
 - [Learning-loop reference](skills/learning-loop.md): Small qualitative reflections using available context and authorized notes; explicit unsaved fallback when note tools are unavailable.
 - [Weekly review + 14-day look-ahead](skills/meos-weekly-review/SKILL.md): Review priorities and capacity across the next 14 days when the user requests weekly planning or a configured weekly review fires; composes board decisions and schedules only within existing authority.
 - [Morning launch](skills/meos-morning-launch/SKILL.md): Prepare today and the first concrete action when the user asks for a morning plan or a configured morning launch fires; reuses last evening’s decisions and highlights changes rather than the entire backlog.

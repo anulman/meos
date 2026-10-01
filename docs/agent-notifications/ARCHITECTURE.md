@@ -77,9 +77,9 @@ fails closed rather than truncating silently; it is not a claim of unbounded
 multi-tenant capacity. Planning is on demand when clients connect, not a second
 unowned timer; already planned due rows remain durable while disconnected.
 
-Future block tentative/committed semantics, previous-night commitment and
-planning interpretation belong in agent operating skills. This transport does
-not commit blocks, rewrite imported calendars, or invent planning product rules.
+Scheduling decisions and planning interpretation belong in agent operating
+skills. This transport does not schedule blocks, rewrite imported calendars,
+or invent planning product rules.
 Envelope schema can be extended without changing stable-ID handoff semantics.
 
 ## Qualification and release boundary
