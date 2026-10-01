@@ -43,7 +43,7 @@ if(process.argv.slice(2).length){
  process.exit(0)
 }
 const esbuild=require('/opt/esbuild/lib/main.js')
-const result=await esbuild.build({entryPoints:['backend/guest/entry.mjs'],outfile:'/work/guest-bundle.mjs',bundle:true,format:'esm',platform:'neutral',mainFields:['module','main'],target:'es2022',nodePaths:['/opt/guest-deps/node_modules'],external:['wasi:*','trailbase:*'],define:{MEOS_GUEST_ORIGIN:JSON.stringify('https://meos.aidans.computer'),MEOS_GUEST_ENVIRONMENT:JSON.stringify('production')},metafile:true,legalComments:'eof'})
+const result=await esbuild.build({entryPoints:['backend/guest/entry.mjs'],outfile:'/work/guest-bundle.mjs',bundle:true,format:'esm',platform:'neutral',mainFields:['module','main'],target:'es2022',nodePaths:['/opt/guest-deps/node_modules'],external:['wasi:*','trailbase:*'],define:{MEOS_GUEST_ENVIRONMENT:JSON.stringify('production')},metafile:true,legalComments:'eof'})
 const approved=new Set(JSON.parse(readFileSync('backend/guest-dependencies.json')).packages.map(p=>p.name))
 for(const name of Object.keys(result.metafile.inputs)) {
  const parts=name.split('/node_modules/')

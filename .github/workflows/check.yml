@@ -17,7 +17,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: node scripts/generate-contract.mjs --check
       - run: sudo unshare --net env -i PATH="$PATH" node --test scripts/backend-contract-tests.mjs
-      - run: node --test scripts/backend-calendar-planner-tests.mjs scripts/backend-calendar-cache-tests.mjs scripts/backend-calendar-overlap-tests.mjs scripts/backend-calendar-polling-tests.mjs scripts/backend-http-tests.mjs scripts/backend-routine-migration-tests.mjs scripts/backend-proxy-tests.mjs scripts/backend-tests.mjs
+      - run: node --test scripts/backend-calendar-planner-tests.mjs scripts/backend-calendar-cache-tests.mjs scripts/backend-calendar-overlap-tests.mjs scripts/backend-calendar-polling-tests.mjs scripts/backend-http-tests.mjs scripts/backend-routine-migration-tests.mjs scripts/backend-instance-tests.mjs scripts/backend-deployment-config-tests.mjs scripts/backend-proxy-tests.mjs scripts/backend-tests.mjs
       - run: node --test scripts/backend-calendar-planner-client-tests.mjs scripts/backend-calendar-auth-backoff-tests.mjs scripts/backend-calendar-routes-tests.mjs scripts/backend-calendar-service-tests.mjs
       - run: python3 scripts/backend-calendar-session-lifetime-tests.py
       - run: node scripts/calendar-window-benchmark.mjs

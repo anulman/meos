@@ -37,13 +37,13 @@ Start with your real days. Reuse a verified persistent instance if you have one;
 otherwise work with your agent or operator through [personal setup](#personal-setup)
 and the [bootstrap procedure](public/skills/meos-bootstrap/SKILL.md).
 
-**Current installation limit:** self-hosting on a new host requires engineering
-work; this repository does not yet ship a portable production installer. The
-shipped path is Linux/systemd with a Docker native runtime and protected web
-adapter. Its helpers have owner-specific assumptions and need reviewed
-configuration support for another host. Do not copy another owner's identity or
-disable trust checks to make installation pass. The in-memory demo and root
-Compose preview are contributor fixtures, not a personal installation.
+Persistent installation uses one Linux/systemd + Docker topology with a protected
+web adapter. Follow the [native installation guide](docs/native-installation.md)
+with an operator: obtain pinned reviewed artifacts, configure your own HTTPS
+origin and Access identity, and verify persistent access. This is not a one-command
+installer or a production Compose/Helm package. Reuse a verified existing instance
+when available. Do not copy another owner's identity or disable trust checks.
+The in-memory demo and root Compose preview remain contributor fixtures.
 
 You can give your agent this starting request:
 

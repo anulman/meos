@@ -12,15 +12,13 @@ import {createMcpHandler} from '../mcp.mjs'
 import {createCommands} from '../commands.mjs'
 import {createSynchronousHttpHandler} from '../http-handler.mjs'
 import {DomainError} from '../domain.mjs'
-import {readInstance} from '../instance.mjs'
+import {readInstance,readDeploymentOrigin} from '../instance.mjs'
 import {createBridge} from '../bridge.mjs'
 import {isWeatherMaintenance,pruneWeather} from '../maintenance.mjs'
 import {createSynchronousWeather} from '../weather.mjs'
 import {createWeatherStorage} from '../weather-storage.mjs'
 
 Object.assign(globalThis,{URL:url.URL,URLSearchParams:url.URLSearchParams})
-// Set by the reviewed build, not by an incoming request or an owner-writable DTO.
-const origin=MEOS_GUEST_ORIGIN
 const database=createDatabasePort(quickJsTransactionClass(sql.Transaction))
 const commands=createCommands(database)
 const encode=new Utf8Encoder(),decode=new Utf8Decoder('utf-8',{fatal:true})
@@ -50,9 +48,18 @@ const weather=createSynchronousWeather({storage:createWeatherStorage(database),f
  try{return readText(response,maxBytes)}finally{dispose(response.incoming)}
 }})
 const bridge=createBridge({database,weather})
-const notifications=createNotificationGuestHandler({notifications:createNotifications(database),origin,readText})
-const mcp=createMcpHandler({commands,origin,readText})
-const handle=createSynchronousHttpHandler({commands,weather,bridge,origin},{readText})
+// Cache only after a verified immutable deployment origin is available. A fresh
+// depot remains unavailable until trusted bootstrap seals its configuration.
+let configured
+function configuredHandlers() {
+ if(configured)return configured
+ const origin=readDeploymentOrigin(database)
+ configured={origin,
+  notifications:createNotificationGuestHandler({notifications:createNotifications(database),origin,readText}),
+  mcp:createMcpHandler({commands,origin,readText}),
+  handle:createSynchronousHttpHandler({commands,weather,bridge,origin},{readText})}
+ return configured
+}
 export const initEndpoint={getManifest(){
  return JSON.stringify({metadata:{display_name:'MeOS',guest_runtime:'ecma_script',version:'0.1.0'},http_handlers:['get','post','put','delete'].map(method=>({method,path:'/api/meos/v1/{*path}'})),job_handlers:[{name:'meos-weather-prune',spec:'0 * * * * *',timeout:5000}],sqlite_functions:[]})
 }}
@@ -82,6 +89,7 @@ export const incomingHandler={handle(incoming,out){
    pruneWeather(createWeatherStorage(database))
    try{respond(out,new GuestResponse(null,{status:204}))}finally{dispose(incoming)};return
   }
+  const {origin,notifications,mcp,handle}=configuredHandlers()
   if(authority!==new URL(origin).host||typeof path!=='string'||!path.startsWith('/'))throw new DomainError('validation','Invalid request target')
   const instance=readInstance(database,MEOS_GUEST_ENVIRONMENT)
   const request={url:origin+path,method,headers:values,incoming}

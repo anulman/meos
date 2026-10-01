@@ -4,16 +4,16 @@ No builds, imports, execution, install or service changes. Admission is root0600
 """
 import argparse,hashlib,json,os,pathlib,shutil,stat
 assert os.geteuid()==0
-p=argparse.ArgumentParser();p.add_argument('--qualification',required=True);p.add_argument('--admission',required=True);p.add_argument('--output',required=True);a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--qualification',required=True);p.add_argument('--admission',required=True);p.add_argument('--output',required=True);p.add_argument('--node-runtime',required=True);p.add_argument('--node-notices',required=True);a=p.parse_args()
 REQUIRED_NODE_NOTICES=['deps/icu-small/LICENSE', 'deps/sqlite/sqlite3.c.header.txt', 'deps/sqlite/sqlite3.h.header.txt', 'deps/v8/LICENSE', 'deps/v8/LICENSE.fdlibm', 'deps/v8/LICENSE.strongtalk', 'deps/v8/LICENSE.v8', 'deps/v8/third_party/abseil-cpp/LICENSE', 'deps/v8/third_party/colorama/LICENSE', 'deps/v8/third_party/fp16/LICENSE', 'deps/v8/third_party/glibc/LICENSE', 'deps/v8/third_party/highway/LICENSE', 'deps/v8/third_party/inspector_protocol/LICENSE', 'deps/v8/third_party/jinja2/LICENSE.rst', 'deps/v8/third_party/jsoncpp/LICENSE', 'deps/v8/third_party/markupsafe/LICENSE', 'deps/v8/third_party/rapidhash-v8/LICENSE', 'deps/v8/third_party/re2/LICENSE', 'deps/v8/third_party/simdutf/LICENSE', 'deps/v8/third_party/siphash/LICENSE', 'deps/v8/third_party/utf8-decoder/LICENSE', 'deps/v8/third_party/v8/builtins/LICENSE', 'deps/v8/third_party/v8/codegen/LICENSE', 'deps/v8/third_party/valgrind/LICENSE', 'deps/v8/third_party/vtune/LICENSE', 'deps/v8/third_party/wasm-api/LICENSE', 'deps/v8/third_party/zlib/LICENSE']
-repo=pathlib.Path(__file__).resolve().parents[1];node=pathlib.Path('/home/clawy/.local/share/mise/installs/node/24.19.0')
+repo=pathlib.Path(__file__).resolve().parents[1];node=pathlib.Path(a.node_runtime).absolute()
 admission_path=pathlib.Path(a.admission).absolute();i=admission_path.lstat();assert stat.S_ISREG(i.st_mode) and i.st_uid==0 and stat.S_IMODE(i.st_mode)==0o600 and i.st_nlink==1
 admission=json.loads(admission_path.read_text());assert admission['status'] in ['approved-for-release-staging','approved-for-isolated-staging'] and admission['reviewer'] and admission['reviewEvidence']
 qualification_only=admission['status']=='approved-for-isolated-staging'
 # Exact independently reviewed supplemental notice set is mandatory, including
 # delegated V8 grants absent from aggregate Node LICENSE. Check before output.
 assert set(admission['nodeSupplementalNoticeFiles'])==set(REQUIRED_NODE_NOTICES)
-notice_source=repo/'.qualification/release-node-runtime-assessment/source/notices'
+notice_source=pathlib.Path(a.node_notices).absolute()
 for relative,digest in admission['nodeSupplementalNoticeFiles'].items():
  source_notice=notice_source/relative
  assert source_notice.is_file() and not source_notice.is_symlink() and hashlib.sha256(source_notice.read_bytes()).hexdigest()==digest
@@ -38,7 +38,7 @@ for relative,digest in qualification['clientFiles'].items():copy(source/'dist/cl
 closure=['access-owner','node-web-server','protected-proxy','body','domain','contract','timezones','scheduling','timezone-rules','calendar-routes','calendar-rpc','calendar-service','calendar-oauth','calendar-polling','calendar-events','calendar-snapshot-store','calendar-planner','calendar-planner-client','calendar-durable-store','calendar-google-broker','calendar-pinned-fetch']
 for relative in ['backend/'+name+'.mjs' for name in closure]+['scripts/serve-real.mjs','scripts/serve-calendar.mjs']:
  copy(source/relative,relative,qualification['sourceFiles'][relative])
-helpers=['production-ready.py','production-web-exec.py','production-uid-check.py','production-access-keys.py','calendar-uid-check.py']
+helpers=['production-ready.py','production-web-exec.py','production-uid-check.py','production-access-keys.py','deployment_config.py','calendar-uid-check.py']
 assert set(admission['helperFiles'])=={'scripts/'+name for name in helpers}|{'tools/backup/meos-backup.py'}
 for relative,digest in admission['helperFiles'].items():copy(repo/relative,relative,digest)
 # The runtime binary and its full distributed notices need explicit independent

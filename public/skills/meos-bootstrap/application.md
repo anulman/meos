@@ -37,8 +37,9 @@ Prepare a concrete plan using the selected release's actual schema: pinned artif
 
 Follow the [host/MCP runbook](host-mcp.md) against the selected checkout. Keep
 artifact qualification, release admission, rendering and activation separate.
-Existing renderer assumptions are host-specific: a different host needs reviewed
-configuration support, not copied personal identifiers or disabled checks.
+Use the per-owner origin, Access identity and independently reviewed artifact
+inputs documented in `docs/native-installation.md` in the pinned checkout; never
+copy personal identifiers or disable checks.
 For a genuinely supplied Compose/Helm release, use its own maintained instructions
 and the same identity, persistence, authority and recovery gates above.
 

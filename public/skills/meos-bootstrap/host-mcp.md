@@ -35,9 +35,10 @@ sources in your **pinned checkout**, in lifecycle order:
 - `clients/meos-host/README.md`: delegated credential admission and optional
   event-worker contract; MCP-only setup stops before listener/worker installation.
 
-The current production helpers contain host-specific origin/runtime assumptions.
-They are not a universal installer. On another host, obtain reviewed configuration
-support and exact artifact/license admission before running them; do not copy
+The production helpers accept reviewed per-install origin and Access identity;
+read `docs/native-installation.md` in the pinned checkout for the one supported
+Linux/systemd + Docker path and its artifact inputs. They are not a universal
+installer. On another host, obtain exact artifact/license admission; do not copy
 another installation’s identifiers, rewrite checks ad hoc, or use acceptance
 bootstrap as production authorization. Reuse a verified existing deployment.
 Render, review and validate units before authorized activation. Preserve current

@@ -34,6 +34,7 @@ if state['environment']=='production':assert manifest['status']=='independently-
 else:assert manifest['status'] in ['qualification-only','independently-reviewed']
 assert re.fullmatch('sha256:[a-f0-9]{64}',manifest['image']) and manifest['image']==admission['newImage']
 run=state['instanceId'];assert re.fullmatch('[a-f0-9]{32}',run)
+assert re.fullmatch(r'https://[a-z0-9.-]+',state['origin']) and len(state['origin'])<=300
 name='meos-'+state['environment']+'-'+run;assert state['volume']==name+'-data';rollback=name+'-rollback-'+state['image'][7:19]+'-'+hashlib.sha256(str(a.output).encode()).hexdigest()[:8]
 out=pathlib.Path(a.output).absolute();assert str(out)==admission['output'] and not out.exists(),'Existing transition: reconcile, never retry automatically'
 for parent in out.parents:
@@ -113,7 +114,15 @@ deadline=time.monotonic()+60
 while True:
  verify(inspect(new_id),manifest['image'],new_id,True)
  try:
-  client=UDS('meos.aidans.computer',timeout=3)
+  # Seal only the exact admitted operator origin after native migration.
+  with sqlite3.connect('file:'+str(root/'data/main.db')+'?mode=rw',uri=True) as db:
+   if db.execute("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name='_meos_deployment'").fetchone()[0]==0:
+    raise FileNotFoundError('Deployment migration not applied yet')
+   assert db.execute('SELECT instance_id,environment FROM _meos_instance').fetchall()==[(run,'production')]
+   origins=db.execute('SELECT origin FROM _meos_deployment').fetchall()
+   if not origins:db.execute('INSERT INTO _meos_deployment VALUES(1,?)',(state['origin'],))
+   else:assert origins==[(state['origin'],)],'Sealed deployment origin mismatch; hold web and reconcile'
+  client=UDS(state['origin'].removeprefix('https://'),timeout=3)
   try:
    client.request('GET','/api/meos/v1/instance');response=client.getresponse();data=response.read(8193);assert response.status==200 and json.loads(data)=={'instanceId':run,'environment':'production'}
   finally:client.close()
