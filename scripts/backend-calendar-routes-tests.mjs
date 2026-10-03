@@ -131,7 +131,7 @@ test('connect flow cookie is private and callback does not require an unexpired 
 test('Google callback never bypasses external Access',async()=>{
  let reached=false;
  const handler=createNodeWebHandler({origin,root:'/tmp',upstream:async()=>Response.json({}),accessOwner:{check:()=>new Response('Denied',{status:403})},calendarRoutes:async()=>{reached=true;return new Response(null,{status:303,headers:{location:'/settings'}})}});
- const req=Readable.from([]);req.url='/api/calendar/google/callback?state=synthetic&code=synthetic';req.method='GET';req.headers={host:new URL(origin).host};const res={headersSent:false,writeHead(status){this.status=status},end(){}};
+ const req=Readable.from([]);req.url='/api/calendar/google/callback?state=synthetic&code=synthetic';req.method='GET';req.headers={host:new URL(origin).host};const res={headersSent:false,once(){},writeHead(status){this.status=status},end(){}};
  await handler(req,res);assert.equal(res.status,403);assert.equal(reached,false);
 });
 test('removed Google notification URL has no route and never bypasses Access',async()=>{const f=fixture();assert.equal(await f.route(request('/api/calendar/google/notifications')),undefined);let reached=false;const handler=createNodeWebHandler({origin,root:'/tmp',upstream:f.upstream,accessOwner:{check:()=>new Response(null,{status:403})},calendarRoutes:async()=>{reached=true}});assert.equal((await hostCall(handler,'/api/calendar/google/notifications','POST')).status,403);assert.equal(reached,false)});

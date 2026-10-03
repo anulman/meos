@@ -21,12 +21,14 @@ const tasks = [
 ];
 const projects=[envelope({id:id(20),title:'Band project',notes:{type:'doc'}})];
 const outcomes=[10,11,12].map((task,index)=>envelope({id:id(30+index),taskId:id(task),period:{start:day,end:'2026-10-04'},position:index}));
+const streams=new Set();
 const requests = [], serverErrors = [], pageErrors = [], blockedRequests = [];
 const revisions = () => ({ tasks: tasks.reduce((n,r)=>n+r.revision,0), projects: 1, routines: routines.reduce((sum, row) => sum + row.revision, 0), occurrences: occurrence.revision, outcomes: 0, periodNotes: 0, preferences: 1 });
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
     res.setHeader('Cache-Control', 'no-store');
+    if(url.pathname==='/api/meos/v1/changes'){res.writeHead(200,{'Content-Type':'text/event-stream'});res.write(': ready\n\n');streams.add(res);res.on('close',()=>streams.delete(res));return}
     if (url.pathname.startsWith('/api/')) {
       let raw = ''; for await (const chunk of req) raw += chunk;
       const call = { path: url.pathname, method: req.method, ...(raw ? { body: JSON.parse(raw) } : {}) };
@@ -177,7 +179,7 @@ try {
     await page.getByRole('button',{name:/^Flexible exercise/}).waitFor();
     const expected=tailLabels.filter((_,index)=>mask&(1<<index));
     // Wait for all independent collection reads before asserting absent sections.
-    await page.waitForLoadState('networkidle');
+    await page.waitForFunction(()=>[...document.querySelectorAll('[role="status"]')].every(node=>!node.textContent.includes('Loading')));
     assert.deepEqual(await page.locator('.settings-view > details > summary').allTextContents(),expected);
     const order=await page.locator('.settings-view > section, .settings-view > details').evaluateAll(nodes=>nodes.map(node=>node.querySelector('h2,summary')?.textContent));
     assert.deepEqual(order.slice(-expected.length||order.length),expected);
@@ -202,7 +204,7 @@ try {
       await page.getByRole('dialog',{name:'Routine instance',exact:true}).waitFor();await page.keyboard.press('Escape');
     }
   }
-  occurrence.value.skipped=true;await page.reload();await page.getByRole('button',{name:/^Flexible exercise/}).waitFor();await page.waitForLoadState('networkidle');
+  occurrence.value.skipped=true;await page.reload();await page.getByRole('button',{name:/^Flexible exercise/}).waitFor();await page.waitForFunction(()=>[...document.querySelectorAll('[role="status"]')].every(node=>!node.textContent.includes('Loading')));
   assert.equal(await page.getByText('Unscheduled routine instances',{exact:true}).count(),0,'skipped instances do not populate the unscheduled list');
   assert.equal(requests.filter(call=>call.method!=='GET').length,writesBeforeTailChecks,'Settings reads and opening tail editors do not plan or mutate');
   assert.deepEqual(serverErrors, []); assert.deepEqual(pageErrors, []); assert.deepEqual(blockedRequests, []);
@@ -211,5 +213,5 @@ try {
   console.error(JSON.stringify({ serverErrors, pageErrors, blockedRequests, mutations: requests.filter(call => call.method !== 'GET'), text: await page?.locator('body').innerText().catch(() => '') }));
   throw error;
 } finally {
-  await browser?.close(); await new Promise(resolve => server.close(resolve));
+  await browser?.close();for(const stream of streams)stream.end();server.closeAllConnections();await new Promise(resolve => server.close(resolve));
 }

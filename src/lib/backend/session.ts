@@ -22,6 +22,7 @@ export const application=new ApplicationClient(transport)
 export async function loadSession(){
  const generation=sessionGeneration,epoch=identityVersion();const previous=session?.user.id
  const response=await fetch('/api/meos/v1/session',{credentials:'same-origin',cache:'no-store',redirect:'error'})
+ if(response.status===401||response.status===403)window.dispatchEvent(new Event('meos-session-ended'))
  if(!response.ok)throw Error('Session unavailable. Try again.')
  const data=await response.json();if(generation!==sessionGeneration||epoch!==identityVersion()){window.dispatchEvent(new Event('meos-session-ended'));throw Error('Session changed')}if(previous&&previous!==data.user?.id){window.dispatchEvent(new Event('meos-session-ended'));throw Error('Session changed')}session=data.user?data:undefined;sessionEpoch=data.user?epoch:undefined;return session
 }
