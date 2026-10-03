@@ -43,7 +43,7 @@ work=out/'work';work.mkdir();(work/'backend').mkdir();(work/'scripts').mkdir()
 # Strict application-source selection, excluding private receipts and retained archives.
 for p in (repo/'backend').rglob('*'):
  assert not p.is_symlink()
- if p.is_file() and (p.suffix in ['.mjs','.json','.sql','.patch']):
+ if p.is_file() and (p.suffix in ['.mjs','.json','.sql','.patch','.textproto']):
   target=work/'backend'/p.relative_to(repo/'backend');target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,target)
 shutil.copyfile(repo/'scripts/release-bundle.mjs',work/'scripts/release-bundle.mjs')
 source_manifest={str(p.relative_to(work)):sha(p) for p in work.rglob('*') if p.is_file()}
@@ -83,7 +83,7 @@ if isolation_only:
  print(json.dumps({'status':'isolation-only-no-build-no-import','proof':str(work/'isolation-proof.json')}));sys.exit(0)
 target=out/'runtime-root';shutil.copytree(rt,target)
 shutil.copyfile(work/'meos-guest.wasm',target/'data/wasm/meos.wasm')
-(target/'data/config.textproto').write_text('server { application_name: "MeOS" site_url: "https://meos.aidans.computer" }\nauth { disable_password_auth: true enable_otp_signin: false enable_anonymous_signin: false }\n')
+(target/'data/config.textproto').write_text('server { application_name: "MeOS" site_url: "https://meos.aidans.computer" }\nauth { disable_password_auth: true enable_otp_signin: false enable_anonymous_signin: false }\n'+(work/'backend/browser-changes.textproto').read_text())
 # Ship every current migration, preserving already-reviewed applied history.
 sys.dont_write_bytecode=True
 depot_helper=repo/'scripts/calendar-depot-runtime.py'

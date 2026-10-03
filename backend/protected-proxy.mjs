@@ -23,7 +23,7 @@ export function createProtectedApiProxy({origin,upstream}) {
   const headers=new Headers()
   for(const key of ['Cookie','Content-Type','Origin','X-CSRF-Token','Sec-Fetch-Site'])if(request.headers.has(key))headers.set(key,request.headers.get(key))
   // No caller Authorization, __context, forwarding, host or arbitrary headers.
-  return new Request(origin+path,{method,headers,body})
+  return new Request(origin+path,{method,headers,body,signal:request.signal})
  }
  const sameOrigin=request=>request.headers.get('Origin')===origin&&request.headers.get('Sec-Fetch-Site')!=='cross-site'
  return async request=>{
@@ -58,6 +58,13 @@ export function createProtectedApiProxy({origin,upstream}) {
    }
    if(path==='/api/meos/v1/notifications'||path==='/api/meos/v1/mcp')return denied()
    if(path==='/api/meos/v1/bridge'||path.startsWith('/api/meos/v1/bridge/'))return denied()
+   if(path==='/api/meos/v1/changes') {
+    if(request.method!=='GET'||url.search||request.headers.get('Sec-Fetch-Site')==='cross-site'||(request.headers.has('Origin')&&request.headers.get('Origin')!==origin))return denied(403)
+    const result=await upstream(upstreamRequest(request,'/api/records/v1/browser_changes/subscribe/*'))
+    if(!result.ok){await result.body?.cancel();return denied(result.status===401?401:403)}
+    if(!/^text\/event-stream(?:;|$)/i.test(result.headers.get('Content-Type')??'')){await result.body?.cancel();throw Error('Unexpected subscription response')}
+    return new Response(result.body,{headers:{'Content-Type':'text/event-stream','Cache-Control':'no-store','X-Accel-Buffering':'no','X-Content-Type-Options':'nosniff'}})
+   }
    if(path.startsWith('/api/meos/v1/')&&['GET','POST','PUT','DELETE'].includes(request.method)) {
     const body=['POST','PUT'].includes(request.method)?await boundedText(request,150000):undefined
     const result=await upstream(upstreamRequest(request,path+url.search,request.method,body))

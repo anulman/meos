@@ -25,3 +25,10 @@ test('form login strips forged host context/bearer and normalizes cookie attribu
  assert.match(result.headers.getSetCookie()[0],/Secure; HttpOnly; SameSite=Lax; Max-Age=300$/)
  assert.equal(await result.text(),'Signed in')
 })
+test('subscription rejects unauthenticated and non-stream upstream responses without publishing data',async()=>{
+ for(const [upstream,status] of [[new Response('private',{status:401}),401],[Response.json({private:'must not escape'}),503]]){
+  const handle=createProtectedApiProxy({origin,upstream:async()=>upstream})
+  const response=await handle(new Request(origin+'/api/meos/v1/changes'))
+  assert.equal(response.status,status);assert.doesNotMatch(await response.text(),/must not escape|private/)
+ }
+})

@@ -1,0 +1,8 @@
+# Read-only, owner-filtered metadata notifications. Domain records remain private.
+record_apis {
+ name: "browser_changes"
+ table_name: "browser_changes"
+ enable_subscriptions: true
+ acl_authenticated: READ
+ read_access_rule: "_ROW_.id = _USER_.id"
+}
