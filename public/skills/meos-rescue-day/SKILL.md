@@ -12,7 +12,7 @@ Use on a meaningful disruption or an explicit “help me recover today” reques
 1. Identify the disruption and remaining usable time from current state. Ask only for a missing constraint that changes the repair; do not assume low energy means every commitment should move.
 2. Preserve fixed commitments, protected rest, travel/preparation and recorded priority order. Separate genuinely flexible blocks from commitments whose changes require a decision.
 3. Find the smallest feasible change set. Prefer keeping unaffected blocks stable; show what would move, what would shrink only if authorized, and what no longer fits. Do not reshuffle the whole week automatically.
-4. If no feasible plan meets all constraints, explain the concrete trade-off and ask for the necessary choice. Leave excess work explicitly unscheduled/deferred instead of hiding overload.
+4. Apply the [displaced and dependent block policy](../contract.md#resolve-displaced-and-dependent-blocks): move the existing sequence to feasible slots, explicitly defer work that cannot fit, or offer removal. Recheck prerequisite progress and every affected successor. If a trade-off exceeds existing authority, ask for that choice; do not leave obsolete slots silently in place.
 5. Preview, apply and verify authorized revision-checked changes. Preserve estimates versus actuals and occurrence history. Reconcile uncertain writes before retrying.
 6. Save the revised first action and dispositions so the next boundary, evening close and morning launch reuse them.
 
