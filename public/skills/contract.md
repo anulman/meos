@@ -74,6 +74,48 @@ Google is the source of truth for synchronized calendar fields: **Google wins sy
 
 Preserve the platform-owned rolling seven-day boundary contract and fresh revision/cancellation checks below; apply recorded delivery preferences and agent judgment.
 
+## Resolve displaced and dependent blocks
+
+During daily repair and weekly planning, give every affected unfinished block an
+explicit disposition. Do not leave a past or infeasible slot in place as if it
+were still a valid plan. Within recorded authority:
+
+1. **Move** the existing block to the next feasible slot in its work sequence,
+   respecting actual prerequisite progress, deadlines, capacity and protected time.
+2. **Defer** work that cannot fit: name next week or a later review date beyond
+   the latest date already planned for that sequence. Read capacity before assigning
+   a timed slot. Otherwise remove the obsolete slot and retain the work visibly
+   unscheduled with its deferral date and reason through supported state.
+3. **Offer removal** when the work is no longer useful or the trade-off needs the
+   user's decision. Removing a planning block is not deleting the underlying task;
+   dropping the work itself still requires explicit user or standing authority.
+
+A deferral date is a review target, not a deadline extension or a promise of
+capacity. If deferral would miss a deadline, surface that conflict. Do not roll
+work onto tomorrow automatically or silently discard it. Missing authority or
+capability leaves a named unresolved choice or blocker; report any stale slot
+that could not be cleared rather than claiming the plan is repaired.
+
+Read the progress of prerequisites before scheduling numbered or dependent work.
+A passed slot does not establish progress. If copywriting block 1 is unstarted,
+block 2 must not remain presented as the next executable action: schedule the
+unfinished prerequisite first and move or defer dependent blocks accordingly.
+If progress is unknown, keep the dependency unresolved rather than inferring
+completion from a block's number or date. Preserve completed work and history;
+revise future titles or notes only when needed to describe the actual next action.
+
+Reuse existing tasks and blocks for the same outcome. One finances outcome does
+not require duplicate tasks merely because it appears in both daily and weekly
+planning. Create separate work only when it has a distinct, independently tracked
+result; check current records before creating it.
+
+Preview and verify the whole affected sequence, not only the first moved block.
+Use supported revision-checked operations, preserve partial successes and
+reconcile uncertain results before retrying. Verify the resulting MeOS records
+and Calendar propagation separately; report what moved, the explicit deferrals,
+removal choices and any unresolved dependent blocks. Reuse these dispositions in
+the next ritual instead of rediscovering or duplicating the work.
+
 ## Link planning priorities to projects
 
 Every planning priority/outcome must link to an actual MeOS project. Load current
