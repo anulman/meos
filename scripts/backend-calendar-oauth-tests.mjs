@@ -61,12 +61,15 @@ test('refresh persists rotation, returns no token and retains refresh token when
  const f=fixture();await f.callback(await f.start());const result=await f.core.refresh({owner:'synthetic-owner'});assert.equal(f.connection.refreshToken,'rotated-synthetic-refresh');assert(!JSON.stringify(result).includes('synthetic'))
  const g=fixture({refreshExchange:async()=>({access_token:'new-access',expires_in:3600,token_type:'Bearer'})});await g.callback(await g.start());await g.core.refresh({owner:'synthetic-owner'});assert.equal(g.connection.refreshToken,'synthetic-refresh')
 })
-test('revoked or uncertain refresh clears credentials; safe temporary error retains grant',async()=>{
- for(const refreshExchange of [async()=>({error:'invalid_grant',error_description:'secret'}),async()=>{throw Error('secret network timeout')}]){const f=fixture({refreshExchange});await f.callback(await f.start());await assert.rejects(f.core.refresh({owner:'synthetic-owner'}),{code:'reconnect_required'});assert.equal(f.connection,undefined)}
- const f=fixture({refreshExchange:async()=>({error:'temporarily_unavailable'})});await f.callback(await f.start());await assert.rejects(f.core.refresh({owner:'synthetic-owner'}),{code:'unavailable'});assert.equal(f.connection.refreshToken,'synthetic-refresh')
+test('only rejected refresh grants clear credentials; temporary and malformed failures retain them',async()=>{
+ const rejected=fixture({refreshExchange:async()=>({error:'invalid_grant',error_description:'secret'})});await rejected.callback(await rejected.start());await assert.rejects(rejected.core.refresh({owner:'synthetic-owner'}),{code:'reconnect_required'});assert.equal(rejected.connection,undefined)
+ for(const response of [{error:'invalid_client'},{error:'unauthorized_client'},{error:'temporarily_unavailable'},{error:'unknown-secret'},{access_token:'new',expires_in:-1},{}]){
+  const f=fixture({refreshExchange:async()=>response});await f.callback(await f.start());await assert.rejects(f.core.refresh({owner:'synthetic-owner'}),{code:'unavailable'});assert.equal(f.connection.refreshToken,'synthetic-refresh')
+ }
+ const f=fixture({refreshExchange:async()=>{throw Error('secret network timeout')}});await f.callback(await f.start());await assert.rejects(f.core.refresh({owner:'synthetic-owner'}),e=>e.code==='unavailable'&&!e.message.includes('secret'));assert.equal(f.connection.refreshToken,'synthetic-refresh')
 })
 test('refresh lease fences concurrent refresh and disconnect/reconnect generation',async()=>{
- let resolve;const f=fixture({refreshExchange:()=>new Promise(r=>resolve=r)});await f.callback(await f.start());const first=f.core.refresh({owner:'synthetic-owner'});await new Promise(r=>setImmediate(r));await assert.rejects(f.core.refresh({owner:'synthetic-owner'}),{code:'busy'});f.fence();resolve({...f.response});await assert.rejects(first,{code:'reconnect_required'});assert.equal(f.connection,undefined)
+ let resolve;const f=fixture({refreshExchange:()=>new Promise(r=>resolve=r)});await f.callback(await f.start());const first=f.core.refresh({owner:'synthetic-owner'});await new Promise(r=>setImmediate(r));await assert.rejects(f.core.refresh({owner:'synthetic-owner'}),{code:'busy'});f.fence();resolve({...f.response});await assert.rejects(first,{code:'unavailable'});assert.equal(f.connection,undefined)
 })
 test('persistence and malformed provider errors are redacted',async()=>{
  const f=fixture();f.store.putAttempt=async()=>{throw Error('secret filesystem credentials')};await assert.rejects(f.start(),e=>e.code==='unavailable'&&!e.message.includes('secret'))
