@@ -28,11 +28,12 @@ const safe=async fn=>{try{return await fn()}catch(e){if(e instanceof CalendarOAu
  * beginRefresh(owner,now): acquire exclusive fenced lease and return
  * {lease,refreshToken,scope}; null means no connection, {busy:true} means leased.
  * finishRefresh(owner,lease,record): CAS lease; return true only if still current.
- * failRefresh(owner,lease,{reconnectRequired}): CAS lease, remove invalid tokens
+ * failRefresh(owner,lease,{reconnectRequired,reason}): CAS lease, remove invalid tokens
  * on reconnectRequired; otherwise release lease retaining prior credentials.
  * Disconnect/reconnect must fence existing leases AND pending OAuth attempts;
- * expired/crashed leases must
- * never blindly retry a refresh with uncertain rotation. Host owns reconciliation.
+ * Google refresh tokens are reusable: expired leases can be replaced, but late
+ * completions/failures must not change the replacement lease or connection.
+ * The host retries temporary failures with bounded, durable polling backoff.
  * Identity verifier MUST cryptographically verify Google's ID token signature,
  * allowed issuer, audience=clientId, expiry and nonce; return {email,emailVerified}.
  * tokenExchange/refreshExchange receive no caller-controlled target URL. Their
@@ -94,14 +95,14 @@ export function createCalendarOAuth({config,store,tokenExchange,refreshExchange,
    let result
    try{result=await refreshExchange({refreshToken:claim.refreshToken,clientId:config.clientId,grantType:'refresh_token'})}
    catch{
-    // Transport ambiguity can include a successful rotated grant: fail closed.
-    await store.failRefresh(owner,claim.lease,{reconnectRequired:true});fail('reconnect_required')
+    // A missing reply does not establish that Google revoked this grant.
+    await store.failRefresh(owner,claim.lease,{reconnectRequired:false,reason:'transport'});fail('unavailable')
    }
-   if(result?.error){const revoked=['invalid_grant','invalid_client','unauthorized_client'].includes(result.error);await store.failRefresh(owner,claim.lease,{reconnectRequired:revoked});fail(revoked?'reconnect_required':'unavailable')}
+   if(result?.error){const revoked=result.error==='invalid_grant';const reason=revoked?'invalid_grant':['invalid_client','unauthorized_client'].includes(result.error)?'client_configuration':'provider_unavailable';await store.failRefresh(owner,claim.lease,{reconnectRequired:revoked,reason});fail(revoked?'reconnect_required':'unavailable')}
    let record;try{record=credentials(result,claim.scope,claim.refreshToken)}catch{
-    await store.failRefresh(owner,claim.lease,{reconnectRequired:true});fail('reconnect_required')
+    await store.failRefresh(owner,claim.lease,{reconnectRequired:false,reason:'invalid_response'});fail('unavailable')
    }
-   if(await store.finishRefresh(owner,claim.lease,record)!==true)fail('reconnect_required')
+   if(await store.finishRefresh(owner,claim.lease,record)!==true)fail('unavailable')
    return {status:'connected',expiresAt:record.expiresAt}
   }),
  }

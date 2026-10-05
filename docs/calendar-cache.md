@@ -69,3 +69,26 @@ Deployment needs the additive Calendar-cache migration, new guest and updated
 Calendar worker together. An older worker leaves the new cache explicitly
 unavailable until backfill; it must not be represented as an empty day. No
 production migration or deployment is performed by this change's qualification.
+
+## Google token refresh failures
+
+The private worker retains the Google refresh token after a transport failure,
+server rejection, client-configuration error, or malformed response. These do not
+establish that the user's grant was revoked. The existing durable poll schedule
+retries after 1 minute, doubles the delay up to 15 minutes, and adds up to 5 seconds
+of jitter. A worker restart does not erase that delay.
+
+Only an explicit `invalid_grant` response from Google's token endpoint clears the
+rejected credentials and requires consent again. Responses that omit a replacement
+refresh token or scope retain the previous values. An expired 60-second refresh
+lease can be replaced; late responses cannot overwrite a new lease or a reconnected
+account. Pending authorization-code exchanges remain single-use.
+
+Private connection state records an allowlisted refresh-failure reason and time;
+it never stores the provider's raw error description in diagnostics. A successful
+refresh clears that failure. Public polling status reports `retrying` while a
+temporary failure is outstanding. Neither retries nor this diagnostic can recover
+a refresh token deleted by an earlier release; that account must reconnect.
+
+See Google's [refresh-token flow](https://developers.google.com/identity/protocols/oauth2/web-server#offline)
+and [token expiration conditions](https://developers.google.com/identity/protocols/oauth2#expiration).
